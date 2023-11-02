@@ -24,14 +24,6 @@ from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
 
 
-# Define bad states defined by PJM which signifiy failed jobs
-# Acceptable job statuses are 'QUEUED', 'RUNNING', 'END'
-BAD_STATES = ["CANCEL", "HOLD", "ERROR"]
-
-# Define the completed state, which may change for different systems
-COMPLETE_STATE = "END"
-
-
 class Fujitsu(Cluster):
     """
     System Fujitsu

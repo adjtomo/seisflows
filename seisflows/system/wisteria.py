@@ -35,7 +35,7 @@ import sys
 import time
 from seisflows import ROOT_DIR, logger
 from seisflows.tools.config import import_seisflows, pickle_function_list
-from seisflows.system.fujitsu import Fujitsu, check_job_status_list
+from seisflows.system.fujitsu import Fujitsu
 
 
 class Wisteria(Fujitsu):
