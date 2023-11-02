@@ -64,7 +64,7 @@ class Backtrack(Bracket):
         # Check if this is the first iteration (by counting 0 step lens).
         # Quasi-Newton direction is not yet scaled properly if first iter. 
         # Instead of a bactracking line perform a bracketing line search
-        if bool(self.step_lens.count(0))
+        if bool(self.step_lens.count(0)):
             alpha, status = super().calculate_step_length()
        
         # Assumed well scaled search direction, attempt backtracking line search 

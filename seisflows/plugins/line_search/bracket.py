@@ -152,7 +152,28 @@ class Bracket:
             `steps` is greater than the number of steps taken in the current 
             line search, will revert to step count 0.
         """
-        i = self.step_count
+        nsteps = self.step_count   # steps taken in current line search
+        if nsteps == 0:
+            logger.warning("cannot revert search history, no steps have been "
+                           "taken this iteration")
+            return
+        # Default value assignment for number of steps to reduce
+        if steps is None:
+            steps = nsteps
+        elif steps > nsteps:
+            logger.warning("number of steps `steps` exceeds number of current "
+                           f"line search step counts, reducing to {nsteps}")
+            steps = nsteps
+
+        logger.info(f"reverting search history {steps} step(s)")
+            
+        self.func_vals = self.func_vals[:steps]
+        self.step_lens = self.step_lens[:steps]
+        assert(len(self.func_vals) == len(self.step_lens)), (
+            f"mismatch between number of step lengths and function evaluations "
+            f"in search history, something has gone wrong with line search"
+        )
+        self.step_count -= steps
         
     def _print_stats(self, x, f):
         """Print out misfit values and step lengths to the logger"""
