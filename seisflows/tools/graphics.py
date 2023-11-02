@@ -199,6 +199,23 @@ def plot_waveforms(tr_obs, tr_syn, tr_adj=None, fid_out=None, title=None,
     plt.savefig(fid_out)
     plt.close()
 
+def plot_optim_stats(fid="output_optim.txt", path_out="./"):
+    """
+    Line plot of optimization stats, which are written about by 
+    Optimize.write_stats(). Intrinsically tied to the format of input file.
+
+    :type fid: str
+    :param fid: path to the optimization stats file to plot
+    """
+    header = open(fid).readlines()[0].strip().split(",")
+    stats = np.loadtxt(fid, delimiter=",", skiprows=1).T
+
+    for h, s in zip(header, stats):
+        plt.plot(s, "ko-")
+        plt.xlabel("Iteration")
+        plt.ylabel(h)
+        plt.savefig(os.path.join(path_out, f"{h}.png"))
+        plt.close("all")
 
 def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
     """
@@ -242,7 +259,8 @@ def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
 def plot_2d_image(x, z, data, cmap="viridis", zero_midpoint=False,
                   resX=1000, resZ=1000):
     """
-    Plots values of a SPECEFM2D model/gradient by interpolating onto a regular grid
+    Plots values of a SPECEFM2D model/gradient by interpolating onto a regular 
+    grid
 
     :type x: np.array
     :param x: x values of GLL mesh
@@ -258,10 +276,14 @@ def plot_2d_image(x, z, data, cmap="viridis", zero_midpoint=False,
         diverging colorscales (e.g., for gradients), where the neutral color
         (e.g., white) is set at value=0
     :type resX: int
-    :param resX: number of points for the interpolation in x- direction (default=1000)
+    :param resX: number of points for the interpolation in x- direction 
+        (default=1000)
     :type resZ: int
-    :param resZ: number of points for the interpolation in z- direction (default=1000)
+    :param resZ: number of points for the interpolation in z- direction 
+    (default=1000)
     """
+    from scipy.interpolate import griddata
+
     # Figure out aspect ratio of the figure
     r = (max(x) - min(x))/(max(z) - min(z))
     rx = r/np.sqrt(1 + r**2)
@@ -276,11 +298,11 @@ def plot_2d_image(x, z, data, cmap="viridis", zero_midpoint=False,
         vmin, vmax = None, None
 
     f = plt.figure(figsize=(10 * rx, 10 * ry))
-    from scipy.interpolate import griddata
 
-    # trick interpolation using the maximum values of z in case of concave topography.
-    # nan values helps interpolation act expectedly.
-    # Can be tested using the default specfem2D model: simple_topography_and_also_a_simple_fluid_layer
+    # trick interpolation using the maximum values of z in case of concave 
+    # topography. nan values helps interpolation act expectedly.
+    # Can be tested using the default specfem2D model: 
+    # simple_topography_and_also_a_simple_fluid_layer
     x = np.append(x, [min(x), max(x)])
     z = np.append(z, [max(z), max(z)])
     data = np.append(data, [np.nan, np.nan])

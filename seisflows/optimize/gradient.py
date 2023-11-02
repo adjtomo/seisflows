@@ -32,6 +32,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
+from seisflows.tools.graphics import plot_optim_stats
 from seisflows.tools.math import angle, dot
 from seisflows.tools.model import Model
 from seisflows.plugins import line_search as line_search_dir
@@ -110,7 +111,7 @@ class Gradient:
         # Hidden paths to store checkpoint file in scratch directory
         self.path["_checkpoint"] = os.path.join(self.path.scratch,
                                                 "checkpoint.npz")
-        self.path["_stats_file"] = os.path.join(self.path.scratch,
+        self.path["_stats_file"] = os.path.join(self.path.output,
                                                 "output_optim.txt")
 
         # Internal check to see if the chosen line search algorithm exists
@@ -470,6 +471,7 @@ class Gradient:
 
         # Needs to be run before shifting model in next step
         self._write_stats()
+        plot_optim_stats(fid=self.path._stats_file, path_out=self.path.output)
 
         logger.info("renaming current (new) optimization vectors as "
                     "previous model (old)")
@@ -539,65 +541,84 @@ class Gradient:
         """
         pass
 
-    def _write_stats(self):
+    def get_stats(self):
         """
-        Simplified write function to append values to text files.
-        Used because stats line search information can be overwritten
-        by subsequent iterations so we need to append values to text files
-        if they should be retained.
+        Get Optimization statistics for the current evaluation of an inversion.
+        Returns a dictionary of values which can then be written to a text file
+        or plotted for convenience.           
 
         .. note::
 
-            This CSV file can be easily read and plotted using np.genfromtxt
-            >>> np.genfromtxt("optim_stats.txt", delimiter=",", names=True, \
-                              dtype=None)
+            The following `factor` was included in the original SeisFlows stats
+            but started throwing runtime errors. Not sure what is was for -- BC
+
+            factor = -1 * dot(g.vector, g.vector)
+            factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]) 
+                    
+        :rtype: Dict of float
+        :return: SeisFlows dictionary object containing statistical informaion
+            about the optimization module
+        """
+        # We construct stats from the gradient (g), search direction (p),
+        # step lengths (x) and function values/misfit (f)
+        g = self.load_vector("g_new")
+        p = self.load_vector("p_new")
+        x, f  = self._line_search.get_search_history(sort=True)
+        step_count = self._line_search.step_count
+
+        # Construct statistics
+        step_length = x[f.argmin()]  # final, accepted step length
+        misfit = f[f.argmin()]  # final, accepted misfit value
+        if_restarted = int(self._restarted)
+        grad_norm_L1 = np.linalg.norm(g.vector, 1)  # L1 norm of gradient
+        grad_norm_L2 = np.linalg.norm(g.vector, 2)  # L2 norm of gradient
+        slope = (f[1] - f[0]) / (x[1] - x[0])  # Slope of the misfit function
+        # Deviation of the search direction from the gradient direction
+        theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)  
+
+        dict_out = Dict(step_count=step_count, step_length=step_length,
+                        misfit=misfit, if_restarted=if_restarted,
+                        grad_norm_L1=grad_norm_L1, grad_norm_L2=grad_norm_L2, 
+                        slope=slope, theta=theta)
+    
+        return dict_out
+
+    def write_stats(self):
+        """
+        Write stats to file so that we don't lose information to subsequent
+        iterations. File is written to `path._stats_file`
         """
         logger.info(f"writing optimization stats: '{self.path._stats_file}'")
 
-        # Gather required information from line search parameters
-        g = self.load_vector("g_new")
-        p = self.load_vector("p_new")
-        x, f  = self._line_search.get_search_history()
-
-        # Calculated stats factors
-        # TODO What is this? It was returning a RuntimeError for value too small
-        #   for double precision. Do we need to keep it?
-        # factor = -1 * dot(g.vector, g.vector)
-        # factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+        keys = ["misfit", "step_count",  "step_length", 
+                "grad_norm_L1", "grad_norm_L2",
+                "slope", "theta", "if_restarted"
+                ]
 
         # First time, write header information and start model misfit. Note that
         # most of the statistics do not apply to the starting model so they
         # are set to 0 by default
         if not os.path.exists(self.path._stats_file):
-            _head = ("step_count,step_length,grad_norm_L1,grad_norm_L2,"
-                     "misfit,if_restarted,slope,theta\n")
-            step_count = 0
-            step_length = x[0]
-            grad_norm_L1 = 0
-            grad_norm_L2 = 0
-            misfit = f[0]
-            slope = 0
-            theta = 0
-            _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
-                    f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
-                    f"{slope:6.3E},{theta:6.3E}\n")
             with open(self.path._stats_file, "w") as f_:
-                f_.write(_head)
-                f_.write(_str)
+                x, f  = self._line_search.get_search_history(sort=True)
+                header = ",".join(keys) + "\n"
+                f_.write(header)
+                # Write values for first iteration
+                for key in keys:
+                    if key == "step_length":
+                        val = x[0]
+                    elif key == "misfit":
+                        val = f[0]
+                    else:
+                        val = 0
+                    f_.write(f"{val:6.3E}")  
+                f_.write("\n")
+        
+        stats = self.get_stats()
 
-        # Gather/calculate information from a given line search run
-        step_count = self._line_search.step_count
-        step_length = x[f.argmin()]
-        misfit = f[f.argmin()]
-
-        grad_norm_L1 = np.linalg.norm(g.vector, 1)
-        grad_norm_L2 = np.linalg.norm(g.vector, 2)
-
-        slope = (f[1] - f[0]) / (x[1] - x[0])
-        theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)
-
-        _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
-                f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
-                f"{slope:6.3E},{theta:6.3E}\n")
+        # Write stats for the current, finished, line search
         with open(self.path._stats_file, "a") as f_:
-            f_.write(_str)
+            for key in keys:
+                f_.write(f"{stats[key]:6.3E},")  
+            f_.write("\n")
+
