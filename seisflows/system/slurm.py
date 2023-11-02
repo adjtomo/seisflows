@@ -87,7 +87,7 @@ class Slurm(Cluster):
         self._completed_states = ["COMPLETED"]
         self._failed_states = ["TIMEOUT", "FAILED", "NODE_FAIL", 
                                "OUT_OF_MEMORY", "CANCELLED"]
-        self._pending_states = ["PENDING"]
+        self._pending_states = ["PENDING", "RUNNING"]
 
     def check(self):
         """
@@ -147,28 +147,46 @@ class Slurm(Cluster):
         ])
         return _call
 
-    @property
-    def run_call_header(self):
+    def run_call(self, exectuable, single=False):
         """
-        The run call defines the SBATCH header which is used to run tasks during
+        The run call defines the SBATCH call which is used to run tasks during
         an executing workflow. Like the submit call its arguments are dictated
         by the given system. Run calls are modified and called by the `run`
         function
 
+        :type executable: str
+        :param exectuable: the actual exectuable to run within the SBATCH 
+            directive. Something like './script.py'
+        :type single: bool
+        :param single: flag to get a run call that is meant to be run on the
+            mainsolver (ntask==1), or run for all jobs (ntask times). Examples
+            of single process runs include smoothing, and kernel combination
         :rtype: str
         :return: the system-dependent portion of a run call
         """
+        # Determine if this is a single-process or array job
+        if single:
+            array = 0
+            ntasks = 1
+            env = "SEISFLOWS_TASKID=0," 
+        else:
+            array = self.task_ids()
+            ntasks = self.nproc
+            env = ""
+        
         _call = " ".join([
              f"sbatch",
              f"{self.slurm_args or ''}",
              f"--job-name={self.title}",
              f"--nodes={self.nodes}",
              f"--ntasks-per-node={self.node_size:d}",
-             f"--ntasks={self.nproc:d}",
+             f"--ntasks={ntasks:d}",
              f"--time={self._tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-             f"--array={self.task_ids()}",
-             f"--parsable"
+             f"--array={array}",
+             f"--parsable",
+             f"{executable}",
+             f"--environment {env}{self.environs or ''}"
         ])
         return _call
 
@@ -206,7 +224,7 @@ class Slurm(Cluster):
 
         return job_id
 
-    def run(self, funcs, single=False, tasktime=None, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, _attempts=0, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes the list of functions (`funcs`) NTASK times with each
@@ -229,46 +247,31 @@ class Slurm(Cluster):
             functions `funcs`. If not given, defaults to the System variable
             `tasktime`. If tasks exceed the given `tasktime`, the program will 
             exit
+        :type _attempts: int
+        :param _attempts: a recursive counter for failed job runs that allows 
+            the `run` function to re-attempt failed jobs up to `rerun` number
+            of times
         """
-        # Allow custom tasktime, else default to System variable
-        if tasktime is None:
-            tasktime = self.tasktime
-        self._tasktime = str(timedelta(minutes=tasktime))
+        logger.info(f"running functions {[_.__name__ for _ in funcs]}")
 
+        # Allow custom tasktime, else default to System variable
+        self._tasktime = str(timedelta(minutes=tasktime or self.tasktime))
+
+        # Condense the functions that we want to run on system to a pickle file
         funcs_fid, kwargs_fid = pickle_function_list(
                 funcs, path=self.path.scratch, verbose=self.verbose,
                 level=self.log_level, **kwargs
                 )
 
-        if single:
-            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                        f"system 1 time")
-        else:
-            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                        f"system {self.ntask} times")
-
-        # Default sbatch command line input, can be overloaded by subclasses
-        # Copy-paste this default run_call and adjust accordingly for subclass
-        run_call = " ".join([
-            f"{self.run_call_header}",
-            f"{self.run_functions}",
-            f"--funcs {funcs_fid}",
-            f"--kwargs {kwargs_fid}",
-            f"--environment {self.environs or ''}"
-        ])
-
-        # Single-process jobs simply need to replace a few sbatch arguments.
-        # Do it AFTER `run_call` has been defined so that subclasses submitting
-        # custom run calls can still benefit from this
-        if single:
-            logger.debug("replacing parts of sbatch run call for single "
-                         "process job")
-            run_call = self._modify_run_call_single_proc(run_call)
-
+        # Get the run call that will be submitted to the system via subprocess
+        run_call = self.run_call(exectuable=f"{self.run_functions} "
+                                            f"--funcs {funcs_fid} "
+                                            f"--kwargs {kwargs_fid}",
+                                 single=single
+                                 )
         logger.debug(run_call)
 
         # RUN the job by submitting the sbatch directive to system
-        # get job id (used to monitor job status) from the stdout message
         stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
         job_id = self._stdout_to_job_id(stdout)
@@ -276,18 +279,15 @@ class Slurm(Cluster):
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
             status = self.monitor_job_status(job_id)
-        except FileNotFoundError:
-            logger.critical(f"cannot access job information through 'sacct', "
-                            f"waited {TIMEOUT_S}s with no return, please "
-                            f"check job scheduler and log messages, or "
-                            f"increase timeout constant in `system.slurm`")
-            sys.exit(-1)
+        except Timeou:
+
 
         # Job has completed
         if status == -1:  # Failed job
             logger.critical(
                 msg.cli(f"Stopping workflow. Please check logs for details.",
                         items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
+                               f"JOB_ID": {job_id}
                                f"SBATCH:  {run_call}"],
                         header="slurm run error", border="=")
             )
@@ -325,13 +325,11 @@ class Slurm(Cluster):
 
         return task_ids
 
-    def query_job_states(self, job_id, timeout_s=300, wait_time_s=30, 
-                         _recheck=0):
+    def query_job_states(self, job_id):
         """
         Overwrites `system.cluster.Cluster.query_job_states`
 
-        Queries completion status of an array job by running the SLURM cmd 
-        `sacct`, 
+        Queries completion status of an array job by running the SLURM `sacct`
 
         .. note::
             The actual command line call wil look something like this
@@ -347,38 +345,21 @@ class Slurm(Cluster):
                 returned but don't represent that actual running job
 
         :type job_id: str
-        :param job_id: main job id to query, returned from the subprocess.run that
-            ran the jobs
-        :type timeout_s: float
-        :param timeout_s: length of time [s] to wait for system to respond 
-            nominally before rasing a TimeoutError. Sometimes it takes a while
-            for job monitoring to start working.
-        :type wait_time_s: float
-        :param wait_time_s: initial wait time to allow System to initialize 
-            jobs in the queue. I.e., how long do we  expect it to take before 
-            the job we submitted shows up in the queue.
-        :type rechecks: int
-        :param rechecks: Used for recursive calling of the function. It can take 
-            time for jobs to be initiated on a system, which may result in the 
-            stdout of the 'sacct' command to be empty. In this case we wait and 
-            call the function again. Rechecks are used to prevent endless loops 
-            by putting a stop criteria
-        :raises TimeoutError: if 'sacct' does not return any output for ~1 min.
+        :param job_id: main job id to query, returned from the subprocess.run 
+            that ran the jobs
+        :rtype: (list, list)
+        :return: (job ids, corresponding job states). Returns (None, None) if
+            `sacct` does not return a useful stdout (e.g., jobs have not
+            yet initialized on system)
         """
         job_ids, job_states = [], []
         cmd = f"sacct -nLX -o jobid,state -j {job_id}"
         result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
         stdout = result.stdout
 
-        # Recursively re-check job state incase the job has not been instantiated 
-        # in which cause 'stdout' is an empty string
+        # If no return, return None so calling function knows something is wrong
         if not stdout:
-            _recheck += 1
-            if _recheck > (timeout_s // wait_time_s):
-                raise TimeoutError(f"cannot access job ID {job_id}")
-            time.sleep(wait_time_s)
-            # Recursive call while ticking up `_recheck` as a timeout counter
-            query_job_states(job_id, _recheck=_recheck)
+            return None, None
 
         # Return the job numbers and respective states for the given job ID
         for job_line in str(stdout).strip().split("\n"):
@@ -389,30 +370,4 @@ class Slurm(Cluster):
             job_states.append(job_state)
 
         return job_ids, job_states
-
-    def _modify_run_call_single_proc(self, run_call):
-        """
-        Modifies a SLURM SBATCH command to use only 1 processor as a single run
-        by replacing the --array and --ntasks options
-
-        :type run_call: str
-        :param run_call: The SBATCH command to modify
-        :rtype: str
-        :return: a modified SBATCH command that should only run on 1 processor
-        """
-        for part in run_call.split(" "):
-            if "--array" in part:
-                run_call = run_call.replace(part, "--array=0")
-            elif "--ntasks" in part:
-                run_call = run_call.replace(part, "--ntasks=1")
-
-        # Append taskid to environment variable, deal with the case where
-        # self.par.ENVIRONS is an empty string
-        task_id_str = "SEISFLOWS_TASKID=0"
-        if not run_call.strip().endswith("--environment"):
-            task_id_str = f",{task_id_str}"  # appending to the list of vars
-
-        run_call += task_id_str
-
-        return run_call
 

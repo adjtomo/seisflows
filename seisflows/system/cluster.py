@@ -163,7 +163,7 @@ class Cluster(Workstation):
             logger.critical(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
 
-    def run(self, funcs, single=False, tasktime=None, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, _retry=0, **kwargs):
         """
         Runs tasks multiple times in parallel by submitting NTASK new jobs to
         system. The list of functions and its kwargs are saved as pickles files,
@@ -284,7 +284,7 @@ class Cluster(Workstation):
 
         return task_id, result.returncode
 
-    def monitor_job_status(self, job_id):
+    def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=5):
         """
         Repeatedly check the status of a currently running job(s) in a clusters' 
         queue. If the job goes into a bad state (like 'FAILED'), log the 
@@ -313,6 +313,14 @@ class Cluster(Workstation):
             array (e.g., 1_0, 1_1, 1_2)
             -if a list, we expect that the jobs have been submitted with independent
             job numbers (e.g, 0, 1, 2)
+        :type timeout_s: float
+        :param timeout_s: length of time [s] to wait for system to respond 
+            nominally before rasing a TimeoutError. Sometimes it takes a while
+            for job monitoring to start working.
+        :type wait_time_s: float
+        :param wait_time_s: initial wait time to allow System to initialize 
+            jobs in the queue. I.e., how long do we  expect it to take before 
+            the job we submitted shows up in the queue.
         :rtype: int
         :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
             fail (one or more jobs returned failing status)
@@ -320,8 +328,10 @@ class Cluster(Workstation):
         """
         logger.info(f"monitoring job status for job: {job_id}")
         bad_jobs = []  # used to keep track of failed jobs
+        time_waited = 0
         while True:
-            time.sleep(25)  # give job time to initialize in queue (units: s)
+            time.sleep(wait_time_s)  # wait so we don't overwhelm queue system
+            time_waited += wait_time_s
 
             # Treat job arrays and job lists differently
             if isinstance(job_id, list):
@@ -333,27 +343,41 @@ class Cluster(Workstation):
             else:                                             
                 job_ids, states = self.query_job_states(job_id)
 
-            # Sometimes query_job_state() does not return, so we wait again
+            # Condition to deal with `query_job_states` not returning correctly
             if not job_ids or not states:
+                # After some timeout time, exit main job, likely error
+                if time_waited >= timeout_s:
+                    logger.critical(msg.cli(
+                        f"cannot access job information with "
+                        f"`system.query_job_states()` after {wait_time_s}s."
+                        f"Please check function, job scheduler and logs, or "
+                        f"increase timeout constant in "
+                        f"`Cluster.monitor_job_status`"),
+                        header="system run timeout", border="="
+                    )
+                    sys.exit(-1)
                 continue
 
             # COMPLETE: All jobs completed nominally, proceed
             if all([state in self._completed_states for state in states]):
                 logger.debug(f"all array jobs returned a complete state")
                 return 1  # Pass
-            # FAILED: All jobs are finished, but not all 'COMPLETED'
+            # FAILED: All jobs are finished, but not all 'completed'
             elif all([state not in self._pending_states for state in states]):
-                logger.debug("some array jobs have returned a non-complete "
-                             "state")
+                # List out any failed jobs not already listed in FAILING state
+                for job_id, state in zip(job_ids, states):
+                    if state in self._failed_states and job_id not in bad_jobs:
+                        logger.critical(f"{job_id}: {state}")
+                logger.critical("some array jobs have returned a non-complete "
+                                "state")
                 return -1
             # FAILING: Jobs still running but >1 non-complete. Keep monitoring
             elif any([check in states for check in self._failed_states]):
                 for job_id, state in zip(job_ids, states):
-                    if state in FAILED_STATES:
+                    if state in self._failed_states job_id not in bad_jobs::
                         # Let User know failing jobs as they arise, only once
-                        if job_id not in bad_jobs:
-                            logger.critical(f"{job_id}: {state}")
-                            bad_jobs.append(job_id)
+                        logger.critical(f"{job_id}: {state}")
+                        bad_jobs.append(job_id)
                 continue    
             # PENDING: Jobs running, mixture of pending and complete states
             else:
