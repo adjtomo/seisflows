@@ -79,7 +79,7 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
-    def __init__(self, ntask=1, nproc=1, tasktime=None, mpiexec=None, 
+    def __init__(self, ntask=1, nproc=1, tasktime=1, mpiexec=None, 
                  array=None, rerun=0, log_level="DEBUG", verbose=False, 
                  workdir=os.getcwd(), path_output=None, path_system=None, 
                  path_par_file=None, path_output_log=None, path_log_files=None, 

@@ -68,7 +68,8 @@ class TestFlow:
         else:
             _task_list += [# self.test_system_print_hello_world,
                            # self.test_single_job_failure,
-                           self.test_partial_array_job_failure
+                           # self.test_partial_array_job_failure,
+                           self.test_array_job_rerun
                            ]
 
         return _task_list
@@ -106,6 +107,7 @@ class TestFlow:
         self.system.nproc = 1
         self.system.tasktime = .25  # 15 seconds
         self.system.walltime = 2.5  # 2.5 minutes
+        self.system.rerun = 0
 
     def run(self):
         """
@@ -151,7 +153,6 @@ class TestFlow:
                     f"log file '{fid}' does not show correct log message"
 
         logger.info("job array submission system test finished successfully")
-                
 
     def test_single_job_failure(self):
         """
@@ -225,8 +226,9 @@ class TestFlow:
         Test that partial array job failures will cause the entire main job
         to crash
         """
-        logger.info("running system test for job queue monitoring and "
-                    "job failure catching")
+        self.system.rerun = 1
+
+        logger.info("running system test for array job rerun capability")
 
         def _test_function(**kwargs):
             time.sleep(10)  # need to wait for queue system to catch up

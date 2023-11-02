@@ -78,7 +78,6 @@ class Slurm(Cluster):
         self._partitions = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
-        self._tasktime = None
         self._walltime = str(timedelta(minutes=self.walltime))
     
         # Define SLURM-dependent job states used for monitoring queue
@@ -105,8 +104,8 @@ class Slurm(Cluster):
         assert(self.submit_to in self._partitions), \
             f"Submission partition name must match {self._partitions}"
 
-        assert("--parsable" in self.run_call_header), (
-            f"System `run_call_header` requires SBATCH argument '--parsable' "
+        assert("--parsable" in self.run_call()), (
+            f"System `run_call` requires SBATCH argument '--parsable' "
             f"which is required to keep STDOUT formatted correctly when "
             f"submitting jobs to the system."
         )
@@ -147,7 +146,7 @@ class Slurm(Cluster):
         ])
         return _call
 
-    def run_call(self, exectuable, single=False):
+    def run_call(self, executable="", single=False, array=None, tasktime=None):
         """
         The run call defines the SBATCH call which is used to run tasks during
         an executing workflow. Like the submit call its arguments are dictated
@@ -157,6 +156,11 @@ class Slurm(Cluster):
         :type executable: str
         :param exectuable: the actual exectuable to run within the SBATCH 
             directive. Something like './script.py'
+        :type array: str
+        :param array: overwrite the `array` variable to run specific jobs. If
+            not provided, then we will run jobs 0-{ntask}%{ntask_max}. Jobs 
+            should be submitted in the format of a SLURM array string, 
+            something like: 0,1,3,5 or 2-4,8-22
         :type single: bool
         :param single: flag to get a run call that is meant to be run on the
             mainsolver (ntask==1), or run for all jobs (ntask times). Examples
@@ -164,13 +168,18 @@ class Slurm(Cluster):
         :rtype: str
         :return: the system-dependent portion of a run call
         """
+        array = array or self.task_ids(single=single)  # get job array str
+        if tasktime is None:
+            # 0 is there just for initialization. `tasktime` will superceded
+            tasktime = str(timedelta(minutes=0 or self.tasktime))
+        else:
+            tasktime = str(timedelta(minutes=tasktime))
+
         # Determine if this is a single-process or array job
         if single:
-            array = 0
             ntasks = 1
             env = "SEISFLOWS_TASKID=0," 
         else:
-            array = self.task_ids()
             ntasks = self.nproc
             env = ""
         
@@ -181,11 +190,11 @@ class Slurm(Cluster):
              f"--nodes={self.nodes}",
              f"--ntasks-per-node={self.node_size:d}",
              f"--ntasks={ntasks:d}",
-             f"--time={self._tasktime}",
+             f"--time={tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
              f"--array={array}",
              f"--parsable",
-             f"{executable}",
+             f"{executable}",  # <-- The actual script/program to run goes here
              f"--environment {env}{self.environs or ''}"
         ])
         return _call
@@ -216,21 +225,24 @@ class Slurm(Cluster):
         job_id = str(stdout).split(";")[0].strip()
         try:
             int(job_id)
-        except ValueError:
+        except ValueError as e:
             logger.critical(f"parsed job id '{job_id}' does not evaluate as an "
                             f"integer, please check that function "
                             f"`system._stdout_to_job_id()` is set correctly")
+            logger.critical(e)
             sys.exit(-1)
 
         return job_id
 
-    def run(self, funcs, single=False, tasktime=None, _attempts=0, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, array=None, _attempts=0, 
+            **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes the list of functions (`funcs`) NTASK times with each
         task occupying NPROC cores.
 
         .. note::
+            
             Completely overwrites the `Cluster.run()` command
 
         :type funcs: list of methods
@@ -247,15 +259,17 @@ class Slurm(Cluster):
             functions `funcs`. If not given, defaults to the System variable
             `tasktime`. If tasks exceed the given `tasktime`, the program will 
             exit
+        :type array: str
+        :param array: overwrite the `array` variable to run specific jobs. If
+            not provided, then we will run jobs 0-{ntask}%{ntask_max}. Jobs 
+            should be submitted in the format of a SLURM array string, 
+            something like: 0,1,3,5 or 2-4,8-22
         :type _attempts: int
         :param _attempts: a recursive counter for failed job runs that allows 
             the `run` function to re-attempt failed jobs up to `rerun` number
             of times
         """
         logger.info(f"running functions {[_.__name__ for _ in funcs]}")
-
-        # Allow custom tasktime, else default to System variable
-        self._tasktime = str(timedelta(minutes=tasktime or self.tasktime))
 
         # Condense the functions that we want to run on system to a pickle file
         funcs_fid, kwargs_fid = pickle_function_list(
@@ -264,10 +278,10 @@ class Slurm(Cluster):
                 )
 
         # Get the run call that will be submitted to the system via subprocess
-        run_call = self.run_call(exectuable=f"{self.run_functions} "
+        run_call = self.run_call(executable=f"{self.run_functions} "
                                             f"--funcs {funcs_fid} "
                                             f"--kwargs {kwargs_fid}",
-                                 single=single
+                                 tasktime=tasktime, array=array, single=single
                                  )
         logger.debug(run_call)
 
@@ -276,22 +290,36 @@ class Slurm(Cluster):
                                 text=True, shell=True).stdout
         job_id = self._stdout_to_job_id(stdout)
 
-        # Monitor the job queue until all jobs have completed, or any one fails
-        try:
-            status = self.monitor_job_status(job_id)
-        except Timeou:
+        # Monitor the job queue until all jobs have finished
+        status = self.monitor_job_status(job_id)
 
+        # Failed job
+        if status == -1:  
+            # Failure recovery mechanism. Determine which jobs did not complete
+            # and attempt to rerun them up to a certain amount of times
+            if self.rerun and _attempts <= self.rerun:
+                failed_jobs, _ = self.query_job_states(
+                                            job_id, states=self._failed_states
+                                            )
+                array_str = ",".join([_ for _ in failed_jobs])
 
-        # Job has completed
-        if status == -1:  # Failed job
-            logger.critical(
-                msg.cli(f"Stopping workflow. Please check logs for details.",
-                        items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
-                               f"JOB_ID": {job_id}
-                               f"SBATCH:  {run_call}"],
-                        header="slurm run error", border="=")
-            )
-            sys.exit(-1)
+                logger.info(f"attempt rerun {len(failed_jobs)} failed jobs")
+                logger.debug(array_str)
+
+                # Recursively 'run' the functions but only with the failed jobs,
+                # assuming that all other jobs completed nominally
+                self.run(funcs=funcs, single=single, tasktime=tasktime,
+                         array=array_str, _attempts=_attempts+1, **kwargs)
+            else:
+                logger.critical(
+                    msg.cli(f"Stopping workflow. Please check logs for details",
+                            items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
+                                   f"JOB_ID: {job_id}",
+                                   f"SBATCH:  {run_call}"],
+                            header="slurm run error", border="=")
+                )
+                sys.exit(-1)
+        # Completed job will end the 'run' function
         else:
             logger.info(f"task {job_id} finished successfully")
             # Wait for all processes to finish and write to disk (if they do)
@@ -312,7 +340,7 @@ class Slurm(Cluster):
             default to TaskID == 0
         :rtype: str
         :return: string formatter of Task IDs to be used by the `run` function
-            via the `run_call_header`
+            via the `run_call`
         """
         if single:
             task_ids = "0"
@@ -325,7 +353,7 @@ class Slurm(Cluster):
 
         return task_ids
 
-    def query_job_states(self, job_id):
+    def query_job_states(self, job_id, states=None):
         """
         Overwrites `system.cluster.Cluster.query_job_states`
 
@@ -347,6 +375,9 @@ class Slurm(Cluster):
         :type job_id: str
         :param job_id: main job id to query, returned from the subprocess.run 
             that ran the jobs
+        :type states: list
+        :param states: If not None, return only job IDs which match the states
+            requested. Useful, e.g., to find only failing jobs
         :rtype: (list, list)
         :return: (job ids, corresponding job states). Returns (None, None) if
             `sacct` does not return a useful stdout (e.g., jobs have not
@@ -366,6 +397,9 @@ class Slurm(Cluster):
             if not job_line:
                 continue
             job_id, job_state = job_line.split()
+            # If requested, skip states that don't match
+            if states and job_state not in states:
+                continue
             job_ids.append(job_id)
             job_states.append(job_state)
 

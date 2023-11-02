@@ -284,7 +284,7 @@ class Cluster(Workstation):
 
         return task_id, result.returncode
 
-    def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=5):
+    def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=15):
         """
         Repeatedly check the status of a currently running job(s) in a clusters' 
         queue. If the job goes into a bad state (like 'FAILED'), log the 
@@ -318,9 +318,9 @@ class Cluster(Workstation):
             nominally before rasing a TimeoutError. Sometimes it takes a while
             for job monitoring to start working.
         :type wait_time_s: float
-        :param wait_time_s: initial wait time to allow System to initialize 
-            jobs in the queue. I.e., how long do we  expect it to take before 
-            the job we submitted shows up in the queue.
+        :param wait_time_s: wait time interval to allow System to initialize 
+            jobs in the queue and to prevent the check system from constantly 
+            querying the queue system.
         :rtype: int
         :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
             fail (one or more jobs returned failing status)
@@ -329,6 +329,10 @@ class Cluster(Workstation):
         logger.info(f"monitoring job status for job: {job_id}")
         bad_jobs = []  # used to keep track of failed jobs
         time_waited = 0
+
+        # This is run in a while loop as we will keep checking job statuses 
+        # until they fall into one of two states, completed or failed
+        # Intermediate states like pending and failing will continue to wait
         while True:
             time.sleep(wait_time_s)  # wait so we don't overwhelm queue system
             time_waited += wait_time_s
@@ -349,7 +353,7 @@ class Cluster(Workstation):
                 if time_waited >= timeout_s:
                     logger.critical(msg.cli(
                         f"cannot access job information with "
-                        f"`system.query_job_states()` after {wait_time_s}s."
+                        f"`system.query_job_states()` after {timeout_s}s."
                         f"Please check function, job scheduler and logs, or "
                         f"increase timeout constant in "
                         f"`Cluster.monitor_job_status`"),
@@ -374,7 +378,7 @@ class Cluster(Workstation):
             # FAILING: Jobs still running but >1 non-complete. Keep monitoring
             elif any([check in states for check in self._failed_states]):
                 for job_id, state in zip(job_ids, states):
-                    if state in self._failed_states job_id not in bad_jobs::
+                    if state in self._failed_states and job_id not in bad_jobs:
                         # Let User know failing jobs as they arise, only once
                         logger.critical(f"{job_id}: {state}")
                         bad_jobs.append(job_id)
