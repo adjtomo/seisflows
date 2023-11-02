@@ -74,6 +74,12 @@ class Cluster(Workstation):
         self.ntask_max = ntask_max or nproc() - 1  # -1 because master job
         self.walltime = walltime
         self.environs = environs or ""
+    
+        # These define cluster status codes for jobs queued/running, 
+        # completed, or failed. Must be filled in by child classes.
+        self._failed_states = []
+        self._completed_states = []
+        self._pending_states = []
 
 
     @property
@@ -276,3 +282,109 @@ class Cluster(Workstation):
             f.close()
 
         return task_id, result.returncode
+
+    def monitor_job_status(job_id):
+        """
+        Repeatedly check the status of a currently running job(s) in a clusters' 
+        queue. If the job goes into a bad state (like 'FAILED'), log the 
+        failing job's id and their states. Returns a state of 1 if all jobs 
+        complete nominally, returns a state of -1 if >1 job returns a 
+        non-complete status.
+
+        .. note::
+            
+            This function does nothing in the `Cluster` module, but it is used
+            by child classes, and so defines a usable code that child
+            classes can inherit. Originally this monitoring system was 
+            written for the SLURM workload manager, but it is generalized.
+            
+        .. note::
+
+            The time.sleep() is critical before querying job status because the 
+            system will likely take a second to intitiate jobs so if we 
+            `query_job_states` before this has happenend, it will return empty
+            lists and cause the function to error out
+
+        :type job_id: str or list
+        :param job_id: main job id(s) to query, returned from the subprocess.run 
+            that ran the job(s). 
+            - if single value, we expect that jobs have been submitted as a job 
+            array (e.g., 1_0, 1_1, 1_2)
+            -if a list, we expect that the jobs have been submitted with independent
+            job numbers (e.g, 0, 1, 2)
+        :rtype: int
+        :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
+            fail (one or more jobs returned failing status)
+        :raises TimeoutError: if 'sacct' does not return any output for ~1 min.
+        """
+        logger.info(f"monitoring job status for job: {job_id}")
+        bad_jobs = []  # used to keep track of failed jobs
+        while True:
+            time.sleep(WAIT_TIME_S)  # give job time to process 
+
+            # Treat job arrays and job lists differently
+            if isinstance(job_id, list):
+                job_ids, states = [], []
+                for jid in job_id:
+                    _job_ids, _states = self.query_job_states(jid)                         
+                    job_ids += _job_ids            
+                    states += _states       
+            else:                                             
+                job_ids, states = self.query_job_states(job_id)
+
+            # Sometimes query_job_state() does not return, so we wait again
+            if not job_ids or not states:
+                continue
+
+            # COMPLETE: All jobs completed nominally, proceed
+            if all([state in self._completed_states for state in states]):
+                logger.debug(f"all array jobs returned a complete state")
+                return 1  # Pass
+            # FAILED: All jobs are finished, but not all 'COMPLETED'
+            elif all([state not in self._pending_states for state in states]):
+                logger.debug("some array jobs have returned a non-complete "
+                             "state")
+                return -1
+            # FAILING: Jobs still running but >1 non-complete. Keep monitoring
+            elif any([check in states for check in self._failed_states]):
+                for job_id, state in zip(job_ids, states):
+                    if state in FAILED_STATES:
+                        # Let User know failing jobs as they arise, only once
+                        if job_id not in bad_jobs:
+                            logger.critical(f"{job_id}: {state}")
+                            bad_jobs.append(job_id)
+                continue    
+            # PENDING: Jobs running, mixture of pending and complete states
+            else:
+                continue
+
+    def query_job_states(self, job_id, timeout_s=300, wait_time_s=30, 
+                         _recheck=0):
+        """
+        Queries completion status of an array job. This function is required
+        by child classes and is set here as an empty template. 
+
+        .. note::
+
+            MUST be handled by child class for a specific cluster. 
+            See `System.Slurm` for one example of how this is handled.
+
+        :type job_id: str
+        :param job_id: job id to query
+        :type timeout_s: float
+        :param timeout_s: length of time [s] to wait for system to respond 
+            nominally before rasing a TimeoutError. Sometimes it takes a while
+            for job monitoring to start working.
+        :type wait_time_s: float
+        :param wait_time_s: initial wait time to allow System to initialize 
+            jobs in the queue. I.e., how long do we  expect it to take before 
+            the job we submitted shows up in the queue.
+        :type _recheck: int
+        :param _recheck: A counter used for recursive calling of the function
+        :rtype: (list, list)
+        :return: (list of job id(s), list of states for each job)
+        :raises TimeoutError: if no output is received from System after
+        """
+        raise NotImplementedError
+
+        # return job_ids, job_states

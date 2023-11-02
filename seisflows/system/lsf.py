@@ -32,14 +32,15 @@ class Lsf(Cluster):
     http://seisflows.readthedocs.org/en/latest/manual/
                                                 manual.html#system-configuration
     """
+    raise NotImplementedError("This System module is not fully "
+                              "implemented. Please open a GitHub issue if you "
+                              "would like to see this capability in SeisFlows, "
+                              "(github.com/adjtomo/seisflows/issues)")
     def __init__(self):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
         """
-        raise NotImplementedError("This module is still a work in progress")
-        sys.exit(-1)
-
         super().__init__()
 
         self.logger.warning("system.LSF is underdeveloped and "

@@ -162,7 +162,7 @@ class Wisteria(Fujitsu):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = check_job_status_list(job_ids)
+            status = self.check_job_status(job_ids)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "
