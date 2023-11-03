@@ -49,19 +49,79 @@ class Bracket:
         self.gtg = []
         self.gtp = []
         self.step_count = 0
+        self.iteridx = []
+    
+    def _log_stats(self):
+        """Print out misfit values and step lengths to the logger"""
+        x, f = self.get_search_history()
+        x_str = ", ".join([f"{_:.2E}" for _ in x])
+        f_str = ", ".join([f"{_:.2E}" for _ in f])
+        logger.info(f"step length(s) = {x_str}")
+        logger.info(f"misfit val(s)  = {f_str}")
+    
+    @property
+    def updates(self):
+        """Keep track of how many model updates we have made"""
+        return len(self.iteridx)
 
-    def update_search_history(self, func_val, step_len, gtg=None, gtp=None):
+    def check():
         """
-        Update the internal list of search history attributes. Lists like
-        `func_vals` get appended to, while values like step_count are
-        overwritten. Allowed to increment func_val and step_len by themselves
+        Make sure internal parameters are consistent with expectations. This is
+        always expected to pass if the User/workflow uses the main functions 
+        to manipulate the line search. But occasionally some manual intervention
+        is required, so the check function makes sure things are okay.
         """
+        try:
+            assert len(self.iterations) != len(self.gtg), (
+                "number of iterations is inconsistent with intializations"
+            )
+            assert(len(self.gtg) == len(self.gtp)), (
+                "line search GTP and GTG have become inconsistent"
+            )
+            assert(len(self.step_lens) == len(self.func_vals)), (
+                "line search step lengths and func vals inconsistent"
+            )
+            assert(len(self.iteridx) == self.step_lens.count(0)), (
+                "line search iterations and initial step lengths inconsistent"
+            )
+        except AssertionError as e: 
+            logger.critical(e)
+
+    def initialize_line_search(self, func_val, gtg, gtp):
+        """
+        Input the initial values of a line search, corresponding to the 
+        initial model for this given iteration. Step length is assumed to be 0,
+        because step length is calculated relative to the initial model.
+        """
+        self.step_count = 1
+        self.step_lens.append(0)
+        self.func_vals.append(func_val)
+        self.gtg.append(gtg)
+        self.gtp.append(gtp)
+
+        # `iteridx`` keeps track of the index of each iteration. That way
+        # if we need to revert or restart a line search, we know exactly where
+        # to roll back to
+        self.iteridx.append(len(self.gtg) - 1)  # -1 to get index not length
+
+    def update_search_history(self, func_val, step_len):
+        """
+        After a misfit evaluation for a trial model, line search needs to know
+        how large the step (alpha) was, and the corresponding objective function
+        misfit evaluation value.
+
+        :type func_val: float
+        :param func_val: value of the objective function evaluation
+        :type step_len: float
+        :param step_len: length of step for the trial model (alpha)
+        """
+        # Quick check to make sure this is expected
+        x, f = self.get_search_history():
+        assert len(x) + 1 == self.step_count, \
+            "update was not expected, step count does not match array length"
+        
         self.func_vals.append(func_val)
         self.step_lens.append(step_len)
-        if gtg:
-            self.gtg.append(gtg)
-        if gtp:
-            self.gtp.append(gtp)
 
     def clear_search_history(self):
         """
@@ -75,97 +135,24 @@ class Bracket:
         self.gtg = []
         self.gtp = []
         self.step_count = 0
+        self.iteridx = []
 
-    def check_search_history(self):
-        """
-        Since the line search is just a wrapper for list of numbers, check that
-        search history hasn't been muddled up by ensuring that internal lists
-        are the correct length for the given evaluation
-        """
-        assert(len(self.gtg) == len(self.gtp)), f"too many entries for 'gtg'"
-        assert(len(self.gtg) == len(self.gtp) == self.step_lens.count(0)), \
-            f"line search update count measure is inconsistent"
-        assert(len(self.func_vals) == len(self.step_lens)), \
-            f"number of function evaluations does not match step lengths"
-        if self.func_vals:
-            assert(self.step_count + 1 == len(self.func_vals)), \
-                f"current step count doesn't match the number of function evals"
-
-    def get_search_history(self, sort=True):
-        """
-        A convenience function, collects information based on the current
-        evaluation of the line search, needed to determine search status and 
-        calculate step length. From the full collection of the search history,
-        only returns values relevant to the current line search.
-
-        .. note::
-
-            In the original SeisFlows the values of the search history were
-            non-intuitive and difficult to understand at a glance. The 
-            original values are copied here as they relate to the mathematical
-            formulations and so are still important:
-        
-            i = self.step_count  
-            k = len(self.step_lens)
-            x = np.array(self.step_lens[k - i - 1:k])
-            f = np.array(self.func_vals[k - i - 1:k])
-            j = count_zeros(self.step_lens) - 1  # update count
-
-        :type sort: bool
-        :param sort: sort the search history by step length
-        :return gtp: dot product of gradient and search direction
-        :rtype: (np.array, np.array)
-        :return: (step lengths of current line search, 
-                  misfits of current line search)
-        """
-        # Number of steps taken the current line search
-        nsteps = self.step_count + 1  # i; +1 to include 0
-
-        # Only return the last valid step lengths and misfit values that 
-        # represent the current line search
-        step_lens = np.array(self.step_lens[-nsteps:])  # x
-        func_vals = np.array(self.func_vals[-nsteps:])  # f
-
-        # Sort by step length
-        if sort:
-            func_vals = func_vals[abs(step_lens).argsort()]
-            step_lens = step_lens[abs(step_lens).argsort()]
-
-        return step_lens, func_vals
-    
-    def restart_line_search(self):
+    def _restart_line_search(self):
         """
         Iff a line search has been initialized and something goes awry, it is
         often preferable to restart the line search. To do this, we roll back
         the number of steps we have taken during the line search, and undo
         variable changes that took place in 'initialize_search'. 
-
-        .. note::
-
-            You will have to re-run `workflow.initialize_line_search()` to
-            ensure that the restarted line search is initialized properly
-        
-        .. warning::
-
-            You must run `optimize.checkpoint()` to have this change take 
-            effect in the workflow. Once checkpointed, this information is lost 
-            and cannot be  recovered easily
         """
-        # Determine how many values we need to remove
-        nvals = self.step_count + 1  # i; +1 to include 0
-
         logger.info("restarting line search for the current iteration")
-        self.step_lens = self.step_lens[:-nvals]
-        self.func_vals = self.func_vals[:-nvals]
 
-        # Only step back gtg and gtp once because they were only updated at 
-        # line search initialization
-        self.gtg = self.gtg[:-1]
-        self.gtp = self.gtp[:-1]
-
+        idx = self.iteridx[-1]
         self.step_count = 0
-    
-    def revert_search_history(self):
+        # Clear out search history up to the last iteration
+        self.step_lens = self.steplens[:idx]
+        self.func_vals = self.func_vals[:idx]
+
+    def _revert_search_history(self):
         """
         Occasionally a line search will break mid-search but the User doesn't 
         want to `restart_line_search`, but rather just roll back to the previous
@@ -193,13 +180,48 @@ class Bracket:
         self.func_vals = self.func_vals[:-1]
         self.step_lens = self.step_lens[:-1]
         self.step_count -= 1
+
+    def get_search_history(self):
+        """
+        Get the step lengths and misfit function evaluations for the current
+        line search. Sort the list by the step lengths to get a coherent list,
+        as e.g., in a bracketing line search the actual order of the list 
+        does not match the magnitude of step lengths taken.
+
+        .. note::
+
+            In the original SeisFlows the values of the search history were
+            non-intuitive and difficult to understand at a glance. The 
+            original values are copied here as they relate to the mathematical
+            formulations and so are still important:
         
-    def _print_stats(self, x, f):
-        """Print out misfit values and step lengths to the logger"""
-        x_str = ", ".join([f"{_:.2E}" for _ in x])
-        f_str = ", ".join([f"{_:.2E}" for _ in f])
-        logger.debug(f"step length(s) = {x_str}")
-        logger.debug(f"misfit val(s)  = {f_str}")
+            i = self.step_count  
+            k = len(self.step_lens)
+            x = np.array(self.step_lens[k - i - 1:k])
+            f = np.array(self.func_vals[k - i - 1:k])
+            j = count_zeros(self.step_lens) - 1  # update count
+
+        :rtype: (np.array, np.array)
+        :return: (step lengths of current line search, 
+                  misfits of current line search)
+        """
+        if not self.iteridx:
+            logger.warning("line search has not yet been initialized")
+            return
+        
+        # Last iteration marks the index of the current line search
+        idx = self.iteridx[-1]
+
+        # Only return the last valid step lengths and misfit values that 
+        # represent the current line search
+        step_lens = np.array(self.step_lens[idx:])  # x
+        func_vals = np.array(self.func_vals[idx:])  # f
+
+        # Sort by the step lengths taken
+        func_vals = func_vals[abs(step_lens).argsort()]
+        step_lens = step_lens[abs(step_lens).argsort()]
+
+        return step_lens, func_vals
 
     def calculate_step_length(self):
         """
@@ -219,7 +241,7 @@ class Bracket:
         """
         # Determine the line search history
         x, f = self.get_search_history()  
-        self._print_stats(x, f)
+        self._log_stats()
 
         # For the first inversion and initial step, set alpha manually
         if bool(self.step_lens.count(0)) and self.step_count == 0:  # == i00s00

@@ -140,6 +140,11 @@ class Gradient:
     def step_count(self):
         """Convenience property to access `step_count` from line search"""
         return self._line_search.step_count
+    
+    def increment_step_count(self):
+        """Convenience property to increase step count by 1"""
+        logger.info(f"increment step count -> {self._line_search.step_count}")
+        self._line_search.step_count += 1
 
     def check(self):
         """
@@ -254,7 +259,8 @@ class Gradient:
                         gtg=self._line_search.gtg,
                         gtp=self._line_search.gtp,
                         step_count=self._line_search.step_count,
-                        step_len_max=self._line_search.step_len_max
+                        step_len_max=self._line_search.step_len_max,
+                        iteridx=self._line_search.iteridx,
                        )
 
         np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
@@ -281,6 +287,7 @@ class Gradient:
             self._line_search.gtp = list(dict_in["gtp"])
             self._line_search.step_count = int(dict_in["step_count"])
             self._line_search.step_len_max = float(dict_in["step_len_max"])
+            self._line_search.iteridx = float(dict_in["iteridx"])
         else:
             logger.info("no optimization checkpoint found, assuming first run")
             self.checkpoint()
@@ -316,29 +323,33 @@ class Gradient:
 
         :rtype: seisflows.tools.specfem.Model
         :return: search direction as a Model instance
+        :raises SystemError: if the search direction is 0, signifying a zero
+            gradient which will not do anything in an update
         """
         g_new = self.load_vector("g_new")
         p_new = g_new.copy()
         p_new.update(vector=-1 * self._precondition(g_new.vector))
 
+        if sum(p_new.vector) == 0:
+            logger.critical(msg.cli(
+                "Search direction vector 'p' is 0, meaning no model update can "
+                "take place. Please check your gradient and waveform misfits. "
+                "SeisFlows exiting prior to start of line search.", border="=",
+                header="optimization gradient error")
+            )
+            sys.exit(-1)
+
         return p_new
 
     def initialize_search(self):
         """
-        Generate a trial model by perturbing the current model in the search
-        direction with a given step length, calculated by the chosen line
-        search algorithm.
-
-        :rtype: tuple
-        :return: (Model, float) or (m_try==trial model, alpha=step length)
+        Setup a the line search machinery by inputting values for the initial
+        model. Also contains a check to see if the line search has been 
+        restarted.
         """
-        m = self.load_vector("m_new")  # current model from external solver
+        f = self.load_vector("f_new")  # current misfit value from preprocess
         g = self.load_vector("g_new")  # current gradient from scaled kernels
         p = self.load_vector("p_new")  # current search direction
-        f = self.load_vector("f_new")  # current misfit value from preprocess
-
-        norm_m = max(abs(m.vector))
-        norm_p = max(abs(p.vector))
         gtg = dot(g.vector, g.vector)
         gtp = dot(g.vector, p.vector)
 
@@ -347,111 +358,78 @@ class Gradient:
         if self._restarted:
             self._line_search.clear_search_history()
 
-        # Optional safeguard to prevent step length from getting too large
-        if self.step_len_max:
-            new_step_len_max = self.step_len_max * norm_m / norm_p
-            logger.info(f"max step length safeguard ({self.step_len_max}) set "
-                        f"at: {new_step_len_max:.2E}")
-            self._line_search.step_len_max = new_step_len_max
-
         # Initialize the line search and save it to disk.
-        self._line_search.step_count = 0  # should already be, but force it
-        self._line_search.update_search_history(func_val=f, step_len=0.,
-                                                gtg=gtg, gtp=gtp)
+        self._line_search.initialize_line_search(func_val=f, gtg=gtg, gtp=gtp)
 
-        # Optional: Step length override allowed for only the very first step
-        # of the very first iteration i01s01.
-        if self.step_len_init and len(self._line_search.step_lens) <= 1:
-            alpha = self.step_len_init * norm_m / norm_p
-            logger.debug(f"setting first step length with user-requested "
-                         f"`step_len_init`={self.step_len_init}")
-        # Normal operation - Calculate step based on position in line search
-        # note that safeguard may be appled in the line search if alpha too big
-        else:
-            alpha, _ = self._line_search.calculate_step_length()
-        logger.info(f"step length `alpha` = {alpha:.2E}")
-
-        # The new model is the old model, scaled by the step direction and
-        # gradient threshold to remove any outlier values
-        m_try = m.copy()
-        dm = alpha * p.vector  # update = step length * step direction
-        logger.info(f"model update `dm` min, max = "
-                    f"{dm.min():.2E}, {dm.max():.2E}")
-
-        m_try.update(vector=m.vector + dm)
-
-        return m_try, alpha
-
-    def increment_step_count(self):
+    def update_search(self):
         """
-        Convenience function to increment line search step count by 1. This is
-        wrapped in a function to keep things explicit, rather than calling +=1 
-        randomly in script. We are also accessing a private member of the class
-        so better to have a public function take care of incrementing.
+        Collect information on a forward evaluation that just took place so 
+        that we can assess how to proceed with the current line search
         """
-        self._line_search.step_count += 1
-        logger.info(f"step count incremented -> {self._line_search.step_count}")
-
-    def update_line_search(self):
+        alpha_try = self.load_vector("alpha")  # step length
+        f_try = self.load_vector("f_try")  # misfit for the trial model
+        self._line_search.update_search_history(step_len=alpha_try, 
+                                                func_val=f_try)
+    
+    def calculate_step_length(self):
         """
-        Updates line search status and step length after a forward simulation
-        has been run and misfit calculated. Checks misfit against line search
-        history to see if the line search has been completed.
+        Determine the step length `alpha` based on the current configuration
+        of the line search machinery (i.e., the misfit vs. function evaluation 
+        values). Has a catch for whether we want to manual override the step 
+        length. Also returns a status that tells the Workflow how to proceed
+        with a line search.
 
-        .. note::
-
-            This is a bit confusing as it calculates the step length `alpha` for
-            the NEXT line search step, while storing the `alpha` value that
-            was calculated from the LAST line search step. This is because we
-            need a corresponding misfit `f_try` from the value of `alpha`, which
-            happens externally with the solver module
-
-        If line search returns a passing exit code (0 or 1), sets up for a
-        subsequent line search evaluation by saving a new step length (alpha),
-        and creating a new trial model (m_try).
-
-        .. note:
-
+        :rtype alpha: float
+        :return alpha: step length recommended by the line search. This is
+            intrinsically tied to the `status`. When `status`=='TRY', alpha
+            represents the step length to take for the next step. When `status`
+            =='PASS', then alpha represents the best fitting step count found
+            for this line search evaluation.
+        :rtype status: str
+        :return status: the status recommended to the workflow. Three options:
             Available status returns are:
             'TRY': try/re-try the line search as conditions have not been met
             'PASS': line search was successful, you can terminate the search
             'FAIL': line search has failed for one or more reasons.
-
-        :rtype: tuple
-        :return: (Model, float, bool) or (m_try==trial model, alpha=step length,
-            status==how to proceed with line search)
         """
-        # Collect information on a forward evaluation that just took place
-        alpha_try = self.load_vector("alpha")  # step length
-        f_try = self.load_vector("f_try")  # misfit for the trial model
+        if self.step_len_init and self._line_search.updates == 0:
+            m = self.load_vector("m_new")  # current model from external solver
+            p = self.load_vector("p_new")  # current search direction
+            norm_m = max(abs(m.vector))
+            norm_p = max(abs(p.vector))
 
-        # Update the line search with a new step length and misfit value
-        # Or retain the accepted step and misfit if line search criteria met
-        self._line_search.update_search_history(step_len=alpha_try,
-                                                func_val=f_try)
+            alpha = self.step_len_init * norm_m / norm_p
+            status = None
+            logger.debug(f"setting first step length with user-requested "
+                         f"`step_len_init`={self.step_len_init}")
+        else:
+            alpha, status = self._line_search.calculate_step_length()
 
-        # PASS: If misfit acceptable, return step length of lowest misfit.
-        # TRY:  If another step is required, return new step length value
-        # FAIL: If a failure criteria is met, return None
-        alpha, status = self._line_search.calculate_step_length()
+        logger.info(f"step length `alpha` = {alpha:.2E}")
+    
+        return alpha, status
 
-        # Note: if status is 'PASS' then `alpha` represents the step length of
-        # the lowest misfit in the line search and we reconstruct `m_try` w/ it
-        if status.upper() in ["PASS", "TRY"]:
-            # Create a new trial model based on search direction, step length
-            # and the initial model vector
-            _m = self.load_vector("m_new")
-            _p = self.load_vector("p_new")
+    def compute_trial_model(self, alpha):
+        """
+        Generates a trial model `m_try` by perturbing the starting model `m_new`
+        with a given search direction `p_new` and a pre-calculated step length
+        `alpha`
 
-            # Sets the latest trial model using the current `alpha` value
-            m_try = _m.copy()
-            m_try.update(vector=_m.vector + alpha * _p.vector)
-            m_try.check()
-        elif status.upper() == "FAIL":
-            # Failed line search skips over costly vector manipulations
-            m_try = None
+        :type alpha: float
+        :param alpha: step length recommended by the line search.
+        :rtype: np.array
+        :return: trial model that can be used for line search evaluation
+        """
+        # The new model is the old model plus a step with a given magnitude 
+        m_try = self.load_vector("m_new").copy()
+        p = self.load_vector("p_new")  # current search direction
 
-        return m_try, alpha, status
+        dm = alpha * p.vector  # update = step length * step direction
+        logger.info(f"model update `dm` min, max = "
+                    f"{dm.min():.2E}, {dm.max():.2E}")
+        m_try.update(vector=m.vector + dm)
+
+        return m_try
 
     def finalize_search(self):
         """
@@ -464,7 +442,7 @@ class Gradient:
 
         logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
-        # Remove the old model parameters
+        # Remove the old-old model parameters (from the last time this was run)
         if glob("?_old*"):
             logger.info("removing previously accepted model files (?_old)")
             for fid in ["m_old.npz", "f_old.txt", "g_old.npz", "p_old.npz"]:

@@ -327,7 +327,6 @@ class Cluster(Workstation):
         # Intermediate states like pending and failing will continue to wait
         while True:
             time.sleep(wait_time_s)  # wait so we don't overwhelm queue system
-            time_waited += wait_time_s
 
             # Treat job arrays and job lists differently
             if isinstance(job_id, list):
@@ -341,15 +340,18 @@ class Cluster(Workstation):
 
             # Condition to deal with `query_job_states` not returning correctly
             if not job_ids or not states:
+                # Only increment wait counter if job query unsuccessful 
+                time_waited += wait_time_s
+
                 # After some timeout time, exit main job, likely error
                 if time_waited >= timeout_s:
                     logger.critical(msg.cli(
-                        f"cannot access job information with "
-                        f"`system.query_job_states()` after {timeout_s}s."
+                        f"Cannot access job information for job {job_id}. "
+                        f"`System.query_job_states()` waited {timeout_s}s. "
                         f"Please check function, job scheduler and logs, or "
-                        f"increase timeout constant in "
-                        f"`Cluster.monitor_job_status`"),
-                        header="system run timeout", border="="
+                        f"increase timeout constant in `timeout_s` in function "
+                        f"`System.Cluster.monitor_job_status`",
+                        header="system run timeout", border="=")
                     )
                     sys.exit(-1)
                 continue

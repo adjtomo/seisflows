@@ -46,12 +46,20 @@ changes.
         - Pyflex preset now directly part of parameter file so that User can
           edit them directly
 - System:
+    - General:
+        - `tasktime` now set in the top parent class
+        - Allow custom tasktimes for functions run with `System.run`
+        - `rerun` function tells System to re-run failed jobs some number of 
+          times to deal with randomly failing tasks that usually work once you
+          run them again
     - Cluster (and derived classes):
         - New parameter `array`: For debug purposes, allow running only specific
           task IDs to e.g., re-run failed processes. Input style follows SLURM
           array argument 
         - Submit jobs directly to the login node with the -l/--login flag
         - Non-zero exit code error catching added to concurrent future calls
+        - Overhauled job monitoring system. Notably, does not break on first  
+          job failure, but rather to wait until all jobs are finished. Tied into System `rerun` feature
     - Slurm (and derived classes): 
         - Added a timeout counter and extended timeout value for checking
           output of `sacct` for queue checking due to premature job exits with
@@ -65,7 +73,16 @@ changes.
       handled by Workflow
     - Takes over responsibility for renaming adjoint sources 
     - Takes over responsibility for obs-syn filename matching prior to preproc.
-- New Dependencies:
+- Optimize:
+- Command Line Tool:
+    - `seisflows submit --login` -> `seisflows submit --direct` for submitting
+      your workflow directly to the login/home node and not to a cluster node
+    - `seisflows configure` makes more clear which paths are default/not 
+      important, and which paths are required
+    - `seisflows setup` <-> `seisflows init` namespace change as the names make
+      more sense in this order. `init` starts a blank working directory, `setup`
+      runs module setup functions (like directory creation)
+- Dependencies: 
     - PyPDF: for PDF mergers in Pyaflowa preprocessing
     - PySEP: for SPECFEM-specific read functions 
 
@@ -79,6 +96,9 @@ changes.
     - Skips initial line search calculation if initial step length requested
 - Workflow: Allow other workflows to overwrite the default location where 
   synthetic waveforms are saved
+- System: improved file system mangement by organizing spawned process log files
+  and removing scratch/system directory each iteration
+- Preprocessing Pyaflowa: imrpoved output file management, export and removal 
 - Model checking now occurs in Workflow rather than Solver functions
 - Workflow data preparation now symlinks in real data rather than copies it,
   to avoid heavy file overhead
@@ -90,6 +110,11 @@ changes.
 - Logger aesthetic change to show first four letters of message type rather than
   first letter (e.g., I -> INFO, W -> WARN, D -> DEBU)
 - Model parameter check now includes mean values in addition to min and max
+- New CLI tool: `seisflows print tasks` to get source names and relevant task ID
+- Model tool now breaks on check if any NaNs present in model arrays
+- `Optimize`: split up some internal functions for easier separation of tasks 
+  that were previously all mashed together
+
 
 ### Bugfixes
 - Major: SPECFEM3D\_GLOBE based solvers were NOT updating the model during 
@@ -105,6 +130,15 @@ changes.
   were forced to absolute
 - Old Optimization files (e.g., m\_old) were not being deleted due to missing 
   file extensions. Not critical because they were not used, and overwritten
+- `seisflows setpar` was not properly setting FORTRAN double precision values. 
+  Added some better catches for `setpar` as it was quietly failing when files
+  were nonexistent
+- LBFGS line search restart `step_count_max` was not being evaluted properly
+- `seisflows configure` will no longer try to configure an already configured   
+  file
+- Concurrency: better all-around error catching for any functions that are 
+  parallelized by concurrent futures. Previously these functions failed quietly
+- solver.specfem3d_globe was not recognizing custom model types
 
 ### Misc.
 - Removed hard requirement that `import_seisflows` required all Workflows have
