@@ -1008,10 +1008,6 @@ class NoiseInversion(Inversion):
             ignored and the final residual file will only be created once all 
             forward simulations are run
         """
-        # This is crucial! Step count is used for tagging and saving waveforms
-        # If your line search crashes and you need to manually rerun misfit,
-        # you MUST incremement the step count or you will overwrite other data
-        self.optimize.increment_step_count() 
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
 

@@ -190,6 +190,15 @@ class LBFGS(Gradient):
 
         # Assign restart condition to internal memory
         self._restarted = restarted
+    
+        if sum(p_new.vector) == 0:
+            logger.critical(msg.cli(
+                "Search direction vector 'p' is 0, meaning no model update can "
+                "take place. Please check your gradient and waveform misfits. "
+                "SeisFlows exiting prior to start of line search.", border="=",
+                header="optimization gradient error")
+            )
+            sys.exit(-1)
 
         return p_new
 

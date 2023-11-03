@@ -64,7 +64,7 @@ class Bracket:
         """Keep track of how many model updates we have made"""
         return len(self.iteridx)
 
-    def check():
+    def check(self):
         """
         Make sure internal parameters are consistent with expectations. This is
         always expected to pass if the User/workflow uses the main functions 
@@ -72,7 +72,7 @@ class Bracket:
         is required, so the check function makes sure things are okay.
         """
         try:
-            assert len(self.iterations) != len(self.gtg), (
+            assert len(self.iteridx) == len(self.gtg), (
                 "number of iterations is inconsistent with intializations"
             )
             assert(len(self.gtg) == len(self.gtp)), (
@@ -80,9 +80,6 @@ class Bracket:
             )
             assert(len(self.step_lens) == len(self.func_vals)), (
                 "line search step lengths and func vals inconsistent"
-            )
-            assert(len(self.iteridx) == self.step_lens.count(0)), (
-                "line search iterations and initial step lengths inconsistent"
             )
         except AssertionError as e: 
             logger.critical(e)
@@ -102,7 +99,7 @@ class Bracket:
         # `iteridx`` keeps track of the index of each iteration. That way
         # if we need to revert or restart a line search, we know exactly where
         # to roll back to
-        self.iteridx.append(len(self.gtg) - 1)  # -1 to get index not length
+        self.iteridx.append(len(self.step_lens) - 1)  # -1 for idx, not length
 
     def update_search_history(self, func_val, step_len):
         """
@@ -116,7 +113,7 @@ class Bracket:
         :param step_len: length of step for the trial model (alpha)
         """
         # Quick check to make sure this is expected
-        x, f = self.get_search_history():
+        x, f = self.get_search_history()
         assert len(x) + 1 == self.step_count, \
             "update was not expected, step count does not match array length"
         
@@ -146,34 +143,32 @@ class Bracket:
         """
         logger.info("restarting line search for the current iteration")
 
-        idx = self.iteridx[-1]
         self.step_count = 0
+
         # Clear out search history up to the last iteration
-        self.step_lens = self.steplens[:idx]
+        idx = self.iteridx[-1] 
+        self.step_lens = self.step_lens[:idx]
         self.func_vals = self.func_vals[:idx]
 
-    def _revert_search_history(self):
+        # Roll back gtg and gtp to before line search was initialized
+        idx = len(self.iteridx)
+        self.gtg = self.gtg[:idx]
+        self.gtp = self.gtp[:idx]
+
+    def _revert_search_history(self, steps=None):
         """
         Occasionally a line search will break mid-search but the User doesn't 
         want to `restart_line_search`, but rather just roll back to the previous
         step count. This function steps back the search history by 
         a number by one step. Call it multiple times to step back multiple steps
         Raises an error if there are no more steps to revert. 
-        
-        If you want to revert to before step count 1, use `restart_line_search`
-
-        .. warning::
-
-            You must run `optimize.checkpoint()` to have this change take 
-            effect in the workflow. Once checkpointed, this information is lost 
-            and cannot be  recovered easily
         """
         if self.step_count == 0:
             logger.warning("cannot revert search history, already at step "
                            "count 0. Use `restart_search_history` to restart "
                            "to a pre line search state")
             return
-
+        
         logger.info(f"reverting search history 1 step")
 
         # Step back the other quantities however many steps we have taken
@@ -242,21 +237,24 @@ class Bracket:
         # Determine the line search history
         x, f = self.get_search_history()  
         self._log_stats()
+        # Some boolean checks to see where we're at in the inversion
+        first_iteration = bool(len(self.step_lens) == 1)
+        first_step = bool(self.step_count == 1)
 
         # For the first inversion and initial step, set alpha manually
-        if bool(self.step_lens.count(0)) and self.step_count == 0:  # == i00s00
+        if first_iteration and first_step:  # == i00s00
             # Based on idea from Dennis and Schnabel
             alpha = self.gtg[-1] ** -1
-            logger.info(f"try: first evaluation, attempt guess step length, "
-                        f"alpha={alpha:.2E}")
+            logger.info(f"try: first evaluation, guessing step length based on "
+                        f"gradient value")
             status = "TRY"
         # For every iteration's initial step, set alpha manually
-        elif step_count == 0:
+        elif first_step and (not first_iteration):
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
             alpha = self.step_lens[idx] * self.gtp[-2] / self.gtp[-1]
-            logger.info(f"try: first step count of iteration, "
-                        f"setting scaled step length, alpha={alpha:.2E}")
+            logger.info(f"try: first step of iteration, "
+                        f"setting scaled step length")
             status = "TRY"
         # If misfit is reduced and then increased, we've bracketed. Pass
         elif _check_bracket(x, f) and _good_enough(x, f):
@@ -268,23 +266,21 @@ class Bracket:
         elif _check_bracket(x, f):
             alpha = polynomial_fit(x, f)
             logger.info(f"try: bracket acceptable but step length unreasonable "
-                        f"attempting to re-adjust step length "
-                        f"alpha={alpha:.2E}")
+                        f"attempting to re-adjust step length")
             status = "TRY"
         # If misfit continues to step down, increase step length
-        elif step_count < self.step_count_max and all(f <= f[0]):
+        elif self.step_count < self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
             logger.info(f"try: misfit not bracketed, increasing step length "
-                        f"using golden ratio, alpha={alpha:.2E}")
+                        f"using golden ratio")
             status = "TRY"
         # If misfit increases, reduce step length by backtracking
-        elif step_count < self.step_count_max:
+        elif self.step_count < self.step_count_max:
             slope = self.gtp[-1] / self.gtg[-1]
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
             logger.info(f"try: misfit increasing, attempting "
-                        f"to reduce step length using parabolic backtrack, "
-                        f"alpha={alpha:.2E}")
+                        f"to reduce step length using parabolic backtrack")
             status = "TRY"
         # step_count_max exceeded, fail
         else:
@@ -296,17 +292,16 @@ class Bracket:
 
         # Apply optional step length safeguard to step length
         if status == "TRY":
-            if alpha > self.step_len_max and step_count == 0:
+            if alpha > self.step_len_max and first_step:
                 alpha = 0.618034 * self.step_len_max
                 logger.info(f"try: applying initial step length "
                             f"safegaurd as alpha has exceeded maximum step "
-                            f"length, alpha_new={alpha:.2E}")
+                            f"length")
             # Stop because safeguard prevents us from going further
             elif alpha > self.step_len_max:
                 alpha = self.step_len_max
                 logger.info(f"try: applying step length safegaurd as alpha has "
-                            f"exceeded maximum allowable step length, "
-                            f"alpha_new={alpha:.2E}")
+                            f"exceeded maximum allowable step length")
 
         return alpha, status
 

@@ -169,6 +169,8 @@ class Gradient:
         if self.step_len_max is not None and self.step_len_init is not None:
             assert self.step_len_init < self.step_len_max, \
                 f"optimize.step_len_init must be < optimize.step_len_max"
+    
+        self._line_search.check()
 
     def setup(self):
         """
@@ -262,7 +264,6 @@ class Gradient:
                         step_len_max=self._line_search.step_len_max,
                         iteridx=self._line_search.iteridx,
                        )
-
         np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
 
     def load_checkpoint(self):
@@ -287,7 +288,7 @@ class Gradient:
             self._line_search.gtp = list(dict_in["gtp"])
             self._line_search.step_count = int(dict_in["step_count"])
             self._line_search.step_len_max = float(dict_in["step_len_max"])
-            self._line_search.iteridx = float(dict_in["iteridx"])
+            self._line_search.iteridx = list(dict_in["iteridx"])
         else:
             logger.info("no optimization checkpoint found, assuming first run")
             self.checkpoint()
