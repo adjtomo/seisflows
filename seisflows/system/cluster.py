@@ -82,7 +82,6 @@ class Cluster(Workstation):
         self._completed_states = []
         self._pending_states = []
 
-
     @property
     def submit_call_header(self):
         """
@@ -286,25 +285,18 @@ class Cluster(Workstation):
 
     def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=15):
         """
-        Repeatedly check the status of a currently running job(s) in a clusters' 
+        Repeatedly check the status of currently running job(s) in a clusters' 
         queue. If the job goes into a bad state (like 'FAILED'), log the 
         failing job's id and their states. Returns a state of 1 if all jobs 
-        complete nominally, returns a state of -1 if >1 job returns a 
-        non-complete status.
+        complete nominally, returns a state of -1 if any nonzero number of jobs 
+        returns a non-complete status.
 
         .. note::
             
-            This function does nothing in the `Cluster` module, but it is used
-            by child classes, and so defines a usable code that child
-            classes can inherit. Originally this monitoring system was 
+            This function does nothing in the standalone `Cluster` module, but 
+            it is used by child classes, and so defines a usable code they
+            can inherit. Originally this monitoring system was 
             written for the SLURM workload manager, but it is generalized.
-            
-        .. note::
-
-            The time.sleep() is critical before querying job status because the 
-            system will likely take a second to intitiate jobs so if we 
-            `query_job_states` before this has happenend, it will return empty
-            lists and cause the function to error out
 
         :type job_id: str or list
         :param job_id: main job id(s) to query, returned from the subprocess.run 

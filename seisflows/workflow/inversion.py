@@ -83,7 +83,6 @@ class Inversion(Migration):
         self.export_model = export_model
         self.thrifty = thrifty
 
-
         # Append an additional path for line search function evaluations
         self.path["eval_func"] = path_eval_func or \
                                  os.path.join(self.path.workdir, "scratch",
@@ -483,6 +482,7 @@ class Inversion(Migration):
 
         # Scale search direction 'p' with step length 'alpha' to update model 
         m_try, alpha = self.optimize.initialize_search()
+        
         self.optimize.save_vector(name="m_try", m=m_try)
         self.optimize.save_vector(name="alpha", m=alpha)
         self.optimize.checkpoint()

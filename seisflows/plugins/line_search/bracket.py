@@ -65,7 +65,10 @@ class Bracket:
 
     def clear_search_history(self):
         """
-        Clears internal line search history for a new line search attempt
+        Clears internal line search history after an optimization restart. This
+        is the 'nuclear' option, because it gets rid of ALL saved information
+        about misfit evaluations from the previous iterations, i.e., this is 
+        like starting from scratch.
         """
         self.func_vals = []
         self.step_lens = []
@@ -80,6 +83,8 @@ class Bracket:
         are the correct length for the given evaluation
         """
         assert(len(self.gtg) == len(self.gtp)), f"too many entries for 'gtg'"
+        assert(len(self.gtg) == len(self.gtp) == self.step_lens.count(0)), \
+            f"line search update count measure is inconsistent"
         assert(len(self.func_vals) == len(self.step_lens)), \
             f"number of function evaluations does not match step lengths"
         if self.func_vals:
@@ -128,52 +133,66 @@ class Bracket:
 
         return step_lens, func_vals
     
-    def revert_search_history(self, steps=None):
+    def restart_line_search(self):
         """
-        Occasionally a line search will break mid-search and will need to be
-        rolled back to the previous step count so that the line search can
-        be resumed safely. This function steps back the search history by 
-        a number of step counts `steps`. If `steps` is None, then this will
-        revert the line search to step count 0 (restarting line search)
+        Iff a line search has been initialized and something goes awry, it is
+        often preferable to restart the line search. To do this, we roll back
+        the number of steps we have taken during the line search, and undo
+        variable changes that took place in 'initialize_search'. 
 
         .. note::
 
+            You will have to re-run `workflow.initialize_line_search()` to
+            ensure that the restarted line search is initialized properly
+        
+        .. warning::
+
             You must run `optimize.checkpoint()` to have this change take 
-            effect in the workflow.
+            effect in the workflow. Once checkpointed, this information is lost 
+            and cannot be  recovered easily
+        """
+        # Determine how many values we need to remove
+        nvals = self.step_count + 1  # i; +1 to include 0
+
+        logger.info("restarting line search for the current iteration")
+        self.step_lens = self.step_lens[:-nvals]
+        self.func_vals = self.func_vals[:-nvals]
+
+        # Only step back gtg and gtp once because they were only updated at 
+        # line search initialization
+        self.gtg = self.gtg[:-1]
+        self.gtp = self.gtp[:-1]
+
+        self.step_count = 0
+    
+    def revert_search_history(self):
+        """
+        Occasionally a line search will break mid-search but the User doesn't 
+        want to `restart_line_search`, but rather just roll back to the previous
+        step count. This function steps back the search history by 
+        a number by one step. Call it multiple times to step back multiple steps
+        Raises an error if there are no more steps to revert. 
+        
+        If you want to revert to before step count 1, use `restart_line_search`
 
         .. warning::
 
-            Once checkpointed, this information is lost and cannot be 
-            recovered easily.
-
-        :type steps: int
-        :param steps: number of line search steps to roll back. If None 
-            (default), reverts line search to step count 0 (full restart). If
-            `steps` is greater than the number of steps taken in the current 
-            line search, will revert to step count 0.
+            You must run `optimize.checkpoint()` to have this change take 
+            effect in the workflow. Once checkpointed, this information is lost 
+            and cannot be  recovered easily
         """
-        nsteps = self.step_count   # steps taken in current line search
-        if nsteps == 0:
-            logger.warning("cannot revert search history, no steps have been "
-                           "taken this iteration")
+        if self.step_count == 0:
+            logger.warning("cannot revert search history, already at step "
+                           "count 0. Use `restart_search_history` to restart "
+                           "to a pre line search state")
             return
-        # Default value assignment for number of steps to reduce
-        if steps is None:
-            steps = nsteps
-        elif steps > nsteps:
-            logger.warning("number of steps `steps` exceeds number of current "
-                           f"line search step counts, reducing to {nsteps}")
-            steps = nsteps
 
-        logger.info(f"reverting search history {steps} step(s)")
-            
-        self.func_vals = self.func_vals[:steps]
-        self.step_lens = self.step_lens[:steps]
-        assert(len(self.func_vals) == len(self.step_lens)), (
-            f"mismatch between number of step lengths and function evaluations "
-            f"in search history, something has gone wrong with line search"
-        )
-        self.step_count -= steps
+        logger.info(f"reverting search history 1 step")
+
+        # Step back the other quantities however many steps we have taken
+        self.func_vals = self.func_vals[:-1]
+        self.step_lens = self.step_lens[:-1]
+        self.step_count -= 1
         
     def _print_stats(self, x, f):
         """Print out misfit values and step lengths to the logger"""
@@ -203,7 +222,7 @@ class Bracket:
         self._print_stats(x, f)
 
         # For the first inversion and initial step, set alpha manually
-        if bool(self.step_lens.count(0)) and step_count == 0:  # == i00s00
+        if bool(self.step_lens.count(0)) and self.step_count == 0:  # == i00s00
             # Based on idea from Dennis and Schnabel
             alpha = self.gtg[-1] ** -1
             logger.info(f"try: first evaluation, attempt guess step length, "

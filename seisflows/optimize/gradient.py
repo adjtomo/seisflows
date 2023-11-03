@@ -355,6 +355,7 @@ class Gradient:
             self._line_search.step_len_max = new_step_len_max
 
         # Initialize the line search and save it to disk.
+        self._line_search.step_count = 0  # should already be, but force it
         self._line_search.update_search_history(func_val=f, step_len=0.,
                                                 gtg=gtg, gtp=gtp)
 
