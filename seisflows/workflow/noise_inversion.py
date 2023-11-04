@@ -1012,28 +1012,27 @@ class NoiseInversion(Inversion):
                             f"{self.optimize.step_count:0>2}"))
 
         # Determine which forward simulations we will need to run
-        config = {}
+        cfg = {}
         if "ZZ" in self.kernels:
-            config["Z"] = {"force": "Z", "tag": "ZZ", "components": ["Z"]}
+            cfg["Z"] = {"tag": "ZZ", "components": ["Z"]}
         if ("RR" in self.kernels) or ("TT" in self.kernels):
-            config["N"] = {"force": "Z", "tag": "ZZ", "components": ["Z"]}
-            forces += sorted(["E", "N"])  # E before N required
+            # E before N is required
+            cfg["E"] = {"tag": "RT", "components": ["T", "R"]}
+            cfg["N"] = {"tag": "RT", "components": ["T", "R"]}
 
         # Run forward simulations and misfit calculation for each required force
-        for i, force in enumerate(forces):
+        for force, attrs in cfg.items():
+            tag = attrs["tag"]
+            components = attrs["components"]
             _state_check = f"evaluate_line_search_misfit_{force}"
-            # Intermediate state check
-            if _state_check in self._states and bool(self._states[_state_check]):
+            self._force = force
+
+            # Intermediate state check to see if we already ran this force
+            if _state_check in self._states and \
+                bool(self._states[_state_check]):
                 continue
 
-            self._force = force
             logger.info(f"running misfit evaluation for: '{self._force}'")
-            if self._force == "Z":
-                tag = "ZZ"
-                components = ["Z"]
-            else:
-                tag = "RT"
-                components = ["T", "R"]
             self.system.run(
                 [self.prepare_data_for_solver,
                  self.run_forward_simulations,

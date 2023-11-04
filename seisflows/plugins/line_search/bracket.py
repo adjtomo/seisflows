@@ -114,7 +114,7 @@ class Bracket:
         """
         # Quick check to make sure this is expected
         x, f = self.get_search_history()
-        assert len(x) + 1 == self.step_count, \
+        assert len(x) == self.step_count, \
             "update was not expected, step count does not match array length"
         
         self.func_vals.append(func_val)
@@ -143,6 +143,8 @@ class Bracket:
         """
         logger.info("restarting line search for the current iteration")
 
+        # Incase we somehow get doubles which should never be the case
+        self.iteridx = np.unique(self.iteridx).tolist()
         self.step_count = 0
 
         # Clear out search history up to the last iteration

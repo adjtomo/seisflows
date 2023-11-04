@@ -467,12 +467,21 @@ class Inversion(Migration):
         """
         logger.info(msg.mnr("INITIALIZING LINE SEARCH"))
 
+        # 'p_new' is the current search direction used to perturb starting model
+        # and is required for the following initialization tasks
+        p_new = self.optimize.compute_direction()
+        if sum(p_new.vector) == 0:
+            logger.critical(msg.cli(
+                "Search direction vector 'p' is 0, meaning no model update can "
+                "take place. Please check your gradient and waveform misfits. "
+                "SeisFlows exiting prior to start of line search.", border="=",
+                header="optimization gradient error")
+            )
+            sys.exit(-1)
+        self.optimize.save_vector(name="p_new", m=p_new)
+
         # Set up the line search machinery. Step count forced to 1
         self.optimize.initialize_search()
-
-        # 'p_new' is the current search direction used to perturb starting model
-        p_new = self.optimize.compute_direction()
-        self.optimize.save_vector(name="p_new", m=p_new)
 
         # Determine the model we will use for first line search step count
         # m_try = m_new + alpha * p_new (i.e., m_i+1 = m_i + dm)
@@ -483,7 +492,6 @@ class Inversion(Migration):
         self.optimize.save_vector(name="m_try", m=m_try)
         self.optimize.save_vector(name="alpha", m=alpha)
         self.optimize.checkpoint()
-        del m_try  # delete potentially large model vector
 
         # Expose model `m_try` to the solver by placing it in eval_func dir.
         _path_m_try = os.path.join(self.path.eval_func, "model")

@@ -406,7 +406,7 @@ class Gradient:
         else:
             alpha, status = self._line_search.calculate_step_length()
 
-        logger.info(f"step length `alpha` = {alpha:.2E}")
+        logger.info(f"step length `alpha` = {alpha:.4E}")
     
         return alpha, status
 
@@ -426,9 +426,9 @@ class Gradient:
         p = self.load_vector("p_new")  # current search direction
 
         dm = alpha * p.vector  # update = step length * step direction
-        logger.info(f"model update `dm` min, max = "
-                    f"{dm.min():.2E}, {dm.max():.2E}")
-        m_try.update(vector=m.vector + dm)
+        logger.info(f"updating model with `dm` (dm_min={dm.min():.2E}, "
+                    f"dm_max = {dm.max():.2E}")
+        m_try.update(vector=m_try.vector + dm)
 
         return m_try
 
