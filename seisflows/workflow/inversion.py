@@ -555,7 +555,6 @@ class Inversion(Migration):
         # Save new model (m_try) and step length (alpha) for new trial step
         self.optimize.save_vector("alpha", alpha)
         self.optimize.save_vector("m_try", m_try)
-        del m_try  # clear potentially large model vector from memory
 
         # Proceed based on the outcome of the line search
         if status.upper() == "PASS":
@@ -569,7 +568,6 @@ class Inversion(Migration):
         elif status.upper() == "TRY":
             logger.info("trial step unsuccessful. re-attempting line search")
             self.optimize.increment_step_count()
-            self.optimize.checkpoint()
 
             # Expose the new model to the solver directories for the next step
             _path_m_try = os.path.join(self.path.eval_func, "model")
@@ -577,13 +575,14 @@ class Inversion(Migration):
 
             # Provide `m_try` parameters to log file for sanity checks
             logger.info(f"`m_try` model parameters for step count "
-                        f"{optimize.step_count}")
+                        f"{self.optimize.step_count}")
             self.solver.check_model_values(path=_path_m_try)
 
             # Re-set state file to ensure that job failure will recover
             self._states["evaluate_line_search_misfit"] = 0
 
             # Recursively run the line search to get a new misfit
+            self.optimize.checkpoint()
             self.evaluate_line_search_misfit()
             self.update_line_search()  # RECURSIVE CALL
         elif status.upper() == "FAIL":
@@ -593,12 +592,12 @@ class Inversion(Migration):
                             "optimization algorithm and line search.")
                 # Reset the line search machinery; set step count to 0
                 self.optimize.restart()
-                self.optimize.checkpoint()
 
                 # Re-set state file to ensure that job failure will recover
                 self._states["evaluate_line_search_misfit"] = 0
 
                 # Restart the entire line search procedure
+                self.optimize.checkpoint()
                 self.initialize_line_search()
                 self.evaluate_line_search_misfit()
                 self.update_line_search()  # RECURSIVE CALL
