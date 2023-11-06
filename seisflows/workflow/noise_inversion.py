@@ -1056,6 +1056,6 @@ class NoiseInversion(Inversion):
         self.sum_residuals(residuals_files, save_to="f_try")
 
         # Reset states incase we need to run again
-        for force in forces:
+        for force in cfg.keys():
             self._states[f"evaluate_line_search_misfit_{force}"] = 0
 

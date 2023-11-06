@@ -427,7 +427,7 @@ class Gradient:
 
         dm = alpha * p.vector  # update = step length * step direction
         logger.info(f"updating model with `dm` (dm_min={dm.min():.2E}, "
-                    f"dm_max = {dm.max():.2E}")
+                    f"dm_max = {dm.max():.2E})")
         m_try.update(vector=m_try.vector + dm)
 
         return m_try
