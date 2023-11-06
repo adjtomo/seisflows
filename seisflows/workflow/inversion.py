@@ -548,6 +548,7 @@ class Inversion(Migration):
             considered the misfit of the starting model
         """
         # Update line search history with the step length (alpha) and misfit (f)
+        # and incremement the step count
         self.optimize.update_search()
         alpha, status = self.optimize.calculate_step_length()
         m_try = self.optimize.compute_trial_model(alpha=alpha)
@@ -567,7 +568,6 @@ class Inversion(Migration):
             return
         elif status.upper() == "TRY":
             logger.info("trial step unsuccessful. re-attempting line search")
-            self.optimize.increment_step_count()
 
             # Expose the new model to the solver directories for the next step
             _path_m_try = os.path.join(self.path.eval_func, "model")

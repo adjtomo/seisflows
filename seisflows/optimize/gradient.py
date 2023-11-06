@@ -140,11 +140,6 @@ class Gradient:
     def step_count(self):
         """Convenience property to access `step_count` from line search"""
         return self._line_search.step_count
-    
-    def increment_step_count(self):
-        """Convenience property to increase step count by 1"""
-        logger.info(f"increment step count -> {self._line_search.step_count}")
-        self._line_search.step_count += 1
 
     def check(self):
         """
@@ -365,13 +360,30 @@ class Gradient:
     def update_search(self):
         """
         Collect information on a forward evaluation that just took place so 
-        that we can assess how to proceed with the current line search
+        that we can assess how to proceed with the current line search. 
+        Incremenet the line search step count as we have finished the current.
         """
+        # Save step length and associated misfit into the line search
         alpha_try = self.load_vector("alpha")  # step length
         f_try = self.load_vector("f_try")  # misfit for the trial model
         self._line_search.update_search_history(step_len=alpha_try, 
                                                 func_val=f_try)
-    
+        logger.info(f"saving misfit and step length for step count == "
+                    f"{self.step_count}")
+
+        # Log out the current line search stats for reference
+        x, f = self._line_search.get_search_history()
+        i_str = ", ".join([f"{_:>8}" for _ in range(len(x))])
+        x_str = ", ".join([f"{_:.2E}" for _ in x])
+        f_str = ", ".join([f"{_:.2E}" for _ in f])
+        logger.info(f"step count  = {i_str}")
+        logger.info(f"step length = {x_str}")
+        logger.info(f"misfit val  = {f_str}")
+
+        # Increment step count for next line search evaluation
+        self._line_search.step_count += 1
+        logger.info(f"increment step count -> {self._line_search.step_count}")
+
     def calculate_step_length(self):
         """
         Determine the step length `alpha` based on the current configuration

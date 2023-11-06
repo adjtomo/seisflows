@@ -51,14 +51,6 @@ class Bracket:
         self.step_count = 0
         self.iteridx = []
     
-    def _log_stats(self):
-        """Print out misfit values and step lengths to the logger"""
-        x, f = self.get_search_history()
-        x_str = ", ".join([f"{_:.2E}" for _ in x])
-        f_str = ", ".join([f"{_:.2E}" for _ in f])
-        logger.info(f"step length(s) = {x_str}")
-        logger.info(f"misfit val(s)  = {f_str}")
-    
     @property
     def updates(self):
         """Keep track of how many model updates we have made"""
@@ -238,7 +230,6 @@ class Bracket:
         """
         # Determine the line search history
         x, f = self.get_search_history()  
-        self._log_stats()
         # Some boolean checks to see where we're at in the inversion
         first_iteration = bool(self.step_lens.count(0) == 1)
         first_step = bool(self.step_count == 1)
@@ -262,7 +253,7 @@ class Bracket:
         elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
             logger.info(f"pass: bracket acceptable and step length "
-                        f"reasonable. returning minimum line search misfit.")
+                        f"reasonable. returning minimum line search misfit")
             status = "PASS"
         # If misfit is reduced but not close, set to quadratic fit
         elif _check_bracket(x, f):
@@ -304,6 +295,12 @@ class Bracket:
                 alpha = self.step_len_max
                 logger.info(f"try: applying step length safegaurd as alpha has "
                             f"exceeded maximum allowable step length")
+                
+        # Decrement step count to set the final accepted value if pass because
+        # we will not be running another step
+        if status == "PASS":
+            self.step_count -= 1
+            logger.info(f"final accepted step count == {self.step_count}")
 
         return alpha, status
 
