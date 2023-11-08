@@ -149,7 +149,7 @@ class Bracket:
         self.gtg = self.gtg[:idx]
         self.gtp = self.gtp[:idx]
 
-    def _revert_search_history(self, steps=None):
+    def _revert_search_history(self):
         """
         Occasionally a line search will break mid-search but the User doesn't 
         want to `restart_line_search`, but rather just roll back to the previous

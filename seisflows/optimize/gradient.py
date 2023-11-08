@@ -26,6 +26,7 @@ different optimization algorithms.
     stagnation of the nonlinear optimizationalgorithm.
 """
 import os
+import sys
 import numpy as np
 from glob import glob
 
@@ -373,9 +374,9 @@ class Gradient:
 
         # Log out the current line search stats for reference
         x, f = self._line_search.get_search_history()
-        i_str = ", ".join([f"{_:>8}" for _ in range(len(x))])
-        x_str = ", ".join([f"{_:.2E}" for _ in x])
-        f_str = ", ".join([f"{_:.2E}" for _ in f])
+        i_str = ", ".join([f"{_:>9}" for _ in range(len(x))])
+        x_str = ", ".join([f"{_:.3E}" for _ in x])
+        f_str = ", ".join([f"{_:.3E}" for _ in f])
         logger.info(f"step count  = {i_str}")
         logger.info(f"step length = {x_str}")
         logger.info(f"misfit val  = {f_str}")
