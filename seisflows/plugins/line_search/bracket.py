@@ -50,10 +50,17 @@ class Bracket:
         self.gtp = []
         self.step_count = 0
         self.iteridx = []
+
+    def __str__(self):
+        """Simply print out all attributes, used for debugging mainly"""
+        str_out = ""
+        for key, val in vars(self).items():
+            str_out += f"{key}: {val}\n"
+        return str_out
     
     @property
-    def updates(self):
-        """Keep track of how many model updates we have made"""
+    def update_count(self):
+        """Independently keeps track of how many model updates we have made"""
         return len(self.iteridx)
 
     def check(self):
@@ -144,8 +151,9 @@ class Bracket:
         self.step_lens = self.step_lens[:idx]
         self.func_vals = self.func_vals[:idx]
 
-        # Roll back gtg and gtp to before line search was initialized
-        idx = len(self.iteridx)
+        # Roll back one-time initialized parameters to before initialization
+        idx = self.update_count  # roll back to the last time we updated
+        self.iteridx = self.iteridx[:idx]
         self.gtg = self.gtg[:idx]
         self.gtp = self.gtp[:idx]
 

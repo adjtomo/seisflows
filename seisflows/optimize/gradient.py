@@ -406,7 +406,10 @@ class Gradient:
             'PASS': line search was successful, you can terminate the search
             'FAIL': line search has failed for one or more reasons.
         """
-        if self.step_len_init and self._line_search.updates == 0:
+        # Manually set the step length as some percentage of the model vector.
+        # Only do this at the very first model update, as after that we have 
+        # expected that the line search will know how to scale automatically
+        if self.step_len_init and self._line_search.update_count == 1:
             m = self.load_vector("m_new")  # current model from external solver
             p = self.load_vector("p_new")  # current search direction
             norm_m = max(abs(m.vector))

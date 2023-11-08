@@ -152,8 +152,8 @@ class Inversion(Migration):
 
         if self.iteration:
             assert(self.start <= self.iteration <= self.end), (
-                f"`workflow.iteration`=={self.iteration} must be between parameters"
-                f"`start` and `end`"
+                f"`workflow.iteration`=={self.iteration} must be between "
+                f"parameters `start` and `end`"
             )
 
             if self.iteration > 1:
@@ -226,7 +226,7 @@ class Inversion(Migration):
         with open(self.path.state_file, "w") as f:
             f.writelines(lines)
 
-    def generate_synthetic_data(**kwargs):
+    def generate_synthetic_data(self, **kwargs):
         """
         Function Override of `workflow.forward.generate_synthetic_data` 
 
@@ -438,6 +438,10 @@ class Inversion(Migration):
         Overwrite `workflow.migration` to convert the current model and the
         gradient calculated by migration from their native SPECFEM model format
         into optimization vectors that can be used for model updates.
+
+        Also includes search direction computation, which takes the gradient
+        `g_new` and scales to provide an appropriate search direction. At 
+        the simplest form (gradient descent), the search direction is simply -g
         """
         super().evaluate_gradient_from_kernels()
 
@@ -450,10 +454,18 @@ class Inversion(Migration):
             unix.mv(src, dst)
 
         # Expose the gradient to the optimization library
+        logger.info("exposing gradient `g_new` to optimization library")
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"),
                          regions=self.solver._regions
                          )
         self.optimize.save_vector(name="g_new", m=gradient)
+
+        # Compute search direction `p_new`: P is used to perturb starting model
+        # and is required for the line search 
+        logger.info("calculating search direction `p_new` from gradient")
+        p_new = self.optimize.compute_direction()
+        self.optimize.save_vector(name="p_new", m=p_new)
+
 
     def initialize_line_search(self):
         """
@@ -467,25 +479,12 @@ class Inversion(Migration):
         """
         logger.info(msg.mnr("INITIALIZING LINE SEARCH"))
 
-        # 'p_new' is the current search direction used to perturb starting model
-        # and is required for the following initialization tasks
-        p_new = self.optimize.compute_direction()
-        if sum(p_new.vector) == 0:
-            logger.critical(msg.cli(
-                "Search direction vector 'p' is 0, meaning no model update can "
-                "take place. Please check your gradient and waveform misfits. "
-                "SeisFlows exiting prior to start of line search.", border="=",
-                header="optimization gradient error")
-            )
-            sys.exit(-1)
-        self.optimize.save_vector(name="p_new", m=p_new)
-
         # Set up the line search machinery. Step count forced to 1
         self.optimize.initialize_search()
 
         # Determine the model we will use for first line search step count
         # m_try = m_new + alpha * p_new (i.e., m_i+1 = m_i + dm)
-        alpha, status = self.optimize.calculate_step_length()
+        alpha, _ = self.optimize.calculate_step_length()
         m_try = self.optimize.compute_trial_model(alpha=alpha)
         
         # Save the current state of the optimization module to disk

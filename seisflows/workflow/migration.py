@@ -225,6 +225,9 @@ class Migration(Forward):
         Generates the 'gradient' from the 'misfit kernel'. This involves
         scaling the gradient by the model vector (log dm --> dm) and applying
         an optional mask function to the gradient.
+
+        :raises SystemError: if the gradient vector is zero, which means that
+            none of the kernels returned usable values.
         """
         logger.info("scaling gradient to absolute model perturbations")
 
@@ -276,4 +279,16 @@ class Migration(Forward):
             src = os.path.join(self.path.eval_grad, "gradient")
             dst = os.path.join(self.path.output, "gradient")
             unix.cp(src, dst)
+
+        # Last minute check to see if the gradient is 0. If so then the adjoint
+        # simulations returned no kernels and that probably means something 
+        # went wrong
+        if sum(gradient.vector) == 0:
+            logger.critical(msg.cli(
+                "Gradient vector 'g' is 0, meaning none of the kernels from "
+                "the adjoint simulations returned. Please check your gradient "
+                "and waveform misfits. ", border="=",
+                header="optimization gradient error")
+            )
+            sys.exit(-1)
 
