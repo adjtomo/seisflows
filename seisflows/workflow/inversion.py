@@ -466,7 +466,6 @@ class Inversion(Migration):
         p_new = self.optimize.compute_direction()
         self.optimize.save_vector(name="p_new", m=p_new)
 
-
     def initialize_line_search(self):
         """
         Computes search direction using the optimization library and sets up

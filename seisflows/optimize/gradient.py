@@ -406,11 +406,17 @@ class Gradient:
             'PASS': line search was successful, you can terminate the search
             'FAIL': line search has failed for one or more reasons.
         """
+        # Used as checks to determine where we are in the inversion
+        first_iteration = bool(self._line_search.step_lens.count(0) == 1)
+        first_step = bool(self.step_count == 1)
+        
+        # Initialize empty vectors for checks
+        m, p = None, None
+
         # Manually set the step length as some percentage of the model vector.
-        # Only do this at the very first model update, as after that we have 
-        # expected that the line search will know how to scale automatically
-        if self.step_len_init and self._line_search.update_count == 1:
-            m = self.load_vector("m_new")  # current model from external solver
+        # Only do this at the very first model update
+        if self.step_len_init and first_iteration and first_step:
+            m = self.load_vector("m_new")  # current model
             p = self.load_vector("p_new")  # current search direction
             norm_m = max(abs(m.vector))
             norm_p = max(abs(p.vector))
@@ -419,8 +425,31 @@ class Gradient:
             status = None
             logger.debug(f"setting first step length with user-requested "
                          f"`step_len_init`={self.step_len_init}")
+        # OR, after the first evaluation, it's expected that the line search 
+        # will know how to scale automatically
         else:
             alpha, status = self._line_search.calculate_step_length()
+
+        # OPTIONAL: Apply step length safeguard to prevent step length from 
+        # getting too large w.r.t model values
+        if status == "TRY" and self.step_len_max:
+            logger.debug("checking safeguard: maximum allowable step length")
+            m = m or self.load_vector("m_new")  # current model
+            p = p or self.load_vector("p_new")  # current search direction
+            norm_m = max(abs(m.vector))
+            norm_p = max(abs(p.vector))
+
+            # Determine maximum alpha as a fraction of the current model
+            max_allowable_alpha = self.step_len_max * norm_m / norm_p
+            if alpha > max_allowable_alpha:
+                logger.warning(f"safeguard: alpha has exceeded maximum step "
+                               f"length {self.step_len_max}, capping value")
+                if first_step:
+                    # If this is the first step, pull back slightly so that line 
+                    # search can safely increase step length later
+                    alpha = 0.618034 * max_allowable_alpha
+                else:
+                    alpha = max_allowable_alpha
 
         logger.info(f"step length `alpha` = {alpha:.4E}")
     

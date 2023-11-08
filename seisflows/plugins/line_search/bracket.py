@@ -290,19 +290,6 @@ class Bracket:
                         f"`step_count_max`={self.step_count_max}")
             alpha = None
             status = "FAIL"
-
-        # Apply optional step length safeguard to step length
-        if status == "TRY":
-            if alpha > self.step_len_max and first_step:
-                alpha = 0.618034 * self.step_len_max
-                logger.info(f"try: applying initial step length "
-                            f"safegaurd as alpha has exceeded maximum step "
-                            f"length")
-            # Stop because safeguard prevents us from going further
-            elif alpha > self.step_len_max:
-                alpha = self.step_len_max
-                logger.info(f"try: applying step length safegaurd as alpha has "
-                            f"exceeded maximum allowable step length")
                 
         # Decrement step count to set the final accepted value if pass because
         # we will not be running another step
