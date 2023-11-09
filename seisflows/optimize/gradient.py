@@ -451,7 +451,7 @@ class Gradient:
                 else:
                     alpha = max_allowable_alpha
 
-        logger.info(f"step length `alpha` = {alpha:.4E}")
+        logger.info(f"step length `alpha` = {alpha:.3E}")
     
         return alpha, status
 
@@ -495,24 +495,23 @@ class Gradient:
                 unix.rm(os.path.join(self.path.scratch, fid))
 
         # Needs to be run before shifting model in next step
-        self._write_stats()
+        self.write_stats()
         plot_optim_stats(fid=self.path._stats_file, path_out=self.path.output)
 
-        logger.info("renaming current (new) optimization vectors as "
-                    "previous model (old)")
+        logger.info("setting current model as previous model (new -> old)")
         # e.g., m_new.npz -> m_old.npz
         for src in glob(os.path.join(self.path.scratch, "*_new.*")):
             dst = src.replace("_new.", "_old.")
             unix.mv(src, dst)
 
-        logger.info("setting accepted trial model (try) as current model (new)")
+        logger.info("setting trial model as starting model (m_try -> m_new)")
         unix.mv(src=os.path.join(self.path.scratch, "m_try.npz"),
                 dst=os.path.join(self.path.scratch, "m_new.npz"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
         x, f = self._line_search.get_search_history()
         self.save_vector("f_new", f.min())
-        logger.info(f"misfit of accepted trial model is f={f.min():.2E}")
+        logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
         logger.info("resetting line search step count to 0")
         self._line_search.step_count = 0
@@ -588,7 +587,7 @@ class Gradient:
         # step lengths (x) and function values/misfit (f)
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
-        x, f  = self._line_search.get_search_history(sort=True)
+        x, f  = self._line_search.get_search_history()
         step_count = self._line_search.step_count
 
         # Construct statistics
@@ -625,7 +624,7 @@ class Gradient:
         # are set to 0 by default
         if not os.path.exists(self.path._stats_file):
             with open(self.path._stats_file, "w") as f_:
-                x, f  = self._line_search.get_search_history(sort=True)
+                x, f  = self._line_search.get_search_history()
                 header = ",".join(keys) + "\n"
                 f_.write(header)
                 # Write values for first iteration
@@ -638,12 +637,11 @@ class Gradient:
                         val = 0
                     f_.write(f"{val:6.3E}")  
                 f_.write("\n")
-        
-        stats = self.get_stats()
 
         # Write stats for the current, finished, line search
+        stats = self.get_stats()
         with open(self.path._stats_file, "a") as f_:
-            for key in keys:
-                f_.write(f"{stats[key]:6.3E},")  
-            f_.write("\n")
+            stats_str = ["{stats[key]:6.3E}" for key in key]
+            stats_str = ",".join(stats_str) + "\n"
+            f_.write(stats_str)
 

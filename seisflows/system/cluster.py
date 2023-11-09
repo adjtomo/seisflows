@@ -314,8 +314,8 @@ class Cluster(Workstation):
             jobs in the queue and to prevent the check system from constantly 
             querying the queue system.
         :rtype: int
-        :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
-            fail (one or more jobs returned failing status)
+        :return: status of all running jobs. 1 for pass (all jobs COMPLETED). 
+            -1 for fail (one or more jobs returned failing status)
         :raises TimeoutError: if 'sacct' does not return any output for ~1 min.
         """
         logger.info(f"monitoring job status for job: {job_id}")
@@ -363,19 +363,19 @@ class Cluster(Workstation):
             # FAILED: All jobs are finished, but not all 'completed'
             elif all([state not in self._pending_states for state in states]):
                 # List out any failed jobs not already listed in FAILING state
-                for job_id, state in zip(job_ids, states):
-                    if state in self._failed_states and job_id not in bad_jobs:
-                        logger.critical(f"{job_id}: {state}")
+                for jid, state in zip(job_ids, states):
+                    if state in self._failed_states and jid not in bad_jobs:
+                        logger.critical(f"{jid}: {state}")
                 logger.critical("some array jobs have returned a non-complete "
                                 "state")
                 return -1
             # FAILING: Jobs still running but >1 non-complete. Keep monitoring
             elif any([check in states for check in self._failed_states]):
-                for job_id, state in zip(job_ids, states):
-                    if state in self._failed_states and job_id not in bad_jobs:
+                for jid, state in zip(job_ids, states):
+                    if state in self._failed_states and jid not in bad_jobs:
                         # Let User know failing jobs as they arise, only once
-                        logger.critical(f"{job_id}: {state}")
-                        bad_jobs.append(job_id)
+                        logger.critical(f"{jid}: {state}")
+                        bad_jobs.append(jid)
                 continue    
             # PENDING: Jobs running, mixture of pending and complete states
             else:
