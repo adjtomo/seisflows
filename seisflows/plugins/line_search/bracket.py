@@ -239,7 +239,7 @@ class Bracket:
         # Determine the line search history
         x, f = self.get_search_history()  
         # Some boolean checks to see where we're at in the inversion
-        first_iteration = bool(self.step_lens.count(0) == 1)
+        first_iteration = bool(self.update_count == 1)
         first_step = bool(self.step_count == 1)
 
         # For the first inversion and initial step, set alpha manually

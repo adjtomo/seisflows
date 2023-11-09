@@ -59,13 +59,14 @@ class Backtrack(Bracket):
         """
         # Determine the current line search history
         x, f = self.get_search_history()
-        first_iteration = bool(len(self.step_lens) >= 1)
+        first_iteration = bool(self.update_count == 1)
         first_step = bool(self.step_count == 1)
         
         # Check if this is the first iteration (by counting 0 step lens).
         # Quasi-Newton direction is not yet scaled properly if first iter. 
         # Instead of a bactracking line perform a bracketing line search
         if first_iteration:
+            logger.info("first iteration, defaulting to bracketing line search")
             alpha, status = super().calculate_step_length()
        
         # Assumed well scaled search direction, attempt backtracking line search 
