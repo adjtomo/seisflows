@@ -99,11 +99,11 @@ class Backtrack(Bracket):
                 alpha = None
                 status = "FAIL"
 
-        # Decrement step count to set the final accepted value if pass because
-        # we will not be running another step
-        if status == "PASS":
-            self.step_count -= 1
-            logger.info(f"final accepted step count == {self.step_count}")
+            # Decrement step count to set the final accepted value if pass 
+            # because we will not be running another step
+            if status == "PASS":
+                self.step_count -= 1
+                logger.info(f"final accepted step count == {self.step_count}")
 
         return alpha, status
 
