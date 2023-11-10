@@ -68,12 +68,9 @@ class Backtrack(Bracket):
         if first_iteration:
             logger.info("first iteration, defaulting to bracketing line search")
             alpha, status = super().calculate_step_length()
-       
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
         else:
-            self._print_stats(x, f)
-
             # Initial unit step length
             if first_step:
                 alpha = min(1., self.step_len_max)
@@ -99,7 +96,6 @@ class Backtrack(Bracket):
                             f"({self.step_count_max}) has been exceeded")
                 alpha = None
                 status = "FAIL"
-
             # Decrement step count to set the final accepted value if pass 
             # because we will not be running another step
             if status == "PASS":

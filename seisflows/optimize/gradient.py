@@ -641,7 +641,7 @@ class Gradient:
         # Write stats for the current, finished, line search
         stats = self.get_stats()
         with open(self.path._stats_file, "a") as f_:
-            stats_str = ["{stats[key]:6.3E}" for key in keys]
+            stats_str = [f"{stats[key]:6.3E}" for key in keys]
             stats_str = ",".join(stats_str) + "\n"
             f_.write(stats_str)
 
