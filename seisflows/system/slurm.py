@@ -30,7 +30,7 @@ import time
 import subprocess
 
 from datetime import timedelta
-from seisflows import ROOT_DIR, logger
+from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
@@ -297,7 +297,7 @@ class Slurm(Cluster):
             # Failure recovery mechanism. Determine which jobs did not complete
             # and attempt to rerun them up to a certain amount of times
             if self.rerun and _attempts < self.rerun:
-                jobs, states = self.query_job_states(job_id)
+                jobs, states = self.query_job_states(job_id, sort=True)
                 # Here we are assuming that the job index matches the task IDs
                 failed_array = []
                 for i, (job, state) in enumerate(zip(jobs, states)):
@@ -356,7 +356,7 @@ class Slurm(Cluster):
 
         return task_ids
 
-    def query_job_states(self, job_id):
+    def query_job_states(self, job_id, sort=False):
         """
         Overwrites `system.cluster.Cluster.query_job_states`
 
@@ -378,6 +378,11 @@ class Slurm(Cluster):
         :type job_id: str
         :param job_id: main job id to query, returned from the subprocess.run 
             that ran the jobs
+        :type sort: bool
+        :param sort: sort by job ids or job array ids. Defaults to False because
+            currently running jobs may return job numbers that cannot be sorted
+            e.g., 1_0, 1_1, 1_[2-5]. We only use sort when recovering from job 
+            failure because then we are assured that all jobs have run.
         :rtype: (list, list)
         :return: (job ids, corresponding job states). Returns (None, None) if
             `sacct` does not return a useful stdout (e.g., jobs have not
@@ -400,18 +405,19 @@ class Slurm(Cluster):
             job_ids.append(job_id)
             job_states.append(job_state)
     
-        # Sort by job ids because we assume that logically job numbers are in
-        # a numerically ascending order i.e., 1,2,3 
-        job_ids, job_states = zip(*sorted(zip(job_ids, job_states)))
+        if sort:
+            # Sort by job ids because we assume that logically job numbers are 
+            # in a numerically ascending order i.e., 1,2,3 
+            job_ids, job_states = zip(*sorted(zip(job_ids, job_states)))
 
-        # Sort array jobs because normal 'sorted' function doesn't work when
-        # strings are hyphenated (e.g., 1_0, 1_1, 1_2)
-        # https://stackoverflow.com/questions/20862968/\
-        #                numbers-with-hyphens-or-strings-of-numbers-with-hyphens
-        job_ids, job_states = zip(
-            *sorted(zip(job_ids, job_states), 
-                    key=lambda x: [int(y) for y in x[0].split('_')])
-                    )
+            # Sort array jobs because normal 'sorted' function doesn't work when
+            # strings are hyphenated (e.g., 1_0, 1_1, 1_2)
+            # https://stackoverflow.com/questions/20862968/\
+            #            numbers-with-hyphens-or-strings-of-numbers-with-hyphens
+            job_ids, job_states = zip(
+                *sorted(zip(job_ids, job_states), 
+                        key=lambda x: [int(y) for y in x[0].split('_')])
+                        )
 
         return job_ids, job_states
 
