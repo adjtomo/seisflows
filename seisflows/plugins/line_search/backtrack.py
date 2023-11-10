@@ -73,7 +73,7 @@ class Backtrack(Bracket):
         else:
             # Initial unit step length
             if first_step:
-                alpha = min(1., self.step_len_max)
+                alpha = 1.
                 logger.info(f"try: first step of iteration, attempt unit step")
                 status = "TRY"
             # Pass if misfit is reduced
