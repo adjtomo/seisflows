@@ -445,13 +445,16 @@ class Inversion(Migration):
         """
         super().evaluate_gradient_from_kernels()
 
-        src = os.path.join(self.path.output, "gradient")
-        dst = os.path.join(self.path.output, f"GRADIENT_{self.iteration:0>2}")
-        if os.path.exists(src):
-            if os.path.exists(dst):
-                unix.rm(dst)
-            logger.debug(f"{src} -> {dst}")
-            unix.mv(src, dst)
+        for tag in ["gradient", "kernels"]:
+            # e.g., 'gradient' -> 'GRADIENT_01'
+            src = os.path.join(self.path.output, tag)
+            if os.path.exists(src):
+                dst = os.path.join(self.path.output, 
+                    f"{tag.upper()}_{self.iteration:0>2}")
+                if os.path.exists(dst):
+                    unix.rm(dst)
+                logger.debug(f"{src} -> {dst}")
+                unix.mv(src, dst)
 
         # Expose the gradient to the optimization library
         logger.info("exposing gradient `g_new` to optimization library")
@@ -619,7 +622,6 @@ class Inversion(Migration):
 
         # Export scratch files to output if requested
         if self.export_model:
-
             model = self.optimize.load_vector("m_new")
             m_fid = os.path.join(self.path.output, 
                                  f"MODEL_{self.iteration:0>2}")
@@ -677,10 +679,14 @@ class Inversion(Migration):
             Resumed, failed workflows will not re-load `_thrifty_status` so
             initial misfit will always be evaluated in that case.
         """
+        # !!! Forcing first iteration to be thrifty because i'm not going to
+        # !!! change the parameters
         if self.iteration == self.start:
-            logger.info("thrifty inversion encountering first iteration, "
-                        "defaulting to standard inversion workflow")
-            _thrifty_status = False
+            _thrifty_status = True
+        # if self.iteration == self.start:
+        #     logger.info("thrifty inversion encountering first iteration, "
+        #                 "defaulting to standard inversion workflow")
+        #     _thrifty_status = False
         elif self.optimize._restarted:  # NOQA
             logger.info("optimization has been restarted, defaulting to "
                         "standard inversion workflow")
