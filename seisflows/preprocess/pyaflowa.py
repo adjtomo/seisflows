@@ -370,8 +370,13 @@ class Pyaflowa:
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
         if save_residuals:
+            if nwin:
+                summed_misfit = total_misfit / total_windows
+            # Edge case where number of windows is 0 (or we didn't pick windows)
+            else:
+                summed_misfit = total_misfit
             with open(save_residuals, "w") as f:
-                f.write(f"{total_misfit / total_windows:.2E}\n")
+                f.write(f"{summed_misfit:.2E}\n")
             if export_residuals:
                 unix.mkdir(export_residuals)
                 unix.cp(src=save_residuals, dst=export_residuals)
