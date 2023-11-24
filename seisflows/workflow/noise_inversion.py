@@ -987,8 +987,7 @@ class NoiseInversion(Inversion):
         # Increase the tasktime by a factor of 2 because there are many more
         # kernel manipulations that need to happen and this task usually fails
         # due to timeout when `tasktime` is set for an adjoint simulation
-        self.system.run([generate_event_kernels], single=True,
-                        tasktime=self.system.tasktime * 2)
+        self.system.run([generate_event_kernels], single=True)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
