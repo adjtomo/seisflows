@@ -364,16 +364,17 @@ class Pyaflowa:
                 total_windows += nwin or 0
 
         logger.info(f"{source_name}; misfit={total_misfit:.2E}; "
-                    f"nwin={total_windows}")
+                    f"number of windows={total_windows}")
 
         # Save residuals to external file for Workflow to calculate misfit `f`
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
         if save_residuals:
-            if nwin:
+            if total_windows != 0:
                 summed_misfit = total_misfit / total_windows
             # Edge case where number of windows is 0 (or we didn't pick windows)
             else:
+                logger.info("no windows found, will not normalize raw misfit")
                 summed_misfit = total_misfit
             with open(save_residuals, "w") as f:
                 f.write(f"{summed_misfit:.2E}\n")
@@ -583,7 +584,6 @@ class Pyaflowa:
                     sys.exit(-1)
 
                 time.sleep(_wait)
-                
 
         return mgmt.stats.misfit, mgmt.stats.nwin
 
