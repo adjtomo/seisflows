@@ -587,20 +587,6 @@ class Pyaflowa:
 
         return mgmt.stats.misfit, mgmt.stats.nwin
 
-    def sum_residuals(self, residuals):
-        """
-        Return summed residuals devided by number of events following equation
-        in Tape et al. 2010
-
-        :type residuals: np.array
-        :param residuals: list of residuals from each NTASK event
-        :rtype: float
-        :return: sum of squares of residuals
-        """
-        summed_residuals = np.sum(residuals)
-
-        return summed_residuals / self._ntask
-
     def finalize(self):
         """
         Run serial finalization tasks at the end of a given iteration. These 
