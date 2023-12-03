@@ -146,6 +146,7 @@ class LBFGS(Gradient):
         :return: search direction as a Model instance
         """
         self._LBFGS_iter += 1
+        logger.info(f"LBFGS iteration incremented -> {self._LBFGS_iter}")
 
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
@@ -153,14 +154,15 @@ class LBFGS(Gradient):
         p_new = g.copy()
 
         if self._LBFGS_iter == 1:
-            logger.info("first L-BFGS iteration, default to 'Gradient' descent")
+            logger.info("first L-BFGS iteration, default to gradient descent "
+                        "(P = -G)")
             p_new.update(vector=-1 * g.vector)
             restarted = False
         # Restart condition or first iteration lead to setting search direction
         # as the inverse gradient (i.e., default to steepest descent)
         elif self._LBFGS_iter > self.LBFGS_max:
             logger.info("restarting L-BFGS due to periodic restart condition. "
-                        "setting search direction as inverse gradient")
+                        "setting search direction as inverse gradient (P = -G)")
             self.restart()
             p_new.update(vector=-1 * g.vector)
             restarted = True

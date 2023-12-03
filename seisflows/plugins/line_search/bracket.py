@@ -88,12 +88,22 @@ class Bracket:
         Input the initial values of a line search, corresponding to the 
         initial model for this given iteration. Step length is assumed to be 0,
         because step length is calculated relative to the initial model.
-        """
-        # `iteridx`` keeps track of the index of each iteration. That way
-        # if we need to revert or restart a line search, we know exactly where
-        # to roll back to
-        self.iteridx.append(len(self.step_lens) - 1)  # -1 for idx, not length
 
+        .. note::
+
+            This is a one-time permanent change to the search history, but can 
+            be rolled back manually by the User with `_restart_line_search` (to 
+            start over from before `initialize_line_search`
+
+        :type func_val: float
+        :param func_val: value of the objective function evaluation
+        :type step_len: float
+        :param step_len: length of step for the trial model (alpha)
+        :type gtg: float
+        :param gtg: dot product of gradient with itself
+        :type gtp: float
+        :param gtp: dot product of gradient with search direction
+        """
         # Append information regarding the current line search
         self.step_count = 1
         self.step_lens.append(0)
@@ -101,11 +111,22 @@ class Bracket:
         self.gtg.append(gtg)
         self.gtp.append(gtp)
 
+        # `iteridx`` keeps track of the index of when each iteration started 
+        # based on the step length. That way if we need to revert or restart a 
+        # line search, we know exactly where to roll back to
+        self.iteridx.append(len(self.step_lens) - 1)  # -1 for idx, not length
+
     def update_search_history(self, func_val, step_len):
         """
         After a misfit evaluation for a trial model, line search needs to know
         how large the step (alpha) was, and the corresponding objective function
         misfit evaluation value.
+
+        .. note::
+
+            This is a one-time permanent change to the search history, but can 
+            be rolled back manually by the User with `_revert_line_search`, to 
+            undo the update performed here
 
         :type func_val: float
         :param func_val: value of the objective function evaluation
@@ -153,7 +174,7 @@ class Bracket:
         self.func_vals = self.func_vals[:idx]
 
         # Roll back one-time initialized parameters to before initialization
-        idx = self.update_count  # roll back to the last time we updated
+        idx = self.update_count - 1  # roll back to the last time we updated
         self.iteridx = self.iteridx[:idx]
         self.gtg = self.gtg[:idx]
         self.gtp = self.gtp[:idx]
