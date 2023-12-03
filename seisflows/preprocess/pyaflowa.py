@@ -370,11 +370,12 @@ class Pyaflowa:
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
         if save_residuals:
+            # Normalize the raw misfit by the number of measurements
             if total_windows != 0:
                 summed_misfit = total_misfit / total_windows
             # Edge case where number of windows is 0 (or we didn't pick windows)
             else:
-                logger.info("no windows found, will not normalize raw misfit")
+                logger.warning("0 windows found, will not normalize raw misfit")
                 summed_misfit = total_misfit
             with open(save_residuals, "w") as f:
                 f.write(f"{summed_misfit:.2E}\n")

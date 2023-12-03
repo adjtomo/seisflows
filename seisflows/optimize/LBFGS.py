@@ -142,8 +142,6 @@ class LBFGS(Gradient):
         4. New search direction is acceptably angled from previous,
             becomes the new search direction
 
-        TODO do we need to precondition L-BFGS?
-
         :rtype: seisflows.tools.specfem.Model
         :return: search direction as a Model instance
         """

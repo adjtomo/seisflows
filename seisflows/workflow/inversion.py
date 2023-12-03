@@ -311,7 +311,7 @@ class Inversion(Migration):
         # Sum newly calc'd residuals into the optimization library
         self.optimize.save_vector(name=save_to, m=total_misfit)
         logger.info(f"misfit {save_to} ({self.evaluation}) = "
-                    f"{total_misfit:.2E}")
+                    f"{total_misfit:.3E}")
 
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
                                 **kwargs):

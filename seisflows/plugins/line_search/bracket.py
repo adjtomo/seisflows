@@ -89,16 +89,17 @@ class Bracket:
         initial model for this given iteration. Step length is assumed to be 0,
         because step length is calculated relative to the initial model.
         """
+        # `iteridx`` keeps track of the index of each iteration. That way
+        # if we need to revert or restart a line search, we know exactly where
+        # to roll back to
+        self.iteridx.append(len(self.step_lens) - 1)  # -1 for idx, not length
+
+        # Append information regarding the current line search
         self.step_count = 1
         self.step_lens.append(0)
         self.func_vals.append(func_val)
         self.gtg.append(gtg)
         self.gtp.append(gtp)
-
-        # `iteridx`` keeps track of the index of each iteration. That way
-        # if we need to revert or restart a line search, we know exactly where
-        # to roll back to
-        self.iteridx.append(len(self.step_lens) - 1)  # -1 for idx, not length
 
     def update_search_history(self, func_val, step_len):
         """

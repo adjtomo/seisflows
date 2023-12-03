@@ -384,7 +384,7 @@ class Forward:
         # working with `data` are unncessary.
         if self.preprocess:
             run_list = [self.prepare_data_for_solver,
-                        self.run_forward_simulations,
+                        self.run_forward_simulations, 
                         self.evaluate_objective_function]
         else:
             run_list = [self.run_forward_simulations]
