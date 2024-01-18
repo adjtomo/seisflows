@@ -19,10 +19,14 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'SeisFlows'
-copyright = '2023'
+copyright = '2024'
 author = 'adjTomo Dev Team'
-version = '2.3.0'
-
+# Grab version number from 'pyproject.toml'
+with open("../pyproject.toml", "r") as f:
+    _lines = f.readlines()
+for _line in _lines:
+    if _line.startswith("version"):
+        version = _line.split('"')[1].strip()
 
 # -- General configuration ---------------------------------------------------
 
@@ -31,7 +35,8 @@ version = '2.3.0'
 # ones.
 extensions = [
         "sphinx_rtd_theme",
-        "autoapi.extension"
+        "autoapi.extension",
+        "myst_parser"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

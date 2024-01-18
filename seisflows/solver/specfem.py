@@ -19,12 +19,15 @@ TODO
 """
 import os
 import sys
+import time
 import subprocess
+from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
 
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import get_task_id, Dict
+from seisflows.tools.model import Model
 from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 
@@ -95,7 +98,7 @@ class Specfem:
     ***
     """
     def __init__(self, syn_data_format="ascii",  materials="acoustic",
-                 density=False, nproc=1, ntask=1, attenuation=False,
+                 update_density=False, nproc=1, ntask=1, attenuation=False,
                  smooth_h=0., smooth_v=0., components=None,
                  source_prefix=None, mpiexec=None, workdir=os.getcwd(),
                  path_solver=None, path_eval_grad=None,
@@ -129,7 +132,7 @@ class Specfem:
         self.materials = materials
         self.nproc = nproc
         self.ntask = ntask
-        self.density = density
+        self.update_density = update_density
         self.attenuation = attenuation
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
@@ -140,7 +143,7 @@ class Specfem:
         self.path = Dict(
             scratch=path_solver or os.path.join(workdir, "scratch", "solver"),
             eval_grad=path_eval_grad or
-                      os.path.join(workdir, "scratch", "evalgrad"),
+                      os.path.join(workdir, "scratch", "eval_grad"),
             data=path_data or os.path.join(workdir, "SFDATA"),
             output=path_output or os.path.join(workdir, "output"),
             specfem_bin=path_specfem_bin,
@@ -152,7 +155,7 @@ class Specfem:
 
         # Private internal parameters for keeping track of solver requirements
         self._parameters = []
-        if self.density:
+        if self.update_density:
             self._parameters.append("rho")
 
         self._mpiexec = mpiexec
@@ -223,14 +226,11 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        assert(model_type in self._available_model_types), (
-            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-            f"match acceptable model types: {self._available_model_types}"
-            )
-
-        # Assign file extensions to be used for database file searching
-        if model_type == "gll":
-            self._ext = ".bin"
+        # !!! BC UNCOMMENT THIS !!!
+        # assert(model_type in self._available_model_types), (
+        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+        #     f"match acceptable model types: {self._available_model_types}"
+        #     )
 
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
@@ -252,7 +252,7 @@ class Specfem:
             source_prefix=self.source_prefix, ntask=self.ntask
         )
 
-        assert(isinstance(self.density, bool)), \
+        assert(isinstance(self.update_density, bool)), \
             f"solver `density` must be True (variable) or False (constant)"
 
         # Check the size of the DATA/ directory and let the User know if 
@@ -269,6 +269,77 @@ class Specfem:
                             f"sure to check if this file is necessary for your "
                             f"workflow"
                             )
+
+    def setup(self):
+        """
+        Prepares solver scratch directories for an impending workflow.
+
+        Sets up directory structure expected by SPECFEM and copies or generates
+        seismic data to be inverted or migrated.
+
+        Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
+        """
+        self._initialize_working_directories()
+        self._export_starting_models()
+
+        # Assign file extensions to be used for database file searching
+        model_type = getpar(key="MODEL",
+                            file=os.path.join(self.path.specfem_data,
+                                              "Par_file"))[1]
+        if "gll" in model_type:
+            self._ext = ".bin"
+        else:
+            logger.warning("no file model/kernel file extension found, this "
+                           "may cause critical issues when looking for files. "
+                           "check SPECFEM parameter `model`.")
+
+    def check_model_values(self, path):
+        """
+        Convenience function to check parameter and model validity for
+        chosen Solver model. Should be called by the Workflow module
+
+        :type path: str
+        :param path: path to model file(s) that should be in the format expected
+            by the Model class (FORTRAN binary, ADIOS etc.)
+        """
+        assert os.path.exists(path), f"Model check path does not exist: {path}"
+
+        _model = Model(path=path, parameters=self._parameters,
+                       regions=self._regions)
+        try:
+            _model.check()
+            _model.print_stats()
+        except AssertionError as e:
+            logger.critical(
+                msg.cli(str(e), header="model read error", border="=")
+            )
+            sys.exit(-1)
+
+    def set_parameters(self, keys, vals, file, delim, **kwargs):
+        """
+        Public API that allows other modules modify solver-specific files with
+        paths relative to the `cwd` attribute.
+
+        Primarily used to modify locations or force vector direction for
+        the generation of different kernels in noise workflows.
+
+        Only works if file exists, otherwise raises FileNotFoundError
+        Kwargs are passed to `seisflows.tools.specfem.setpar()`
+
+        :type key: str
+        :param key: case-insensitive key to match in par_file. must match EXACT
+        :type val: str
+        :param val: value to OVERWRITE to the given key
+        :raises FileNotFoundError: if `file` does not exist within the solver's
+            working directory
+        """
+        os.chdir(self.cwd)
+        if os.path.exists(file):
+            for key, val in zip(keys, vals):
+                setpar(key=key, val=val, file=file, delim=delim, **kwargs)
+        else:
+            raise FileNotFoundError(f"solver/{file} not found, cannot set "
+                                    f"parameters")
 
     @property
     def source_names(self):
@@ -458,18 +529,6 @@ class Specfem:
         """
         return "OUTPUT_FILES"
 
-    def setup(self):
-        """
-        Prepares solver scratch directories for an impending workflow.
-
-        Sets up directory structure expected by SPECFEM and copies or generates
-        seismic data to be inverted or migrated.
-
-        Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
-        """
-        self._initialize_working_directories()
-        self._export_starting_models()
-
     def forward_simulation(self, executables=None, save_traces=False,
                            export_traces=False, save_forward=True, **kwargs):
         """
@@ -515,6 +574,18 @@ class Specfem:
             # e.g., fwd_mesher.log
             stdout = f"fwd_{self._exc2log(exc)}.log"
             self._run_binary(executable=exc, stdout=stdout)
+
+        # Error check to ensure that mesher and solver have been run succesfully
+        # !!! Temporarily removed check because SPECFEM2D does not create this
+        # !!! file
+        # _mesh = os.path.exists(os.path.join("OUTPUT_FILES", 
+        #                                     "output_mesher.txt"))
+        _solv = bool(glob(os.path.join("OUTPUT_FILES", self.data_wildcard())))
+        #if not _mesh or not _solv:
+        if not _solv:
+            logger.critical(msg.cli(f"solver failed to produce expected files",
+                            header="external solver error", border="="))
+            sys.exit(-1)
 
         # Work around SPECFEM's version dependent file names
         if self.syn_data_format.upper() == "SU":
@@ -587,36 +658,68 @@ class Specfem:
             logger.info(f"running SPECFEM executable {exc}, log to '{stdout}'")
             self._run_binary(executable=exc, stdout=stdout)
 
-        # Rename kernels to work w/ conflicting name conventions
-        # Change directory so that the rename doesn't affect the full path
-        # Deals with both SPECFEM3D and 3D_GLOBE, which adds in the 'reg?' tag
-        unix.cd(self.kernel_databases)
+        # Rename 'alpha' -> 'vp' and 'beta' -> 'vs' for consistency. 
+        # Wait a few seconds before doing this to avoid race condition of
+        # kernel file creation and renaming
+        self._rename_kernel_parameters()
+
+        # Kernel export and saving must take place within the kernel directory
+        unix.cd(os.path.join(self.cwd, self.kernel_databases))
+
+        # Export kernels: copy them to some external directory for storage
+        if export_kernels:
+            unix.mkdir(export_kernels)
+            for par in self._parameters:
+                kernel_files = glob(self.model_wildcard(par=par, kernel=True))
+                if kernel_files:
+                    logger.debug(f"copying '{par}' kernels to {export_kernels}")
+                    unix.cp(src=kernel_files, dst=export_kernels)
+                else:
+                    logger.warning(f"no kernel files for '{par}', cant export")
+
+        # Save kernels: move kernels to an internal directory for later steps
+        # so they don't get overwritten by future adjoint simulations
+        if save_kernels:
+            unix.mkdir(save_kernels)
+            for par in self._parameters:
+                kernel_files = glob(self.model_wildcard(par=par, kernel=True))
+                if kernel_files:
+                    logger.debug(f"moving '{par}' kernels to {save_kernels}")
+                    unix.mv(src=kernel_files, dst=save_kernels)
+                else:
+                    logger.critical(f"no kernel files found for '{par}', "
+                                    f"please check adjoint solver log for "
+                                    f"{self.source_name}")
+                    sys.exit(-1)
+
+    def _rename_kernel_parameters(self):
+        """
+        Rename kernels to work w/ conflicting name conventions.
+        - alpha -> vp
+        - beta -> vs
+        
+        Performed directly inside the directory so that rename won't affect
+        any strings in the full path. Deals with both SPECFEM3D and 3D_GLOBE.
+        GLOBE version adds in the 'reg?' tag that needs to be considered.
+
+        Kept as a separate function so it can be called outside the adjoint
+        simulation task for debugging purposes.
+        """
+        unix.cd(os.path.join(self.cwd, self.kernel_databases))
+
         for tag in ["alpha", "alpha[hv]", "reg?_alpha", "reg?_alpha[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
-                logger.debug(f"renaming output event kernels: '{tag}' -> 'vp'")
+                logger.info(f"renaming {len(names)} kernels: '{tag}' -> 'vp'")
                 unix.rename(old="alpha", new="vp", names=names)
 
         for tag in ["beta", "beta[hv]", "reg?_beta", "reg?_beta[hv]"]:
             names = glob(self.model_wildcard(par=tag, kernel=True))
             if names:
-                logger.debug(f"renaming output event kernels: '{tag}' -> 'vs'")
+                logger.info(f"renaming {len(names)} kernels: '{tag}' -> 'vs'")
                 unix.rename(old="beta", new="vs", names=names)
 
-        # Save and export the kernels to user-defined locations
-        if export_kernels:
-            unix.mkdir(export_kernels)
-            for par in self._parameters:
-                unix.cp(src=glob(self.model_wildcard(par=par, kernel=True)),
-                        dst=export_kernels)
-
-        if save_kernels:
-            unix.mkdir(save_kernels)
-            for par in self._parameters:
-                unix.mv(src=glob(self.model_wildcard(par=par, kernel=True)),
-                        dst=save_kernels)
-
-    def combine(self, input_path, output_path, parameters=None):
+    def combine(self, input_paths, output_path, parameters=None):
         """
         Wrapper for 'xcombine_sem'.
         Sums kernels from individual source contributions to create gradient.
@@ -629,9 +732,10 @@ class Specfem:
             system.run(single=True) so that we can use the main solver
             directory to perform the kernel summation task
 
-        :type input_path: str
-        :param input_path: path to data
-        :type output_path: strs
+        :type input_paths: list
+        :param input_paths: list of paths to directories containing binary
+            files to be combined
+        :type output_path: str
         :param output_path: path to export the outputs of xcombine_sem
         :type parameters: list
         :param parameters: optional list of parameters,
@@ -647,15 +751,13 @@ class Specfem:
 
         # Write the source names into the kernel paths file for SEM/ directory
         with open("kernel_paths", "w") as f:
-            f.writelines(
-                [os.path.join(input_path, f"{name}\n")
-                 for name in self.source_names]
-            )
+            for input_path in input_paths:
+                f.write(f"{input_path}\n")
 
         # Call on xcombine_sem to combine kernels into a single file
         for name in parameters:
             # e.g.: mpiexec bin/xcombine_sem alpha_kernel kernel_paths output/
-            exc = f"bin/xcombine_sem {name}_kernel kernel_paths {output_path}"
+            exc = f"bin/xcombine_sem {name} kernel_paths {output_path}"
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout)
@@ -822,17 +924,49 @@ class Specfem:
         dst = os.path.join(self.cwd, self.model_databases, "")
         unix.cp(src, dst)
 
-    def _initialize_working_directories(self):
+    def _initialize_working_directories(self, max_workers=None):
         """
-        Serial task used to initialize working directories for each of the a
-        available sources
+        Serial or parallel task used to initialize working directories for
+        each of the available sources
+
+        :type max_workers: int
+        :param max_workers: number of concurrent tasks to use when creating 
+            working directories. Defaults to using all available cores on 
+            the machine since this is a lightweight task
         """
-        logger.info(f"initializing {self.ntask} solver directories")
-        for source_name in self.source_names:
-            cwd = os.path.join(self.path.scratch, source_name)
-            if os.path.exists(cwd):
-                continue
-            self._initialize_working_directory(cwd=cwd)
+        if max_workers is None:
+            max_workers = unix.nproc() - 1  # use all available cores
+
+        # Full path each source in the scratch directory for directories that
+        # do not exist, otherwise this function gets skipped
+        source_paths = [os.path.join(self.path.scratch, source_name)
+                        for source_name in self.source_names]
+        source_paths = [p for p in source_paths if not os.path.exists(p)]
+
+        if source_paths:
+            logger.info(f"initializing {self.ntask} solver directories "
+                        f"{max_workers} at a time")
+
+        if max_workers > 1:
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = [
+                    executor.submit(self._initialize_working_directory, cwd)
+                    for cwd in source_paths
+                ]
+            wait(futures)
+            # If any of the jobs, calling the result will raise the Exception
+            for future in futures:
+                try:
+                    future.result()
+                except Exception as e:
+                    logger.critical(f"directory initialization error: {e}")
+                    sys.exit(-1)
+        else:
+            for source_name in self.source_names:
+                cwd = os.path.join(self.path.scratch, source_name)
+                if os.path.exists(cwd):
+                    continue
+                self._initialize_working_directory(cwd=cwd)
 
     def _initialize_working_directory(self, cwd=None):
         """
@@ -865,7 +999,6 @@ class Specfem:
             source_name = os.path.basename(cwd)
 
         logger.debug(f"initializing solver directory source: {source_name}")
-
         # Starting from a fresh working directory
         unix.rm(cwd)
         unix.mkdir(cwd)

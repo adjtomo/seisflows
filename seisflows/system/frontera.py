@@ -24,8 +24,7 @@ import subprocess
 from seisflows import ROOT_DIR, logger
 from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
-from seisflows.system.slurm import (Slurm, query_job_states, BAD_STATES, 
-                                    check_job_status_list)
+from seisflows.system.slurm import Slurm, check_job_status
 
 
 class Frontera(Slurm):
@@ -227,6 +226,8 @@ class Frontera(Slurm):
         """                                                                      
         funcs_fid, kwargs_fid = pickle_function_list(funcs,                      
                                                      path=self.path.scratch,     
+                                                     verbose=self.verbose,
+                                                     level=self.log_level,
                                                      **kwargs)                   
         if single:                                                               
             logger.info(f"running functions {[_.__name__ for _ in funcs]} on "   
@@ -259,7 +260,7 @@ class Frontera(Slurm):
 
         # Monitor the job queue until all jobs have completed, or any one fails  
         try:                                                                     
-            status = check_job_status_list(job_ids)
+            status = check_job_status(job_ids)
         except FileNotFoundError:                                                
             logger.critical(f"cannot access job information through 'sacct', "   
                             f"waited 50s with no return, please check job "      

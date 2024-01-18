@@ -17,7 +17,6 @@ import os
 import numpy as np
 
 from seisflows import logger
-from seisflows.tools.array import count_zeros
 from seisflows.tools.math import parabolic_backtrack, polynomial_fit
 
 
@@ -50,85 +49,198 @@ class Bracket:
         self.gtg = []
         self.gtp = []
         self.step_count = 0
+        self.iteridx = []
 
-    def update_search_history(self, func_val, step_len, gtg=None, gtp=None):
+    def __str__(self):
+        """Simply print out all attributes, used for debugging mainly"""
+        str_out = ""
+        for key, val in vars(self).items():
+            str_out += f"{key}: {val}\n"
+        return str_out
+    
+    @property
+    def update_count(self):
+        """Independently keeps track of how many model updates we have made"""
+        return len(self.iteridx)
+
+    def check(self):
         """
-        Update the internal list of search history attributes. Lists like
-        `func_vals` get appended to, while values like step_count are
-        overwritten. Allowed to increment func_val and step_len by themselves
+        Make sure internal parameters are consistent with expectations. This is
+        always expected to pass if the User/workflow uses the main functions 
+        to manipulate the line search. But occasionally some manual intervention
+        is required, so the check function makes sure things are okay.
         """
+        try:
+            assert len(self.iteridx) == len(self.gtg), (
+                "number of iterations is inconsistent with intializations"
+            )
+            assert(len(self.gtg) == len(self.gtp)), (
+                "line search GTP and GTG have become inconsistent"
+            )
+            assert(len(self.step_lens) == len(self.func_vals)), (
+                "line search step lengths and func vals inconsistent"
+            )
+        except AssertionError as e: 
+            logger.critical(e)
+
+    def initialize_line_search(self, func_val, gtg, gtp):
+        """
+        Input the initial values of a line search, corresponding to the 
+        initial model for this given iteration. Step length is assumed to be 0,
+        because step length is calculated relative to the initial model.
+
+        .. note::
+
+            This is a one-time permanent change to the search history, but can 
+            be rolled back manually by the User with `_restart_line_search` (to 
+            start over from before `initialize_line_search`
+
+        :type func_val: float
+        :param func_val: value of the objective function evaluation
+        :type step_len: float
+        :param step_len: length of step for the trial model (alpha)
+        :type gtg: float
+        :param gtg: dot product of gradient with itself
+        :type gtp: float
+        :param gtp: dot product of gradient with search direction
+        """
+        # Append information regarding the current line search
+        self.step_count = 1
+        self.step_lens.append(0)
+        self.func_vals.append(func_val)
+        self.gtg.append(gtg)
+        self.gtp.append(gtp)
+
+        # `iteridx`` keeps track of the index of when each iteration started 
+        # based on the step length. That way if we need to revert or restart a 
+        # line search, we know exactly where to roll back to
+        self.iteridx.append(len(self.step_lens) - 1)  # -1 for idx, not length
+
+    def update_search_history(self, func_val, step_len):
+        """
+        After a misfit evaluation for a trial model, line search needs to know
+        how large the step (alpha) was, and the corresponding objective function
+        misfit evaluation value.
+
+        .. note::
+
+            This is a one-time permanent change to the search history, but can 
+            be rolled back manually by the User with `_revert_line_search`, to 
+            undo the update performed here
+
+        :type func_val: float
+        :param func_val: value of the objective function evaluation
+        :type step_len: float
+        :param step_len: length of step for the trial model (alpha)
+        """
+        # Quick check to make sure this is expected
+        x, f = self.get_search_history()
+        assert len(x) == self.step_count, \
+            "update was not expected, step count does not match array length"
+        
         self.func_vals.append(func_val)
         self.step_lens.append(step_len)
-        if gtg:
-            self.gtg.append(gtg)
-        if gtp:
-            self.gtp.append(gtp)
 
     def clear_search_history(self):
         """
-        Clears internal line search history for a new line search attempt
+        Clears internal line search history after an optimization restart. This
+        is the 'nuclear' option, because it gets rid of ALL saved information
+        about misfit evaluations from the previous iterations, i.e., this is 
+        like starting from scratch.
         """
         self.func_vals = []
         self.step_lens = []
         self.gtg = []
         self.gtp = []
         self.step_count = 0
+        self.iteridx = []
 
-    def check_search_history(self):
+    def _restart_line_search(self):
         """
-        Since the line search is just a wrapper for list of numbers, check that
-        search history hasn't been muddled up by ensuring that internal lists
-        are the correct length for the given evaluation
+        Iff a line search has been initialized and something goes awry, it is
+        often preferable to restart the line search. To do this, we roll back
+        the number of steps we have taken during the line search, and undo
+        variable changes that took place in 'initialize_search'. 
         """
-        assert(len(self.gtg) == len(self.gtp)), f"too many entries for 'gtg'"
-        assert(len(self.func_vals) == len(self.step_lens)), \
-            f"number of function evaluations does not match step lengths"
-        if self.func_vals:
-            assert(self.step_count + 1 == len(self.func_vals)), \
-                f"current step count doesn't match the number of function evals"
+        logger.info("restarting line search for the current iteration")
 
-    def get_search_history(self, sort=True):
+        # Incase we somehow get doubles which should never be the case
+        self.iteridx = np.unique(self.iteridx).tolist()
+        self.step_count = 0
+
+        # Clear out search history up to the last iteration
+        idx = self.iteridx[-1] 
+        self.step_lens = self.step_lens[:idx]
+        self.func_vals = self.func_vals[:idx]
+
+        # Roll back one-time initialized parameters to before initialization
+        idx = self.update_count - 1  # roll back to the last time we updated
+        self.iteridx = self.iteridx[:idx]
+        self.gtg = self.gtg[:idx]
+        self.gtp = self.gtp[:idx]
+
+    def _revert_search_history(self):
         """
-        A convenience function, collects information based on the current
-        evaluation of the line search, needed to determine search status and 
-        calculate step length. From the full collection of the search history,
-        only returns values relevant to the current line search.
-
-        :type sort: bool
-        :param sort: sort the search history by step length
-        :rtype x: np.array
-        :return x: list of step lenths from current line search
-        :rtype f: np.array
-        :return f: correpsonding list of function values
-        :rtype gtg: list
-        :return gtg: dot product dot product of gradient with itself
-        :rtype gtp: list
-        :return gtp: dot product of gradient and search direction
-        :rtype i: int
-        :return i: step_count
-        :rtype j: int
-        :return j: number of iterations corresponding to 0 step length,
-            i.e., the update count
+        Occasionally a line search will break mid-search but the User doesn't 
+        want to `restart_line_search`, but rather just roll back to the previous
+        step count. This function steps back the search history by 
+        a number by one step. Call it multiple times to step back multiple steps
+        Raises an error if there are no more steps to revert. 
         """
-        i = self.step_count
-        k = len(self.step_lens)
-        x = np.array(self.step_lens[k - i - 1:k])
-        f = np.array(self.func_vals[k - i - 1:k])
-        j = count_zeros(self.step_lens) - 1  # update count
+        if self.step_count == 0:
+            logger.warning("cannot revert search history, already at step "
+                           "count 0. Use `restart_search_history` to restart "
+                           "to a pre line search state")
+            return
+        
+        logger.info(f"reverting search history 1 step")
 
-        # Sort by step length
-        if sort:
-            f = f[abs(x).argsort()]
-            x = x[abs(x).argsort()]
+        # Step back the other quantities however many steps we have taken
+        self.func_vals = self.func_vals[:-1]
+        self.step_lens = self.step_lens[:-1]
+        self.step_count -= 1
 
-        return x, f, self.gtg, self.gtp, i, j
+    def get_search_history(self):
+        """
+        Get the step lengths and misfit function evaluations for the current
+        line search. Sort the list by the step lengths to get a coherent list,
+        as e.g., in a bracketing line search the actual order of the list 
+        does not match the magnitude of step lengths taken.
 
-    def _print_stats(self, x, f):
-        """Print out misfit values and step lengths to the logger"""
-        x_str = ", ".join([f"{_:.2E}" for _ in x])
-        f_str = ", ".join([f"{_:.2E}" for _ in f])
-        logger.debug(f"step length(s) = {x_str}")
-        logger.debug(f"misfit val(s)  = {f_str}")
+        .. note::
+
+            In the original SeisFlows the values of the search history were
+            non-intuitive and difficult to understand at a glance. The 
+            original values are copied here as they relate to the mathematical
+            formulations and so are still important:
+        
+            i = self.step_count  
+            k = len(self.step_lens)
+            x = np.array(self.step_lens[k - i - 1:k])
+            f = np.array(self.func_vals[k - i - 1:k])
+            j = count_zeros(self.step_lens) - 1  # update count
+
+        :rtype: (np.array, np.array)
+        :return: (step lengths of current line search, 
+                  misfits of current line search)
+        """
+        if not self.iteridx:
+            logger.warning("line search has not yet been initialized")
+            return
+        
+        # Last iteration marks the index of the current line search
+        idx = self.iteridx[-1]
+
+        # Only return the last valid step lengths and misfit values that 
+        # represent the current line search
+        step_lens = np.array(self.step_lens[idx:])  # x
+        func_vals = np.array(self.func_vals[idx:])  # f
+
+        # Sort by the step lengths taken
+        func_vals = func_vals[abs(step_lens).argsort()]
+        step_lens = step_lens[abs(step_lens).argsort()]
+
+        return step_lens, func_vals
 
     def calculate_step_length(self):
         """
@@ -147,51 +259,51 @@ class Bracket:
             status==how to treat the next step count evaluation)
         """
         # Determine the line search history
-        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
-        self._print_stats(x, f)
+        x, f = self.get_search_history()  
+        # Some boolean checks to see where we're at in the inversion
+        first_iteration = bool(self.update_count == 1)
+        first_step = bool(self.step_count == 1)
 
         # For the first inversion and initial step, set alpha manually
-        if step_count == 0 and update_count == 0:
+        if first_iteration and first_step:  # == i00s00
             # Based on idea from Dennis and Schnabel
-            alpha = gtg[-1] ** -1
-            logger.info(f"try: first evaluation, attempt guess step length, "
-                        f"alpha={alpha:.2E}")
+            alpha = self.gtg[-1] ** -1
+            logger.info(f"try: first evaluation, guessing step length based on "
+                        f"gradient value")
             status = "TRY"
         # For every iteration's initial step, set alpha manually
-        elif step_count == 0:
+        elif first_step and (not first_iteration):
             # Based on the first equation in sec 3.5 of Nocedal and Wright 2ed
             idx = np.argmin(self.func_vals[:-1])
-            alpha = self.step_lens[idx] * gtp[-2] / gtp[-1]
-            logger.info(f"try: first step count of iteration, "
-                        f"setting scaled step length, alpha={alpha:.2E}")
+            alpha = self.step_lens[idx] * self.gtp[-2] / self.gtp[-1]
+            logger.info(f"try: first step of iteration, "
+                        f"setting scaled step length")
             status = "TRY"
         # If misfit is reduced and then increased, we've bracketed. Pass
         elif _check_bracket(x, f) and _good_enough(x, f):
             alpha = x[f.argmin()]
             logger.info(f"pass: bracket acceptable and step length "
-                        f"reasonable. returning minimum line search misfit.")
+                        f"reasonable. returning minimum line search misfit")
             status = "PASS"
         # If misfit is reduced but not close, set to quadratic fit
         elif _check_bracket(x, f):
             alpha = polynomial_fit(x, f)
             logger.info(f"try: bracket acceptable but step length unreasonable "
-                        f"attempting to re-adjust step length "
-                        f"alpha={alpha:.2E}")
+                        f"attempting to re-adjust step length")
             status = "TRY"
         # If misfit continues to step down, increase step length
-        elif step_count < self.step_count_max and all(f <= f[0]):
+        elif self.step_count < self.step_count_max and all(f <= f[0]):
             alpha = 1.618034 * x[-1]  # 1.618034 is the 'golden ratio'
             logger.info(f"try: misfit not bracketed, increasing step length "
-                        f"using golden ratio, alpha={alpha:.2E}")
+                        f"using golden ratio")
             status = "TRY"
         # If misfit increases, reduce step length by backtracking
-        elif step_count < self.step_count_max:
-            slope = gtp[-1] / gtg[-1]
+        elif self.step_count < self.step_count_max:
+            slope = self.gtp[-1] / self.gtg[-1]
             alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                         f1=f[1], b1=0.1, b2=0.5)
             logger.info(f"try: misfit increasing, attempting "
-                        f"to reduce step length using parabloic backtrack, "
-                        f"alpha={alpha:.2E}")
+                        f"to reduce step length using parabolic backtrack")
             status = "TRY"
         # step_count_max exceeded, fail
         else:
@@ -200,20 +312,12 @@ class Bracket:
                         f"`step_count_max`={self.step_count_max}")
             alpha = None
             status = "FAIL"
-
-        # Apply optional step length safeguard to step length
-        if status == "TRY":
-            if alpha > self.step_len_max and step_count == 0:
-                alpha = 0.618034 * self.step_len_max
-                logger.info(f"try: applying initial step length "
-                            f"safegaurd as alpha has exceeded maximum step "
-                            f"length, alpha_new={alpha:.2E}")
-            # Stop because safeguard prevents us from going further
-            elif alpha > self.step_len_max:
-                alpha = self.step_len_max
-                logger.info(f"try: applying step length safegaurd as alpha has "
-                            f"exceeded maximum allowable step length, "
-                            f"alpha_new={alpha:.2E}")
+                
+        # Decrement step count to set the final accepted value if pass because
+        # we will not be running another step
+        if status == "PASS":
+            self.step_count -= 1
+            logger.info(f"final accepted step count == {self.step_count}")
 
         return alpha, status
 

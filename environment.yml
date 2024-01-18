@@ -6,8 +6,9 @@ dependencies:
     - obspy
     - cartopy
     - pyyaml
+    - pypdf
     - pip:
-      - pyatoa<=0.2.2
-      - pysep-adjtomo<=0.4.1
+      - pyatoa>=0.3.0
+      - pysep-adjtomo
       - -e .
        

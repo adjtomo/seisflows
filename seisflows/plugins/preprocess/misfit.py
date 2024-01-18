@@ -86,7 +86,9 @@ def instantaneous_phase(syn, obs, nt, dt, *args, **kwargs):
 
 def traveltime(syn, obs, nt, dt, *args, **kwargs):
     """
-    Cross-correlation traveltime 
+    Cross-correlation traveltime misfit function that is proportional to the
+    squared time shift corresponding to the highest correlation coefficient
+    of the cross-correlation between observed and synthetics
 
     :type syn: np.array
     :param syn: synthetic data array
@@ -98,8 +100,9 @@ def traveltime(syn, obs, nt, dt, *args, **kwargs):
     :param dt: time step in sec
     """
     cc = abs(np.convolve(obs, np.flipud(syn)))
+    timeshift = (np.argmax(cc) - nt + 1) * dt
 
-    return (np.argmax(cc) - nt + 1) * dt
+    return 1/2 * timeshift ** 2
 
 
 def traveltime_inexact(syn, obs, nt, dt, *args, **kwargs):
@@ -134,6 +137,7 @@ def amplitude(syn, obs, nt, dt, *args, **kwargs):
     :type dt: float
     :param dt: time step in sec
     """
+    cc = abs(np.convolve(obs, np.flipud(syn)))
     ioff = (np.argmax(cc) - nt + 1) * dt
 
     if ioff <= 0:
@@ -179,7 +183,7 @@ def envelope3(syn, obs, nt, dt, eps=0., *args, **kwargs):
     env_syn = abs(analytic(syn))
     env_obs = abs(analytic(obs))
 
-    return Traveltime(env_syn, env_obs, nt, dt)
+    return traveltime(env_syn, env_obs, nt, dt)
 
 
 def instantaneous_phase2(syn, obs, nt, dt, eps=0., *args, **kwargs):

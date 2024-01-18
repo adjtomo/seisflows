@@ -56,7 +56,7 @@ class Migration(Forward):
     """
     __doc__ = Forward.__doc__ + __doc__
 
-    def __init__(self, modules=None, path_mask=None, export_gradient=True,
+    def __init__(self, path_mask=None, export_gradient=True,
                  export_kernels=False, **kwargs):
         """
         Instantiate Migration-specific parameters
@@ -68,7 +68,6 @@ class Migration(Forward):
         """
         super().__init__(**kwargs)
 
-        self._modules = modules
         self.export_gradient = export_gradient
         self.export_kernels = export_kernels
 
@@ -97,37 +96,69 @@ class Migration(Forward):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        return [self.evaluate_initial_misfit,
+        return [self.generate_synthetic_data,
+                self.evaluate_initial_misfit,
                 self.run_adjoint_simulations,
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels
                 ]
 
-    def run_adjoint_simulations(self):
+    def run_adjoint_simulations(self, **kwargs):
         """
-        Performs adjoint simulations for a single given event. File manipulation
-        to ensure kernels are discoverable by other modules
+        Performs adjoint simulations for all events. Some additional file 
+        naming to ensure kernels are discoverable by other modules. 
+
+        .. note::
+
+            This is a relatively simple function, but it keeps the approach 
+            general by allowing other workflows to include pre- and post-
+            processing tasks, or to overwrite the adjoint simulation task
         """
-        def run_adjoint_simulation():
-            """Adjoint simulation function to be run by system.run()"""
-            if self.export_kernels:
+        logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
+        self.system.run([self._run_adjoint_simulation_single], **kwargs)
+
+
+    def _run_adjoint_simulation_single(self, save_kernels=None, 
+                                       export_kernels=None, **kwargs):
+        """
+        Run an adjoint simulation for a single source. Allow saving kernels by 
+        moving them out of the run directory to another location. Allow 
+        exporting kernels by copying them to the output directory.
+
+        .. note::
+
+            Must be run by system.run() so that solvers are assigned
+            individual task ids/working directories.
+
+        :type save_kernels: str
+        :param save_kernels: path to a directory where kernels created by the 
+            adjoint simulation are moved to for further use in the workflow
+            Defaults to saving kernels in `scratch/eval_grad/kernels/<source>`
+        :type export kernels: str
+        :param export_kernels: path to a directory where kernels are copied for
+            more permanent storage, where they will not be wiped by `clean` or
+            `restart`. User parameter `export_kernels` must be set `True`.
+        """
+        # Set default value for `export_kernels` or take program default
+        if self.export_kernels:
+            if export_kernels is None:
                 export_kernels = os.path.join(self.path.output, "kernels",
                                               self.solver.source_name)
-            else:
-                export_kernels = False
+        else:
+            export_kernels = False
 
-            logger.info(f"running adjoint simulation for source "
-                        f"{self.solver.source_name}")
-            # Run adjoint simulations on system. Make kernels discoverable in
-            # path `eval_grad`. Optionally export those kernels
-            self.solver.adjoint_simulation(
-                save_kernels=os.path.join(self.path.eval_grad, "kernels",
-                                          self.solver.source_name, ""),
-                export_kernels=export_kernels
-            )
+        # Set default value for `save_kernels` or take programmed default
+        if save_kernels is None:
+            save_kernels = os.path.join(self.path.eval_grad, "kernels",
+                                        self.solver.source_name, "")
 
-        logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
-        self.system.run([run_adjoint_simulation])
+        logger.info(f"running adjoint simulation for source "
+                    f"{self.solver.source_name}")
+
+        # Run adjoint simulations on system. Make kernels discoverable in
+        # path `eval_grad`. Optionally export those kernels
+        self.solver.adjoint_simulation(save_kernels=save_kernels,
+                                       export_kernels=export_kernels)
 
     def postprocess_event_kernels(self):
         """
@@ -135,16 +166,32 @@ class Migration(Forward):
         then (optionally) smooth the output misfit kernel by convolving with
         a 3D Gaussian function with user-defined horizontal and vertical
         half-widths.
+
+        .. note::
+
+            If you hit a floating point error during the smooth operation, 
+            your kernels may be zero due to something going awry in the
+            misfit quantification or adjoint simulations.
         """
-        def combine_event_kernels():
+        def combine_event_kernels(**kwargs):
             """Combine event kernels into a misfit kernel"""
             logger.info("combining event kernels into single misfit kernel")
+
+            # Input paths are the kernels generated by each of the sources
+            input_paths = [os.path.join(self.path.eval_grad, "kernels", src) for
+                           src in self.solver.source_names]
+
+            # Parameters to combine are the kernels, which follow the 
+            # naming convention {par}_kernel
+            parameters = [f"{par}_kernel" for par in self.solver._parameters]
+
             self.solver.combine(
-                input_path=os.path.join(self.path.eval_grad, "kernels"),
-                output_path=os.path.join(self.path.eval_grad, "misfit_kernel")
+                input_paths=input_paths,
+                output_path=os.path.join(self.path.eval_grad, "misfit_kernel"),
+                parameters=parameters
             )
 
-        def smooth_misfit_kernel():
+        def smooth_misfit_kernel(**kwargs):
             """Smooth the output misfit kernel"""
             if self.solver.smooth_h > 0. or self.solver.smooth_v > 0.:
                 logger.info(
@@ -178,6 +225,9 @@ class Migration(Forward):
         Generates the 'gradient' from the 'misfit kernel'. This involves
         scaling the gradient by the model vector (log dm --> dm) and applying
         an optional mask function to the gradient.
+
+        :raises SystemError: if the gradient vector is zero, which means that
+            none of the kernels returned usable values.
         """
         logger.info("scaling gradient to absolute model perturbations")
 
@@ -229,4 +279,16 @@ class Migration(Forward):
             src = os.path.join(self.path.eval_grad, "gradient")
             dst = os.path.join(self.path.output, "gradient")
             unix.cp(src, dst)
+
+        # Last minute check to see if the gradient is 0. If so then the adjoint
+        # simulations returned no kernels and that probably means something 
+        # went wrong
+        if sum(gradient.vector) == 0:
+            logger.critical(msg.cli(
+                "Gradient vector 'g' is 0, meaning none of the kernels from "
+                "the adjoint simulations returned. Please check your gradient "
+                "and waveform misfits. ", border="=",
+                header="optimization gradient error")
+            )
+            sys.exit(-1)
 

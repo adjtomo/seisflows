@@ -35,7 +35,7 @@ import sys
 import time
 from seisflows import ROOT_DIR, logger
 from seisflows.tools.config import import_seisflows, pickle_function_list
-from seisflows.system.fujitsu import Fujitsu, check_job_status_list
+from seisflows.system.fujitsu import Fujitsu
 
 
 class Wisteria(Fujitsu):
@@ -162,7 +162,7 @@ class Wisteria(Fujitsu):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = check_job_status_list(job_ids)
+            status = self.check_job_status(job_ids)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "

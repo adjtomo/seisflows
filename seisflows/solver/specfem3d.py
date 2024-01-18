@@ -58,7 +58,7 @@ class Specfem3D(Specfem):
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
-                                   "xsmooth_sem", "xcombine_vol_data_vtk"]
+                                   "xsmooth_sem"]  #, "xcombine_vol_data_vtk"]
 
         # Internally used parameters set by functions within class
         self._model_databases = None
@@ -193,12 +193,14 @@ class Specfem3D(Specfem):
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
-        # !!! Do we need to tailor this to output of preprocess module? !!!
+        # we expect that preprocessing has created ALL required adjoint sources
         dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
         if not os.path.exists(dst):
             src = os.path.join(self.cwd, "DATA", "STATIONS")
             unix.cp(src, dst)
 
+        # SPECFEM class takes care of simulation_type and save_forward params
+        # as well as kernel renaming and export
         super().adjoint_simulation(executables=executables,
                                    save_kernels=save_kernels,
                                    export_kernels=export_kernels)

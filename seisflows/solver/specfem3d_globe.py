@@ -102,9 +102,11 @@ class Specfem3DGlobe(Specfem):
         self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]
-        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
-                                   "xsmooth_sem", "xsmooth_laplacian_sem",
-                                   "xcombine_vol_data_vtk"]
+        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem"]
+        if smooth_type == "laplacian":
+            self._required_binaries.append("xsmooth_laplacian_sem")
+        else:
+            self._required_binaries.append("xsmooth_sem")
 
         # Internally used parameters set by functions within class
         self._model_databases = None
@@ -125,6 +127,14 @@ class Specfem3DGlobe(Specfem):
             assert(int(r) in [1, 2, 3]), (
                 f"`regions` must be some integer combination 1, 2 and/or 3"
                 )
+
+        # Check that the DATA/ sub-directory crust2.0 is available.
+        # SPECFEM3D_GLOBE quirk requires this as a base model for GLL updates
+        for fid in ["s362ani", "crust2.0", "topo_bathy"]:  # !!! CHECK THIS
+            if not os.path.exists(os.path.join(self.path.specfem_data, fid)):
+                logger.warning(f"`path_specfem_data`/{fid} is required for "
+                               f"SPECFEM3D_GLOBE to use GLL models"
+                               )
 
     def data_wildcard(self, comp="?"):
         """
@@ -167,8 +177,6 @@ class Specfem3DGlobe(Specfem):
         """
         Calls SPECFEM3D_GLOBE forward solver, exports solver outputs to traces.
 
-
-
         :type executables: list or None                                          
         :param executables: list of SPECFEM executables to run, in order, to     
             complete a forward simulation. This can be left None in most cases,  
@@ -186,8 +194,10 @@ class Specfem3DGlobe(Specfem):
             permanent storage location. i.e., copy files from their original     
             location 
         """
+        # Forward simulations REQUIRE re-running the mesher to instantiate
+        # iterative model updates
         if executables is None:
-            executables = ["bin/xspecfem3D"]
+            executables = ["bin/xmeshfem3D", "bin/xspecfem3D"]
 
         super().forward_simulation(executables=executables, 
                                    save_traces=save_traces, 
@@ -201,7 +211,7 @@ class Specfem3DGlobe(Specfem):
     def adjoint_simulation(self, executables=None, save_kernels=False,
                            export_kernels=False):
         """
-        Supers SPECFEM3D for adjoint solver and removes GLOBE-specific fwd files
+        Supers SPECFEM for adjoint solver and removes GLOBE-specific fwd files
         Also deals with anisotropic kernels (or lack thereof)
 
         :type executables: list or None                                          
@@ -226,7 +236,6 @@ class Specfem3DGlobe(Specfem):
             executables = ["bin/xspecfem3D"]
 
         # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
-        # !!! Do we need to tailor this to output of preprocess module? !!!
         dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
         if not os.path.exists(dst):
             src = os.path.join(self.cwd, "DATA", "STATIONS")
@@ -239,37 +248,37 @@ class Specfem3DGlobe(Specfem):
         elif self.materials.upper() == "ANISOTROPIC":
             anisotropic_kl = ".true."
             save_transverse_kl_only = ".true."
-        elif self.materials.upper() == "FULLY_ANISOTROPIC":
-            # Work in progress, setting up for full 21 parameter anisotropy
-            raise NotImplementedError("Full anisotropy is not yet implemented "
-                                      "in SeisFlows")
-            anisotropic_kl = ".true."
-            save_transverse_kl_only = ".false."
+        else:
+            raise NotImplementedError("unexpected value for `solver.materials`")
 
         unix.cd(self.cwd)
         setpar(key="ANISOTROPIC_KL", val=anisotropic_kl, file="DATA/Par_file")
         setpar(key="SAVE_TRANSVERSE_KL_ONLY", val=save_transverse_kl_only, 
                file="DATA/Par_file")
-
+        
+        # SPECFEM3D class takes care of attenuation and STATIONS_ADJOINT file
         super().adjoint_simulation(executables=executables,                      
                                    save_kernels=save_kernels,                    
                                    export_kernels=export_kernels)
 
-        # Working around fact that save_forward arrays have diff naming
+        # Working around fact that `absorb_buffer` files have diff naming w.r.t
+        # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
+        # since we no longer need these
         if self.prune_scratch:                                                   
             for glob_key in ["proc??????_reg?_absorb_buffer.bin"]: 
                 logger.debug(f"removing '{glob_key}' files from database "       
                              f"directory")                                       
                 unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
-    def combine(self, input_path, output_path, parameters=None):                 
+    def combine(self, input_paths, output_path, parameters=None):                 
         """
         Overwrite of xcombine_sem with an additional file check as 
         SPECFEM3D_GLOBE requires file 'mesh_parameters.bin'
                                                                                  
-        :type input_path: str                                                    
-        :param input_path: path to data                                          
-        :type output_path: strs                                                  
+        :type input_paths: str                                                    
+        :param input_paths: list of paths to directories containing binary
+            files to be combined
+        :type output_path: str
         :param output_path: path to export the outputs of xcombine_sem           
         :type parameters: list                                                   
         :param parameters: optional list of parameters,                          
@@ -284,14 +293,14 @@ class Specfem3DGlobe(Specfem):
         # Copy the 'mesh_parameters.bin' from LOCAL_PATH. Assumed to be the 
         # same for all tasks
         src = os.path.join(self.model_databases, "mesh_parameters.bin")
-        for name in self.source_names:
-            dst = os.path.join(input_path, name, "mesh_parameters.bin")
+        for input_path in input_paths:
+            dst = os.path.join(input_path, "mesh_parameters.bin")
             unix.cp(src, dst)
         
         # 3DGLOBE 'xcombine_sem' does not expect `reg?_` prefix, strip off
         stripped_parameters = list(set([_[5:] for _ in parameters]))
 
-        super().combine(input_path=input_path, output_path=output_path,
+        super().combine(input_paths=input_paths, output_path=output_path,
                         parameters=stripped_parameters)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,      
@@ -442,3 +451,30 @@ class Specfem3DGlobe(Specfem):
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)
+
+    def import_model(self, path_model):
+        """
+        SPECFEM3D_GLOBE acts differently than the Cartesian version when
+        running GLL models. The User must put the GLL model files in
+        directory DATA/GLL (default, manually set PATHNAME_GLL_modeldir in
+        constants.h), and run the mesher to incorporate any model updates.
+
+        The updated GLL model files for iterative inversions need to be stored
+        in a specific directory. Here it is hardcoded to the default value for
+        SPECFEM3D_GLOBE constant `PATHNAME_GLL_modeldir`, which is specified in
+        `src/constants.h` as "DATA/GLL"
+
+        :type path_model: str
+        :param path_model: path to an existing starting model
+        """
+        assert(os.path.exists(path_model)), f"model {path_model} does not exist"
+        unix.cd(self.cwd)
+
+        # Copy the model files (ex: proc000023_vp.bin ...) into database dir
+        src = glob(os.path.join(path_model, f"*{self._ext}"))
+        dst = os.path.join(self.cwd, "DATA", "GLL", "")
+        if not os.path.exists(dst):
+            unix.mkdir(dst)
+
+        unix.cp(src, dst)
+

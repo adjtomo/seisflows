@@ -43,7 +43,7 @@ class LBFGS(Gradient):
     """
     L-BFGS Optimization
     -------------------
-    Limited memory BFGS nonlienar optimization algorithm
+    Limited memory BFGS nonlinear optimization algorithm
 
     Parameters
     ----------
@@ -69,8 +69,6 @@ class LBFGS(Gradient):
 
         # Overwrite user-chosen line search. L-BFGS requires 'Backtrack'ing LS
         if self.line_search_method.title() != "Backtrack":
-            logger.warning(f"L-BFGS optimization requires 'backtrack'ing line "
-                           f"search. Overwriting '{self.line_search_method}'")
             self.line_search_method = "Backtrack"
             self._line_search = getattr(
                 line_search_dir, self.line_search_method)(
@@ -144,12 +142,11 @@ class LBFGS(Gradient):
         4. New search direction is acceptably angled from previous,
             becomes the new search direction
 
-        TODO do we need to precondition L-BFGS?
-
         :rtype: seisflows.tools.specfem.Model
         :return: search direction as a Model instance
         """
         self._LBFGS_iter += 1
+        logger.info(f"LBFGS iteration incremented -> {self._LBFGS_iter}")
 
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
@@ -157,14 +154,15 @@ class LBFGS(Gradient):
         p_new = g.copy()
 
         if self._LBFGS_iter == 1:
-            logger.info("first L-BFGS iteration, default to 'Gradient' descent")
+            logger.info("first L-BFGS iteration, default to gradient descent "
+                        "(P = -G)")
             p_new.update(vector=-1 * g.vector)
             restarted = False
         # Restart condition or first iteration lead to setting search direction
         # as the inverse gradient (i.e., default to steepest descent)
         elif self._LBFGS_iter > self.LBFGS_max:
             logger.info("restarting L-BFGS due to periodic restart condition. "
-                        "setting search direction as inverse gradient")
+                        "setting search direction as inverse gradient (P = -G)")
             self.restart()
             p_new.update(vector=-1 * g.vector)
             restarted = True
@@ -185,7 +183,7 @@ class LBFGS(Gradient):
                 restarted = False
             else:
                 logger.info("new search direction not appropriate, defaulting "
-                            "to gradient desceitn")
+                            "to gradient descent")
                 self.restart()
                 p_new.update(vector=-1 * g.vector)
                 restarted = True
@@ -198,27 +196,27 @@ class LBFGS(Gradient):
     def restart(self):
         """
         Restart the L-BFGS optimization algorithm by clearing out stored
-        gradient memory.
+        gradient memory. The workflow will need to call `compute_direction` and
+        `initialize_search` afterwards to properly re-instantiate the line
+        search machinery. 
         """
         logger.info("restarting L-BFGS optimization algorithm")
 
-        # Fall back to gradient descent for search direction
-        g = self.load_vector("g_new")
-        p_new = g.copy()
-        p_new.update(vector=-1 * g.vector)
-        self.save_vector("p_new", p_new)
-
-        # Clear internal memory
+        # Clear internal memory back to default values
         self._line_search.clear_search_history()
         self._restarted = True
-        self._LBFGS_iter = 1
+        self._LBFGS_iter = 0  # will be incremented to 1 by `compute_direction`
         self._memory_used = 0
 
-        # Clear out previous gradient information
-        s = np.memmap(filename=self.path._s_file, mode="r+")
-        y = np.memmap(filename=self.path._y_file, mode="r+")
-        s[:] = 0.
-        y[:] = 0.
+        # Clear out previous gradient information. Check file existence first
+        # because the first iteration will not have generated S and Y yet, but
+        # we may want to run restart for manual line search restart
+        if os.path.exists(self.path._s_file):
+            s = np.memmap(filename=self.path._s_file, mode="r+")
+            s[:] = 0.
+        if os.path.exists(self.path._y_file):
+            y = np.memmap(filename=self.path._y_file, mode="r+")
+            y[:] = 0.
 
     def _update_search_history(self):
         """
