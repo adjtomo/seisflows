@@ -1,12 +1,13 @@
 name: seisflows
 channels:
     - conda-forge
-    - defaults
 dependencies:
     - pip
     - obspy
     - cartopy
     - pyyaml
     - pip:
+      - pyatoa<=0.2.2
+      - pysep-adjtomo<=0.4.1
       - -e .
        

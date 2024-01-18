@@ -34,7 +34,7 @@ class Default:
     :type unit_output: str
     :param unit_output: Data units. Must match the synthetic output of
         external solver. Available: ['DISP': displacement, 'VEL': velocity,
-        'ACC': acceleration]
+        'ACC': acceleration, 'PRE': pressure]
     :type misfit: str
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
@@ -145,7 +145,7 @@ class Default:
         self._syn_acceptable_data_formats = ["SU", "ASCII"]
         self._obs_acceptable_data_formats = ["SU", "ASCII", "SAC"]
 
-        self._acceptable_unit_output = ["DISP", "VEL", "ACC"]
+        self._acceptable_unit_output = ["DISP", "VEL", "ACC", "PRE"]
 
         # Misfits and adjoint sources are defined by the available functions
         # in each of these plugin files. Drop hidden variables from dir()
@@ -408,7 +408,8 @@ class Default:
 
     def _setup_quantify_misfit(self, source_name):
         """
-        Gather waveforms from the Solver scratch directory and
+        Gather waveforms from the Solver scratch directory which will be used
+        for generating adjoint sources
         """
         source_name = source_name or self._source_names[get_task_id()]
 
@@ -424,7 +425,7 @@ class Default:
         # verify observed traces format
         obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
 
-        if self.obs_data_format == "ASCII":
+        if self.obs_data_format.upper() == "ASCII":
             obs_ext_ok = obs_ext[0].upper() == ".ASCII" or \
                          obs_ext[0].upper() == f".SEM{self.unit_output[0]}"
         else:
@@ -477,8 +478,8 @@ class Default:
         return observed, synthetic
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
-                        save_adjsrcs=None, iteration=1, step_count=0,
-                        **kwargs):
+                        export_residuals=None, save_adjsrcs=None, iteration=1,
+                        step_count=0, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -550,6 +551,12 @@ class Default:
 
         if save_adjsrcs and self._generate_adjsrc:
             self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
+
+        # Exporting residuals to disk (output/) for more permanent storage
+        if export_residuals:
+            if not os.path.exists(export_residuals):
+                unix.mkdir(export_residuals)
+            unix.cp(src=save_residuals, dst=export_residuals)
 
     def finalize(self):
         """Teardown procedures for the default preprocessing class"""

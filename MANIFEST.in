@@ -1,0 +1,4 @@
+# MANIFEST.in
+
+include seisflows/seisflows/system/runscripts/run
+include seisflows/seisflows/system/runscripts/submit
