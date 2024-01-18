@@ -202,7 +202,7 @@ class Forward:
         Makes required path structure for the workflow, runs setup functions
         for all the required modules of this workflow.
         """
-        logger.info(f"SETTING UP {self.__class__.__name__.upper()} WORKFLOW")
+        logger.info(f"setup {self.__class__.__name__} workflow")
 
         # Create the desired directory structure
         for path in self.path.values():
@@ -332,7 +332,7 @@ class Forward:
                 )
 
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
-                                **kwargs):
+                                _preproc_only=False, **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
         before generating synthetics, which is either copied from user-supplied
@@ -355,6 +355,14 @@ class Forward:
             each source. Remainder of string is some combination of the
             iteration, step count etc. Allows inheriting workflows to
             override this path if more specific file naming is required.
+        :type _preproc_only: bool
+        :param _preproc_only: a debug tool to ONLY run the preprocessing 
+            contained in `evaluate_objective_function`, skipping over the 
+            forward simulation. You would want to do this, e.g., if your 
+            workflow already ran the forward simulation and you just want to 
+            re pick windows, or test out different filter bands etc. 
+            Recommended this be run in debug mode and that you change `tasktime`
+            to reflect that no forward simulation will be run.
         """
         logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
 
@@ -386,6 +394,10 @@ class Forward:
             run_list = [self.prepare_data_for_solver,
                         self.run_forward_simulations, 
                         self.evaluate_objective_function]
+            # Manual overwrite to not run forward simulations
+            if _preproc_only:
+                logger.warning("user request that NO forward simulation be run")
+                run_list = [self.evaluate_objective_function]
         else:
             run_list = [self.run_forward_simulations]
 
