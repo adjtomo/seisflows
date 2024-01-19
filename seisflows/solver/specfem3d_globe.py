@@ -141,6 +141,7 @@ class Specfem3DGlobe(Specfem):
                 logger.warning(f"`path_specfem_data`/{fid} is required for "
                                f"SPECFEM3D_GLOBE to use GLL models"
                                )
+                
         # Set SPECFEM parameter 'SAVE_SOURCE_MASK' if requested by User
         if self.source_mask:
             source_mask = getpar(key="SAVE_SOURCE_MASK", 
@@ -275,6 +276,17 @@ class Specfem3DGlobe(Specfem):
         super().adjoint_simulation(executables=executables,                      
                                    save_kernels=save_kernels,                    
                                    export_kernels=export_kernels)
+        
+        # Export the source mask files so that Workflow can find them later
+        if self.mask_source:
+            dst = os.path.join(self.path.eval_grad, "mask", self.source_name)
+            unix.mkdir(dst)
+            mask_files = glob(self.model_wildcard(par="mask_source"))
+            if not mask_files:
+                logger.warning("no source mask files found despite parameter "
+                               "`mask_source`=True")
+            logger.debug(f"moving source mask files to {dst}")
+            unix.mv(src=mask_files, dst=dst)
 
         # Working around fact that `absorb_buffer` files have diff naming w.r.t
         # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
