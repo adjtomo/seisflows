@@ -60,6 +60,11 @@ class Specfem3DGlobe(Specfem):
             intensive, but default and matches 2D and 3D_Cartesian smoothing
         - 'laplacian' (default): average points around vertex to smooth. 
             faster and preferred method for GLOBE code
+    :type mask_source: bool
+    :param mask_source: mask the source region of the gradient to avoid high
+        amplitude updates around source region. If True, uses the SPECFEM 
+        parameter 'SAVE_SOURCE_MASK' to output source mask files and applies
+        source mask to event kernel during gradient calculation.
 
     Paths
     -----
@@ -69,13 +74,14 @@ class Specfem3DGlobe(Specfem):
 
     def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
                  prune_scratch=True, regions="123", smooth_type="laplacian",
-                 **kwargs):
+                 mask_source=False, **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
         self.prune_scratch = prune_scratch
         self.export_vtk = export_vtk
+        self.mask_source = mask_source
 
         # These two variables are the same but we have a public version so it 
         # will show up in the parameter file (for 3D_GLOBE only), and a private
@@ -135,6 +141,15 @@ class Specfem3DGlobe(Specfem):
                 logger.warning(f"`path_specfem_data`/{fid} is required for "
                                f"SPECFEM3D_GLOBE to use GLL models"
                                )
+        # Set SPECFEM parameter 'SAVE_SOURCE_MASK' if requested by User
+        if self.source_mask:
+            source_mask = getpar(key="SAVE_SOURCE_MASK", 
+                                 file=os.path.join(self.path.specfem_data,
+                                                   "Par_file"))[1]
+            if source_mask != ".true.":
+                logger.info("updating SPECFEM parameter `SAVE_SOURCE_MASK`")
+                setpar(key="SAVE_SOURCE_MASK", val=".true.", 
+                       file=os.path.join(self.path.specfem_data, "Par_file"))
 
     def data_wildcard(self, comp="?"):
         """
