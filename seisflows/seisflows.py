@@ -588,7 +588,7 @@ class SeisFlows:
         unix.cp(self._args.parameter_file, temp_par_file)
 
         try:
-            written, path_docstrings = [], []
+            written = []
             f = open(self._args.parameter_file, "a")
             # Write all module parameters and corresponding docstrings
             for module in modules:
@@ -622,8 +622,9 @@ class SeisFlows:
                     elif key in _ignore_paths:
                         continue
                     # Don't write default paths yet, will write at the end
-                    elif key in _default_paths and key not in defaults:
-                        defaults[key] = val
+                    elif key in _default_paths:
+                        if key not in defaults:
+                            defaults[key] = val
                         continue
                     
                     if val is None:
@@ -632,6 +633,8 @@ class SeisFlows:
                         val = os.path.abspath(val)
                     else:
                         val = os.path.relpath(val)
+                    if key == "scratch":
+                        import pdb;pdb.set_trace()
                     f.write(f"path_{key}: {val}\n")
                     written.append(key)
             # Write out the default paths at the very end
