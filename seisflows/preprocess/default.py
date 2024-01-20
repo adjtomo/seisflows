@@ -27,8 +27,8 @@ from seisflows.plugins.preprocess import adjoint as adjoint_sources
 
 class Default:
     """
-    Default Preprocess
-    ------------------
+    Default Preprocess [Preprocess Base]
+    ------------------------------------
     Data processing for seismic traces, with options for data misfit,
     filtering, normalization and muting.
 

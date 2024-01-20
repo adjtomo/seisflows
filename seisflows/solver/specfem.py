@@ -33,8 +33,8 @@ from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 class Specfem:
     """
-    Solver SPECFEM
-    --------------
+    Solver SPECFEM [Solver Base]
+    ----------------------------
     Defines foundational structure for Specfem-based solver module. 
     Generalized SPECFEM interface to manipulate SPECFEM2D/3D/3D_GLOBE w/ Python
 
