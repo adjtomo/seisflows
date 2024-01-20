@@ -696,7 +696,6 @@ class SeisFlows:
                            delim=":")
             return
             
-
         if module not in NAMES:
             print(msg.cli(text=f"{module} does not match {NAMES}",
                           header="error"))
@@ -707,7 +706,7 @@ class SeisFlows:
         unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
         try:
             # Create a new parameter file with updated module
-            self.setup(force=True)
+            self.init(force=True)
             for name in NAMES:
                 setpar(key=name, val=ogpars[name],
                        file=self._args.parameter_file, delim=":")
