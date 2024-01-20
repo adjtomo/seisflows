@@ -160,7 +160,7 @@ class Migration(Forward):
         Combine/sum NTASK event kernels into a single volumetric kernel and
         then (optionally) smooth the output misfit kernel by convolving with
         a 3D Gaussian function with user-defined horizontal and vertical
-        half-widths, or by using the laplacian smoothing operator.s
+        half-widths, or by using the laplacian smoothing operator.
 
         .. note::
 

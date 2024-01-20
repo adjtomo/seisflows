@@ -143,12 +143,13 @@ class Specfem3DGlobe(Specfem):
                                )
                 
         # Set SPECFEM parameter 'SAVE_SOURCE_MASK' if requested by User
-        if self.source_mask:
+        if self.mask_source:
             source_mask = getpar(key="SAVE_SOURCE_MASK", 
                                  file=os.path.join(self.path.specfem_data,
                                                    "Par_file"))[1]
             if source_mask != ".true.":
-                logger.info("updating SPECFEM parameter `SAVE_SOURCE_MASK`")
+                logger.info("updating SPECFEM parameter "
+                            "`SAVE_SOURCE_MASK` = .true.")
                 setpar(key="SAVE_SOURCE_MASK", val=".true.", 
                        file=os.path.join(self.path.specfem_data, "Par_file"))
 
@@ -277,7 +278,7 @@ class Specfem3DGlobe(Specfem):
                                    save_kernels=save_kernels,                    
                                    export_kernels=export_kernels)
         
-        # Export the source mask files so that Workflow can find them later
+        # Export the source mask files so that Workflow can find them later.
         if self.mask_source:
             dst = os.path.join(self.path.eval_grad, "mask", self.source_name)
             unix.mkdir(dst)

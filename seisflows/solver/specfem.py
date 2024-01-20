@@ -19,7 +19,6 @@ TODO
 """
 import os
 import sys
-import time
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
@@ -944,8 +943,7 @@ class Specfem:
         source_paths = [p for p in source_paths if not os.path.exists(p)]
 
         if source_paths:
-            logger.info(f"initializing {self.ntask} solver directories "
-                        f"{max_workers} at a time")
+            logger.info(f"initializing {self.ntask} solver directories")
 
         if max_workers > 1:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
