@@ -280,9 +280,13 @@ class Specfem3DGlobe(Specfem):
         
         # Export the source mask files so that Workflow can find them later.
         if self.mask_source:
-            dst = os.path.join(self.path.eval_grad, "mask", self.source_name)
+            dst = os.path.join(self.path.eval_grad, "source_mask", 
+                               self.source_name)
             unix.mkdir(dst)
-            mask_files = glob(self.model_wildcard(par="mask_source"))
+            mask_files = glob(
+                os.path.join(self.cwd, self.model_databases, 
+                             self.model_wildcard(par="reg?_mask_source"))
+                             )
             if not mask_files:
                 logger.warning("no source mask files found despite parameter "
                                "`mask_source`=True")

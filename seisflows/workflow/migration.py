@@ -56,7 +56,7 @@ class Migration(Forward):
     """
     __doc__ = Forward.__doc__ + __doc__
 
-    def __init__(self, mask_source=False, path_mask=None, export_gradient=True,
+    def __init__(self, path_mask=None, export_gradient=True,
                  export_kernels=False, **kwargs):
         """
         Instantiate Migration-specific parameters
@@ -177,12 +177,13 @@ class Migration(Forward):
             This uses the Model class because SPECFEM does not have an internal
             function for multiplying files (only for adding/subtracting)
             """
-            mask_path = os.path.join(self.path.eval_grad, "mask", 
+            mask_path = os.path.join(self.path.eval_grad, "source_mask", 
                                      self.solver.source_name)
             mask_files = glob(os.path.join(mask_path, "*"))
 
             # Only trigger this function if the Solver has saved source masks
             if not mask_files:
+                logger.debug("no source mask files found, skipping source mask")
                 return
             
             logger.info("masking source region in event kernels")
