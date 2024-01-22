@@ -283,6 +283,12 @@ class Specfem3DGlobe(Specfem):
             dst = os.path.join(self.path.eval_grad, "mask_source", 
                                self.source_name)
             unix.mkdir(dst)
+            # Don't overwrite existing files because they will be the same
+            if glob(os.path.join(dst, "*")):
+                logger.debug("source mask files already exist in directory, "
+                             "will not transfer new files")
+                return
+            # Check that the adjoint simulation actually created requisite files
             mask_files = glob(
                 os.path.join(self.cwd, self.model_databases, 
                              self.model_wildcard(par="reg?_mask_source"))
@@ -290,6 +296,8 @@ class Specfem3DGlobe(Specfem):
             if not mask_files:
                 logger.warning("no source mask files found despite parameter "
                                "`mask_source`=True")
+                return
+        
             logger.debug(f"moving source mask files to {dst}")
             unix.mv(src=mask_files, dst=dst)
 

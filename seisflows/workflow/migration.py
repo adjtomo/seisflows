@@ -20,6 +20,7 @@ model
 import os
 import sys
 import shutil
+import numpy as np
 from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
@@ -196,9 +197,12 @@ class Migration(Forward):
                 parameters=[f"{par}_kernel" for par in self.solver._parameters],
                 regions=self.solver._regions
                 )
-            # Multiple mask vector to mask out source region in event kernel
-            event_kernel.update(vector=event_kernel.vector * mask_model.vector)
-            # Overwrite existing event kernel files
+            # The mask vector is only the length of one parameter, so we need
+            # to expand it to the length of the event kernel vector
+            mask_vector_repeat = np.repeat(mask_model.vector, 
+                                             len(event_kernel.parameters))
+            event_kernel.update(vector=event_kernel.vector * mask_vector_repeat)
+            # Overwrite existing event kernel files with the masked version
             event_kernel.write(
                 path=os.path.join(self.path.eval_grad, "kernels", 
                                   self.solver.source_name)
