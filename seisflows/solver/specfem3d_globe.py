@@ -280,7 +280,7 @@ class Specfem3DGlobe(Specfem):
         
         # Export the source mask files so that Workflow can find them later.
         if self.mask_source:
-            dst = os.path.join(self.path.eval_grad, "source_mask", 
+            dst = os.path.join(self.path.eval_grad, "mask_source", 
                                self.source_name)
             unix.mkdir(dst)
             mask_files = glob(

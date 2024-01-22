@@ -177,7 +177,7 @@ class Migration(Forward):
             This uses the Model class because SPECFEM does not have an internal
             function for multiplying files (only for adding/subtracting)
             """
-            mask_path = os.path.join(self.path.eval_grad, "source_mask", 
+            mask_path = os.path.join(self.path.eval_grad, "mask_source", 
                                      self.solver.source_name)
             mask_files = glob(os.path.join(mask_path, "*"))
 

@@ -34,7 +34,7 @@ class Model:
     # Add kernel tag to all acceptable parameters for adjoint simulation results
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
     # Add source mask for SPECFEM3D_ source masking
-    acceptable_parameters.append("source_mask")
+    acceptable_parameters.append("mask_source")
     # Edit acceptable parameters for 3DGLOBE, which must include region name
     for parameter in acceptable_parameters[:]:
         for region in ["1", "2", "3"]:
@@ -644,7 +644,6 @@ class Model:
             avail_par = list(set(avail_par).intersection(
                                         set(self.acceptable_parameters)
                                         ))
-            import pdb;pdb.set_trace()
             # Count the number of files for matching parameters only (do once)
             # Globe version requires the region number in the wild card
             nproc = len(glob(os.path.join(
