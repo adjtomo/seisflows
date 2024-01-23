@@ -39,10 +39,6 @@ class Specfem3DGlobe(Specfem):
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
-    :type export_vtk: bool
-    :param export_vtk: anytime a model, kernel or gradient is considered,
-        generate a VTK file and store it in the scratch/ directory for the User
-        to visualize at their leisure.
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -72,15 +68,14 @@ class Specfem3DGlobe(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
-                 prune_scratch=True, regions="123", smooth_type="laplacian",
-                 mask_source=False, **kwargs):
+    def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True, 
+                 regions="123", smooth_type="laplacian", mask_source=False, 
+                 **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
         self.prune_scratch = prune_scratch
-        self.export_vtk = export_vtk
         self.mask_source = mask_source
 
         # These two variables are the same but we have a public version so it 

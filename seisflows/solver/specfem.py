@@ -288,9 +288,9 @@ class Specfem:
         if "gll" in model_type:
             self._ext = ".bin"
         else:
-            logger.warning("no file model/kernel file extension found, this "
-                           "may cause critical issues when looking for files. "
-                           "check SPECFEM parameter `model`.")
+            logger.warning("no SPECFEM model type specified to define file "
+                           "extension, defaulting to '.bin'")
+            self._ext = ".bin"
 
     def check_model_values(self, path):
         """
