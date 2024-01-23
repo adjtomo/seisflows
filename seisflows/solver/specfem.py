@@ -996,7 +996,7 @@ class Specfem:
         else:
             source_name = os.path.basename(cwd)
 
-        logger.debug(f"initializing solver directory source: {source_name}")
+        logger.debug(f"mkdir {source_name}")
         # Starting from a fresh working directory
         unix.rm(cwd)
         unix.mkdir(cwd)
