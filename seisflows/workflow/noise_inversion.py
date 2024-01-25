@@ -240,11 +240,19 @@ class NoiseInversion(Inversion):
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
 
-    def evaluate_zz_misfit(self):
+    def evaluate_zz_misfit(self, **kwargs):
         """
         Run the forward solver to generate ZZ SGFs using a +Z component FORCE,
         and evalaute the misfit using the preprocessing module. Save the
         residual files but do not sum them.
+
+        .. note::
+
+            To rerun preprocessing only (e.g., you want to test out new window
+            parameters), run the following commands:
+            $ seisflows debug
+            > workflow.setup()
+            > workflow.evaluate_zz_misfit(_preproc_only=True)
         """
         # Skip if not valid
         if "ZZ" not in self.kernels:
@@ -257,11 +265,13 @@ class NoiseInversion(Inversion):
         self._cmpnt = "Z"
 
         # Residuals file looks like e.g., 'residuals_{src}_i01s00_ZZ.txt'
-        super().evaluate_initial_misfit(save_residuals=os.path.join(
+        save_residuals = os.path.join(
             self.path.eval_grad, "residuals", 
-            f"residuals_{{src}}_{self.evaluation}_ZZ.txt"),
-            sum_residuals=False
-        )
+            f"residuals_{{src}}_{self.evaluation}_ZZ.txt"
+            )
+        super().evaluate_initial_misfit(save_residuals=save_residuals,
+                                        sum_residuals=False, **kwargs
+                                        )
         self._rename_preprocess_files(tag="ZZ")
 
     def run_zz_adjoint_simulations(self):

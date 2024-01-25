@@ -178,35 +178,50 @@ class Migration(Forward):
             This uses the Model class because SPECFEM does not have an internal
             function for multiplying files (only for adding/subtracting)
             """
-            mask_path = os.path.join(self.path.eval_grad, "mask_source", 
-                                     self.solver.source_name)
-            mask_files = glob(os.path.join(mask_path, "*"))
-
             # Only trigger this function if the Solver has saved source masks
+            mask_path = os.path.join(self.path.eval_grad, "mask_source", 
+                                     self.solver.source_names[0])
+            mask_files = glob(os.path.join(mask_path, "*"))
             if not mask_files:
                 logger.debug("no source mask files found, skipping source mask")
                 return
             
             logger.info("masking source region in event kernels")
-            # Mask vector [0, 1], where values <1 are near source
-            mask_model = Model(path=mask_path, parameters=["mask_source"],
-                               regions=self.solver._regions)
-            event_kernel = Model(
-                path=os.path.join(self.path.eval_grad, "kernels", 
-                                  self.solver.source_name), 
-                parameters=[f"{par}_kernel" for par in self.solver._parameters],
-                regions=self.solver._regions
-                )
-            # The mask vector is only the length of one parameter, so we need
-            # to expand it to the length of the event kernel vector
-            mask_vector_repeat = np.repeat(mask_model.vector, 
-                                             len(event_kernel.parameters))
-            event_kernel.update(vector=event_kernel.vector * mask_vector_repeat)
-            # Overwrite existing event kernel files with the masked version
-            event_kernel.write(
-                path=os.path.join(self.path.eval_grad, "kernels", 
-                                  self.solver.source_name)
-                )
+            for src in self.solver.source_names:
+                logger.debug(f"mask source {src}")
+                path = os.path.join(self.path.eval_grad, "mask_source", src)
+
+                # Mask vector [0, 1], where values <1 are near source
+                mask_model = Model(path=path, parameters=["mask_source"],
+                                   regions=self.solver._regions)
+                
+                # Gaussian mask  does not sufficiently suppress source region
+                # so we make it a cutout by setting source region to 0
+                _arr = mask_model.vector
+                _arr[_arr < 1] = 0  # any part of the source mask set to 0
+                mask_model.update(vector=_arr)
+
+                # The mask vector is only the length of one parameter, so we 
+                # need to expand it to the length of the event kernel vector
+                mask_vector_repeat = np.repeat(mask_model.vector, 
+                                                len(self.solver._parameters))
+                
+                # Now we apply the mask to the event kernel which contains all
+                # parameters we are updating in our inversion
+                event_kernel = Model(
+                    path=os.path.join(self.path.eval_grad, "kernels", src), 
+                    parameters=[f"{par}_kernel" for par in 
+                                self.solver._parameters],
+                    regions=self.solver._regions
+                    )
+                event_kernel.update(
+                    vector=event_kernel.vector * mask_vector_repeat
+                    )
+
+                # Overwrite existing event kernel files with the masked version
+                event_kernel.write(
+                    path=os.path.join(self.path.eval_grad, "kernels", src)
+                    )
 
         def combine_event_kernels(**kwargs):
             """
