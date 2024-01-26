@@ -200,7 +200,7 @@ class Migration(Forward):
                 maskv[maskv < 1] = 0  # source region set to 0
 
                 # Need to expand vector the length of the event kernel vector
-                maskv = np.repeat(maskv, len(self.solver._parameters))
+                maskv = np.tile(maskv, len(self.solver._parameters))
                 
                 # Now we apply the mask to the event kernel which contains all
                 # parameters we are updating in our inversion

@@ -454,7 +454,6 @@ class Specfem3DGlobe(Specfem):
             xcombine_vol_data_vtk slice list filename \
                 input_topo_dir input_file_dir output_dir resolution region (opt)
 
-                
         .. note::
 
             It is ASSUMED that this function is being called by
@@ -493,10 +492,8 @@ class Specfem3DGlobe(Specfem):
 
         # Call on xcombine_sem to combine kernels into a single file
         for name in list(parameters):
-            # e.g.:  bin/xcombine_vol_data_vtk 0 3 alpha_kernel in/ out/ 0
             exc = f"bin/xcombine_vol_data_vtk all {name} " \
                   f"DATABASES_MPI/ {input_path} {output_path} {int(hi_res)}"
-            # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)
 
