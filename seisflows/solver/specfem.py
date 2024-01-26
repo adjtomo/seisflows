@@ -823,6 +823,13 @@ class Specfem:
         files = glob(os.path.join(output_path, "*"))
         unix.rename(old="_smooth", new="", names=files)
 
+    def combine_vol_data_vtk(self, names, resolution=0):
+        """
+        Wrapper for: xcombine_vol_data_vtk
+        Combine solver database files into a single .VTK file that is used 
+        for visualizing 3D models in programs like ParaView.
+        """
+
     def _run_binary(self, executable, stdout="solver.log", with_mpi=True):
         """
         Calls MPI solver executable to run solver binaries, used by individual

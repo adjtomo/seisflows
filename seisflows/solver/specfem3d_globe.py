@@ -447,18 +447,24 @@ class Specfem3DGlobe(Specfem):
         """
         Wrapper for 'xcombine_vol_data_vtk'. Combines binary files together
         to generate a single .VTK file that can be visualized by external
-        software like ParaView
+        software like ParaView. Different call structure from Cartesian version.
 
         .. rubric::
-            xcombine_data start end quantity input_dir output_dir hi/lo-res
 
+            xcombine_vol_data_vtk slice list filename \
+                input_topo_dir input_file_dir output_dir resolution region (opt)
+
+                
         .. note::
+
             It is ASSUMED that this function is being called by
             system.run(single=True) so that we can use the main solver
             directory to perform the kernel summation task
 
         :type input_path: str
-        :param input_path: path to database files to be summed.
+        :param input_path: path to files that are to be summed, can be different
+            from the database files of the solver (e.g., if kernel files have
+            been moved to another destination)
         :type output_path: strs
         :param output_path: path to export the outputs of xcombine_sem
         :type hi_res: bool
@@ -467,9 +473,16 @@ class Specfem3DGlobe(Specfem):
             nodal vertex. These files are LARGE, and we discourage using
             `hi_res`==True unless you know you want these files.
         :type parameters: list
-        :param parameters: optional list of parameters,
-            defaults to `self._parameters`
+        :param parameters: list of parameter names that should be combined to
+            get individual VTK files. Parameter names do NOT require the 'reg'
+            prefix, e.g., submit 'vsh_kernel', not 'reg1_vsh_kernel'
         """
+        # Expand paths incase they are relative paths
+        input_path = os.path.abspath(input_path)
+        output_path = os.path.abspath(output_path)
+
+        # Change to the MAINSOLVER directory so we can use its machinery for 
+        # VTK combinations
         unix.cd(self.cwd)
 
         if parameters is None:
@@ -479,10 +492,10 @@ class Specfem3DGlobe(Specfem):
             unix.mkdir(output_path)
 
         # Call on xcombine_sem to combine kernels into a single file
-        for name in parameters:
+        for name in list(parameters):
             # e.g.:  bin/xcombine_vol_data_vtk 0 3 alpha_kernel in/ out/ 0
-            exc = f"bin/xcombine_vol_data_vtk 0 {self.nproc-1} {name} " \
-                  f"{input_path} {output_path} {int(hi_res)}"
+            exc = f"bin/xcombine_vol_data_vtk all {name} " \
+                  f"DATABASES_MPI/ {input_path} {output_path} {int(hi_res)}"
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)

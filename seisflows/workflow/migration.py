@@ -178,11 +178,10 @@ class Migration(Forward):
             This uses the Model class because SPECFEM does not have an internal
             function for multiplying files (only for adding/subtracting)
             """
-            # Only trigger this function if the Solver has saved source masks
+            # Only trigger this function if the Solver saved source mask files
             mask_path = os.path.join(self.path.eval_grad, "mask_source", 
                                      self.solver.source_names[0])
-            mask_files = glob(os.path.join(mask_path, "*"))
-            if not mask_files:
+            if not glob(os.path.join(mask_path, "*")):
                 logger.debug("no source mask files found, skipping source mask")
                 return
             
@@ -195,16 +194,13 @@ class Migration(Forward):
                 mask_model = Model(path=path, parameters=["mask_source"],
                                    regions=self.solver._regions)
                 
-                # Gaussian mask  does not sufficiently suppress source region
+                # Gaussian mask does not sufficiently suppress source region
                 # so we make it a cutout by setting source region to 0
-                _arr = mask_model.vector
-                _arr[_arr < 1] = 0  # any part of the source mask set to 0
-                mask_model.update(vector=_arr)
+                maskv = mask_model.vector
+                maskv[maskv < 1] = 0  # source region set to 0
 
-                # The mask vector is only the length of one parameter, so we 
-                # need to expand it to the length of the event kernel vector
-                mask_vector_repeat = np.repeat(mask_model.vector, 
-                                                len(self.solver._parameters))
+                # Need to expand vector the length of the event kernel vector
+                maskv = np.repeat(maskv, len(self.solver._parameters))
                 
                 # Now we apply the mask to the event kernel which contains all
                 # parameters we are updating in our inversion
@@ -214,9 +210,7 @@ class Migration(Forward):
                                 self.solver._parameters],
                     regions=self.solver._regions
                     )
-                event_kernel.update(
-                    vector=event_kernel.vector * mask_vector_repeat
-                    )
+                event_kernel.update(vector=event_kernel.vector * maskv)
 
                 # Overwrite existing event kernel files with the masked version
                 event_kernel.write(

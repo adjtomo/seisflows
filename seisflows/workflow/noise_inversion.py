@@ -994,9 +994,10 @@ class NoiseInversion(Inversion):
                 self.solver.combine(input_paths, output_path, parameters)
         
         # Run above function on system using a single compute node
-        # Increase the tasktime by a factor of 2 because there are many more
-        # kernel manipulations that need to happen and this task usually fails
-        # due to timeout when `tasktime` is set for an adjoint simulation
+        # NOTE: May need to increase the tasktime by a factor of 2 because 
+        # there are many more kernel manipulations that need to happen and this 
+        # task usually fails due to timeout when `tasktime` is set for an 
+        # adjoint simulation
         self.system.run([generate_event_kernels], single=True)
 
         # Now the original function takes over and combines event kernels into
