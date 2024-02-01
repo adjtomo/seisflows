@@ -759,7 +759,7 @@ class Specfem:
             exc = f"bin/xcombine_sem {name} kernel_paths {output_path}"
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
-            self._run_binary(executable=exc, stdout=stdout)
+            self._run_binary(executable=exc, stdout=stdout, with_mpi=True)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,
                span_v=None, use_gpu=False):
@@ -816,19 +816,12 @@ class Specfem:
                    f"{input_path} {output_path} {use_gpu}")
             # e.g., combine_vs.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
-            self._run_binary(executable=exc, stdout=stdout)
+            self._run_binary(executable=exc, stdout=stdout, with_mpi=True)
 
         # Rename output files to remove the '_smooth' suffix which SeisFlows
         # will not recognize
         files = glob(os.path.join(output_path, "*"))
         unix.rename(old="_smooth", new="", names=files)
-
-    def combine_vol_data_vtk(self, names, resolution=0):
-        """
-        Wrapper for: xcombine_vol_data_vtk
-        Combine solver database files into a single .VTK file that is used 
-        for visualizing 3D models in programs like ParaView.
-        """
 
     def _run_binary(self, executable, stdout="solver.log", with_mpi=True):
         """
