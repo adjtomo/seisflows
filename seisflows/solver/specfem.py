@@ -19,7 +19,6 @@ TODO
 """
 import os
 import sys
-import time
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
@@ -33,8 +32,8 @@ from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 class Specfem:
     """
-    Solver SPECFEM
-    --------------
+    Solver SPECFEM [Solver Base]
+    ----------------------------
     Defines foundational structure for Specfem-based solver module. 
     Generalized SPECFEM interface to manipulate SPECFEM2D/3D/3D_GLOBE w/ Python
 
@@ -289,9 +288,9 @@ class Specfem:
         if "gll" in model_type:
             self._ext = ".bin"
         else:
-            logger.warning("no file model/kernel file extension found, this "
-                           "may cause critical issues when looking for files. "
-                           "check SPECFEM parameter `model`.")
+            logger.warning("no SPECFEM model type specified to define file "
+                           "extension, defaulting to '.bin'")
+            self._ext = ".bin"
 
     def check_model_values(self, path):
         """
@@ -760,7 +759,7 @@ class Specfem:
             exc = f"bin/xcombine_sem {name} kernel_paths {output_path}"
             # e.g., smooth_vp.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
-            self._run_binary(executable=exc, stdout=stdout)
+            self._run_binary(executable=exc, stdout=stdout, with_mpi=True)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,
                span_v=None, use_gpu=False):
@@ -817,7 +816,7 @@ class Specfem:
                    f"{input_path} {output_path} {use_gpu}")
             # e.g., combine_vs.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
-            self._run_binary(executable=exc, stdout=stdout)
+            self._run_binary(executable=exc, stdout=stdout, with_mpi=True)
 
         # Rename output files to remove the '_smooth' suffix which SeisFlows
         # will not recognize
@@ -944,8 +943,7 @@ class Specfem:
         source_paths = [p for p in source_paths if not os.path.exists(p)]
 
         if source_paths:
-            logger.info(f"initializing {self.ntask} solver directories "
-                        f"{max_workers} at a time")
+            logger.info(f"initializing {self.ntask} solver directories")
 
         if max_workers > 1:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -998,7 +996,7 @@ class Specfem:
         else:
             source_name = os.path.basename(cwd)
 
-        logger.debug(f"initializing solver directory source: {source_name}")
+        logger.debug(f"mkdir {source_name}")
         # Starting from a fresh working directory
         unix.rm(cwd)
         unix.mkdir(cwd)

@@ -33,12 +33,15 @@ class Model:
                              "vpv", "vph", "vsv", "vsh", "eta"]
     # Add kernel tag to all acceptable parameters for adjoint simulation results
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
+    # Add source mask for SPECFEM3D_ source masking
+    acceptable_parameters.append("mask_source")
     # Edit acceptable parameters for 3DGLOBE, which must include region name
     for parameter in acceptable_parameters[:]:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
+    
 
-    def __init__(self, path=None, fmt="", parameters=None, regions="123", 
+    def __init__(self, path=os.getcwd(), fmt="", parameters=None, regions="123", 
                  flavor=None):
         """
         Model only needs path to model to determine model parameters. Format
@@ -641,7 +644,6 @@ class Model:
             avail_par = list(set(avail_par).intersection(
                                         set(self.acceptable_parameters)
                                         ))
-
             # Count the number of files for matching parameters only (do once)
             # Globe version requires the region number in the wild card
             nproc = len(glob(os.path.join(

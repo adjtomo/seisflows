@@ -24,7 +24,7 @@ import os
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.specfem import setpar, getpar
+from seisflows.tools.specfem import read_fortran_binary, setpar, getpar
 from seisflows.solver.specfem import Specfem
 
 
@@ -39,10 +39,6 @@ class Specfem3DGlobe(Specfem):
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
-    :type export_vtk: bool
-    :param export_vtk: anytime a model, kernel or gradient is considered,
-        generate a VTK file and store it in the scratch/ directory for the User
-        to visualize at their leisure.
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -60,6 +56,26 @@ class Specfem3DGlobe(Specfem):
             intensive, but default and matches 2D and 3D_Cartesian smoothing
         - 'laplacian' (default): average points around vertex to smooth. 
             faster and preferred method for GLOBE code
+    :type mask_source: bool
+    :param mask_source: mask the source region of the gradient to avoid high
+        amplitude updates around source region. If True, uses the SPECFEM 
+        parameter 'SAVE_SOURCE_MASK' to output source mask files and applies
+        source mask to event kernel during gradient calculation.
+    :type scale_mask_source: float
+    :param scale_mask_region: only used if `mask_source` == True. the output
+        source mask from SPECFEM3D_GLOBE is an array of ones (1) with a 3D 
+        gaussian ceneterd on the source region which approaches 0 at the 
+        hypocenter. However, for kernels that have very small amplitudes (<1E-5)
+        the amplitudes of the mask may not be sufficient to suppress the high
+        amplitude source region kernel. This fudge factor allows the User to
+        scale the source mask to better suppress the source region. ONLY the
+        source mask region will be multiplied by this value. Defaults to False 
+        (no modification), if set to 0, entire source mask region will act as
+        a cutout. Trial and error will be required to determine a useful value
+        that is not 0 or 1. Note that this parameter is not actually used by
+        the solver, it is used by the Migration workflow, but it is kept here
+        for consistency.
+
 
     Paths
     -----
@@ -67,15 +83,16 @@ class Specfem3DGlobe(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
-                 prune_scratch=True, regions="123", smooth_type="laplacian",
-                 **kwargs):
+    def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True, 
+                 regions="123", smooth_type="laplacian", mask_source=False, 
+                 scale_mask_region=False, **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
         self.prune_scratch = prune_scratch
-        self.export_vtk = export_vtk
+        self.mask_source = mask_source
+        self.scale_mask_region = scale_mask_region
 
         # These two variables are the same but we have a public version so it 
         # will show up in the parameter file (for 3D_GLOBE only), and a private
@@ -135,6 +152,17 @@ class Specfem3DGlobe(Specfem):
                 logger.warning(f"`path_specfem_data`/{fid} is required for "
                                f"SPECFEM3D_GLOBE to use GLL models"
                                )
+                
+        # Set SPECFEM parameter 'SAVE_SOURCE_MASK' if requested by User
+        if self.mask_source:
+            source_mask = getpar(key="SAVE_SOURCE_MASK", 
+                                 file=os.path.join(self.path.specfem_data,
+                                                   "Par_file"))[1]
+            if source_mask != ".true.":
+                logger.info("updating SPECFEM parameter "
+                            "`SAVE_SOURCE_MASK` = .true.")
+                setpar(key="SAVE_SOURCE_MASK", val=".true.", 
+                       file=os.path.join(self.path.specfem_data, "Par_file"))
 
     def data_wildcard(self, comp="?"):
         """
@@ -260,6 +288,29 @@ class Specfem3DGlobe(Specfem):
         super().adjoint_simulation(executables=executables,                      
                                    save_kernels=save_kernels,                    
                                    export_kernels=export_kernels)
+        
+        # Export the source mask files so that Workflow can find them later.
+        if self.mask_source:
+            dst = os.path.join(self.path.eval_grad, "mask_source", 
+                               self.source_name)
+            unix.mkdir(dst)
+            # Don't overwrite existing files because they will be the same
+            if glob(os.path.join(dst, "*")):
+                logger.debug("source mask files already exist in directory, "
+                             "will not transfer new files")
+                return
+            # Check that the adjoint simulation actually created requisite files
+            mask_files = glob(
+                os.path.join(self.cwd, self.model_databases, 
+                             self.model_wildcard(par="reg?_mask_source"))
+                             )
+            if not mask_files:
+                logger.warning("no source mask files found despite parameter "
+                               "`mask_source`=True")
+                return
+
+            logger.debug(f"moving source mask files to {dst}")
+            unix.mv(src=mask_files, dst=dst)
 
         # Working around fact that `absorb_buffer` files have diff naming w.r.t
         # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
@@ -412,18 +463,23 @@ class Specfem3DGlobe(Specfem):
         """
         Wrapper for 'xcombine_vol_data_vtk'. Combines binary files together
         to generate a single .VTK file that can be visualized by external
-        software like ParaView
+        software like ParaView. Different call structure from Cartesian version.
 
         .. rubric::
-            xcombine_data start end quantity input_dir output_dir hi/lo-res
+
+            xcombine_vol_data_vtk slice list filename \
+                input_topo_dir input_file_dir output_dir resolution region (opt)
 
         .. note::
+
             It is ASSUMED that this function is being called by
             system.run(single=True) so that we can use the main solver
             directory to perform the kernel summation task
 
         :type input_path: str
-        :param input_path: path to database files to be summed.
+        :param input_path: path to files that are to be summed, can be different
+            from the database files of the solver (e.g., if kernel files have
+            been moved to another destination)
         :type output_path: strs
         :param output_path: path to export the outputs of xcombine_sem
         :type hi_res: bool
@@ -432,9 +488,16 @@ class Specfem3DGlobe(Specfem):
             nodal vertex. These files are LARGE, and we discourage using
             `hi_res`==True unless you know you want these files.
         :type parameters: list
-        :param parameters: optional list of parameters,
-            defaults to `self._parameters`
+        :param parameters: list of parameter names that should be combined to
+            get individual VTK files. Parameter names do NOT require the 'reg'
+            prefix, e.g., submit 'vsh_kernel', not 'reg1_vsh_kernel'
         """
+        # Expand paths incase they are relative paths
+        input_path = os.path.abspath(input_path)
+        output_path = os.path.abspath(output_path)
+
+        # Change to the MAINSOLVER directory so we can use its machinery for 
+        # VTK combinations
         unix.cd(self.cwd)
 
         if parameters is None:
@@ -444,11 +507,9 @@ class Specfem3DGlobe(Specfem):
             unix.mkdir(output_path)
 
         # Call on xcombine_sem to combine kernels into a single file
-        for name in parameters:
-            # e.g.:  bin/xcombine_vol_data_vtk 0 3 alpha_kernel in/ out/ 0
-            exc = f"bin/xcombine_vol_data_vtk 0 {self.nproc-1} {name} " \
-                  f"{input_path} {output_path} {int(hi_res)}"
-            # e.g., smooth_vp.log
+        for name in list(parameters):
+            exc = f"bin/xcombine_vol_data_vtk all {name} " \
+                  f"DATABASES_MPI/ {input_path} {output_path} {int(hi_res)}"
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)
 

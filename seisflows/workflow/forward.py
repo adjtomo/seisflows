@@ -17,8 +17,8 @@ from seisflows.tools.config import Dict
 
 class Forward:
     """
-    Forward Workflow
-    ----------------
+    Forward Workflow [Workflow Base]
+    --------------------------------
     Defines foundational structure for Workflow module. When used standalone 
     is in charge of running forward solver in parallel and (optionally) 
     calculating data-synthetic misfit and adjoint sources.

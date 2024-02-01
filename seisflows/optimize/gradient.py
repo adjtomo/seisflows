@@ -41,8 +41,8 @@ from seisflows.plugins import line_search as line_search_dir
 
 class Gradient:
     """
-    Gradient Optimization
-    ---------------------
+    Gradient Optimization [Optimize Base]
+    -------------------------------------
     Defines foundational structure for Optimization module. Applies a 
     gradient/steepest descent optimization algorithm.
 

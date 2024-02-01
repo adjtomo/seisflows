@@ -27,8 +27,8 @@ from seisflows.preprocess.default import read, initialize_adjoint_traces
 
 class Pyaflowa:
     """
-    Pyaflowa Preprocess
-    -------------------
+    Pyaflowa Preprocess [Preprocess Base]
+    -------------------------------------
     Preprocessing and misfit quantification using Python's Adjoint Tomography
     Operations Assistant (Pyatoa)
 

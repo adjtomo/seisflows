@@ -18,8 +18,8 @@ from seisflows.tools.config import copy_file, set_task_id
 
 class Workstation:
     """
-    Workstation System
-    ------------------
+    Workstation System [System Base]
+    --------------------------------
     Defines foundational structure for System module. When used standalone,
     runs solver tasks either in serial (if `nproc`==1; i.e., without MPI) or in
     parallel (if `nproc`>1; i.e., with MPI). All other tasks are run in serial.
