@@ -24,7 +24,7 @@ import os
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.specfem import setpar, getpar
+from seisflows.tools.specfem import read_fortran_binary, setpar, getpar
 from seisflows.solver.specfem import Specfem
 
 
@@ -61,6 +61,21 @@ class Specfem3DGlobe(Specfem):
         amplitude updates around source region. If True, uses the SPECFEM 
         parameter 'SAVE_SOURCE_MASK' to output source mask files and applies
         source mask to event kernel during gradient calculation.
+    :type scale_mask_source: float
+    :param scale_mask_region: only used if `mask_source` == True. the output
+        source mask from SPECFEM3D_GLOBE is an array of ones (1) with a 3D 
+        gaussian ceneterd on the source region which approaches 0 at the 
+        hypocenter. However, for kernels that have very small amplitudes (<1E-5)
+        the amplitudes of the mask may not be sufficient to suppress the high
+        amplitude source region kernel. This fudge factor allows the User to
+        scale the source mask to better suppress the source region. ONLY the
+        source mask region will be multiplied by this value. Defaults to False 
+        (no modification), if set to 0, entire source mask region will act as
+        a cutout. Trial and error will be required to determine a useful value
+        that is not 0 or 1. Note that this parameter is not actually used by
+        the solver, it is used by the Migration workflow, but it is kept here
+        for consistency.
+
 
     Paths
     -----
@@ -70,13 +85,14 @@ class Specfem3DGlobe(Specfem):
 
     def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True, 
                  regions="123", smooth_type="laplacian", mask_source=False, 
-                 **kwargs):
+                 scale_mask_region=False, **kwargs):
         """Instantiate a Specfem3D_Globe solver interface"""
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
         self.prune_scratch = prune_scratch
         self.mask_source = mask_source
+        self.scale_mask_region = scale_mask_region
 
         # These two variables are the same but we have a public version so it 
         # will show up in the parameter file (for 3D_GLOBE only), and a private
@@ -292,7 +308,7 @@ class Specfem3DGlobe(Specfem):
                 logger.warning("no source mask files found despite parameter "
                                "`mask_source`=True")
                 return
-        
+
             logger.debug(f"moving source mask files to {dst}")
             unix.mv(src=mask_files, dst=dst)
 

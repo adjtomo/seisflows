@@ -194,10 +194,13 @@ class Migration(Forward):
                 mask_model = Model(path=path, parameters=["mask_source"],
                                    regions=self.solver._regions)
                 
-                # Gaussian mask does not sufficiently suppress source region
-                # so we make it a cutout by setting source region to 0
+                # Gaussian mask sometimes does not sufficiently suppress source 
+                # region so we modify the amplitude 
                 maskv = mask_model.vector
-                maskv[maskv < 1] = 0  # source region set to 0
+                if self.solver.scale_mask_region:
+                    logger.info(f"scaling source mask by 
+                                {self.solver.scale_mask_region}")
+                    maskv[maskv < 1] *= self.solver.scale_mask_region  
 
                 # Need to expand vector the length of the event kernel vector
                 maskv = np.tile(maskv, len(self.solver._parameters))
