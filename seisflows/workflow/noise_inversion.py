@@ -50,6 +50,9 @@ to get ZZ, RR and TT SGFs that can be compared to data.
 
     9. Sum kernels K = K_RR + K_TT
 
+    See also internal parameter `separate_t_r_kernels` for reducing the required 
+    TT and RR kernel simulation numbers from 4 to 2
+
 .. note:: References
 
     1. "Three‐dimensional sensitivity kernels for multicomponent empirical
@@ -113,6 +116,14 @@ class NoiseInversion(Inversion):
         steps laid out in Wang et al. (2019) and outlined below:
 
         Example inputs would be 'ZZ' or 'ZZ,TT' or 'ZZ,TT,RR'. Case insensitive
+    :type separate_t_r_kernels: bool
+    :param separate_t_r_kernels: only relevant if kernels has both TT and RR. 
+        saves computation time by combining the horizontal RR and TT
+        adjoint simulations and kernel summations into single tasks at the 
+        cost of not having separate gradients for each of your kernels. Under
+        the hood this computes K_E = K_ER + K_ET and K_N = K_NR + K_NT (2 sims), 
+        whereas to get separate kernels, you would compute K_R = K_ER + K_NR and
+        K_T = K_NR + K_NT (4 sims)
 
     Paths
     -----
@@ -121,13 +132,14 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
-    def __init__(self, kernels="ZZ", **kwargs):
+    def __init__(self, kernels="ZZ", separate_t_r_kernels=False, **kwargs):
         """
         Initialization of the Noise Inversion Workflow module
         """
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
+        self.separate_t_r_kernels = separate_t_r_kernels
 
         # Internal variables control behavior of spawned jobs. These should not
         # be set by the User, they are set by main processing functions here.
@@ -1003,6 +1015,24 @@ class NoiseInversion(Inversion):
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
+
+# Copy paste into your workflow and run from the debugger
+    def CUSTOM_combine_kernels(self):
+        """DELETE ME"""
+        def combine_kernels(self, **kwargs):
+            parameters = [f"{par}_kernel" for par in self.solver._parameters]
+            for kernel in ["R", "T"]:
+                for srcname in self.solver.source_names:
+                    base_path = (f"/import/c1/ERTHQUAK/bhchow/work/seisflows/"
+                                 f"SYNVERSION/scratch/eval_grad/kernels/{srcname}/")
+
+                    input_paths = [os.path.join(base_path, f"E{kernel}"),
+                                os.path.join(base_path, f"N{kernel}")]
+                    output_path = os.path.join(base_path, f"{kernel}{kernel}")
+
+                    self.solver.combine(input_paths, output_path, parameters)
+
+            self.system.run([combine_kernels], single=True)
 
     def evaluate_line_search_misfit(self):
         """

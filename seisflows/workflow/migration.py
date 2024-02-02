@@ -198,7 +198,7 @@ class Migration(Forward):
                 # region so we modify the amplitude 
                 maskv = mask_model.vector
                 if self.solver.scale_mask_region:
-                    logger.info(f"scaling source mask by 
+                    logger.info(f"scaling source mask by "
                                 {self.solver.scale_mask_region}")
                     maskv[maskv < 1] *= self.solver.scale_mask_region  
 
