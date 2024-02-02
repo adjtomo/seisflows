@@ -36,7 +36,7 @@ class Pyaflowa:
     ----------
     :type min_period: float
     :param min_period: Minimum filter corner in unit seconds. Bandpass
-    filter if set with `max_period`, highpass filter if set without
+        filter if set with `max_period`, highpass filter if set without
     `max_period`, no filtering if not set and `max_period also not set
     :type pyflex_parameters: dict
     :param pyflex_parameters: overwrite for Pyflex parameters defined
@@ -60,6 +60,14 @@ class Pyaflowa:
         each iteration (e.g., i01s00... i02s00...
         'ONCE': Calculate new windows at first evaluation of
         the workflow, i.e., at self.par.BEGIN
+    :type revalidate: bool
+    :param revalidate: Only used if `fix_windows` is True, ITER or ONCE. Windows
+        that are retrieved from datasets will be revalidated against parameters
+        in the Config object (ccshift, dlna, etc.), and rejected if they fall 
+        outside defined bounds. If False, windows will not be revalidated. 
+        Caution is advised with this parameter as event misfit may be 
+        artificially reducedby removing a significant number of windows, which
+        is possible when `revalidate`==True
     :type adj_src_type: str
     :param adj_src_type: Adjoint source type to evaluate misfit, defined by
         Pyadjoint. See `pyadjoint.config.ADJSRC_TYPES` for detailed options list
@@ -98,8 +106,9 @@ class Pyaflowa:
     """
     def __init__(self, min_period=1., max_period=10.,
                  pyflex_parameters=None, pyadjoint_parameters=None,
-                 fix_windows=False, adj_src_type="cc_traveltime",
-                 plot_waveforms=True, preprocess_log_level="DEBUG",
+                 fix_windows=False, revalidate=False, 
+                 adj_src_type="cc_traveltime", plot_waveforms=True, 
+                 preprocess_log_level="DEBUG",
                  export_datasets=True, export_figures=True,
                  export_log_files=True, workdir=os.getcwd(),
                  path_preprocess=None, path_solver=None, path_specfem_data=None,
@@ -144,6 +153,7 @@ class Pyaflowa:
         self.min_period = min_period
         self.max_period = max_period
         self.fix_windows = fix_windows
+        self.revalidate = revalidate
         self.adj_src_type = adj_src_type
         self.plot_waveforms = plot_waveforms
         self.preprocess_log_level = preprocess_log_level
@@ -532,7 +542,9 @@ class Pyaflowa:
                                 os.path.join(self.path["_datasets"],
                                              f"{config.event_id}.h5"),
                                 mode="r") as ds:
-                            mgmt.retrieve_windows_from_dataset(ds=ds)
+                            mgmt.retrieve_windows_from_dataset(
+                                    ds=ds, revalidate=self.revalidate
+                                    )
                         break
                     except (BlockingIOError, FileExistsError):
                         # Random sleep time [0,1]s to decrease chances of two

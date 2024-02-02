@@ -1016,24 +1016,6 @@ class NoiseInversion(Inversion):
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
 
-# Copy paste into your workflow and run from the debugger
-    def CUSTOM_combine_kernels(self):
-        """DELETE ME"""
-        def combine_kernels(self, **kwargs):
-            parameters = [f"{par}_kernel" for par in self.solver._parameters]
-            for kernel in ["R", "T"]:
-                for srcname in self.solver.source_names:
-                    base_path = (f"/import/c1/ERTHQUAK/bhchow/work/seisflows/"
-                                 f"SYNVERSION/scratch/eval_grad/kernels/{srcname}/")
-
-                    input_paths = [os.path.join(base_path, f"E{kernel}"),
-                                os.path.join(base_path, f"N{kernel}")]
-                    output_path = os.path.join(base_path, f"{kernel}{kernel}")
-
-                    self.solver.combine(input_paths, output_path, parameters)
-
-            self.system.run([combine_kernels], single=True)
-
     def evaluate_line_search_misfit(self):
         """
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
