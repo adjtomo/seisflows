@@ -193,6 +193,7 @@ class Forward:
             _task_names = [task.__name__ for task in self.task_list]
             assert(self.stop_after in _task_names), \
                 f"workflow parameter `stop_after` must match {_task_names}"
+            logger.info(f"`workflow.stop_after` == {self.stop_after}")
 
     def setup(self):
         """

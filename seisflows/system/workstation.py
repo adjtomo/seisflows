@@ -156,6 +156,7 @@ class Workstation:
                 logger.critical(f"`array` argument can not be parsed by System "
                                 f"module. Please check error message: {e}")
                 sys.exit(-1)
+            logger.info(f"`system.array` == {self.array}")
     
         assert(isinstance(self.rerun, int)), f"`rerun` must be an int [0,inf)"
         assert(self.rerun >= 0), f"`rerun` must be in bounds [0, inf)"
