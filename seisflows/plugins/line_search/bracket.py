@@ -161,6 +161,10 @@ class Bracket:
         often preferable to restart the line search. To do this, we roll back
         the number of steps we have taken during the line search, and undo
         variable changes that took place in 'initialize_search'. 
+        
+        .. note::
+            In order to proceed with workflow after running this function you 
+            will need to restart the workflow from `initialize_line_search`
         """
         logger.info("restarting line search for the current iteration")
 
