@@ -556,7 +556,7 @@ class Pyaflowa:
                 mgmt.window()
             mgmt.measure()
         except Exception as e:
-            station_logger.warning(e)
+            station_logger.warning(f"FLOW FAILED: {e}")
             pass
 
         # Plot waveform + map figure. Map may fail if we don't have appropriate
