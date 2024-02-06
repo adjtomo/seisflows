@@ -534,6 +534,10 @@ class Pyaflowa:
             # !!! HARDCODE NORMALIZATION FOR ANAT, REMOVE THIS !!!
             mgmt.preprocess(remove_response=False, normalize_to="syn")
             if fix_windows:
+                # Determine components from waveforms on the fly so that we can
+                # use that information to only select windows we need
+                components = [tr.stats.component for tr in mgmt.st_syn]
+
                 # Retrieve windows from the last available evaluation. Wrap in
                 # try-except block incase file lock is in place by other procs.
                 while True:
@@ -543,7 +547,8 @@ class Pyaflowa:
                                              f"{config.event_id}.h5"),
                                 mode="r") as ds:
                             mgmt.retrieve_windows_from_dataset(
-                                    ds=ds, revalidate=self.revalidate
+                                    ds=ds, components=components,
+                                    revalidate=self.revalidate
                                     )
                         break
                     except (BlockingIOError, FileExistsError):
@@ -556,7 +561,7 @@ class Pyaflowa:
                 mgmt.window()
             mgmt.measure()
         except Exception as e:
-            station_logger.warning(f"FLOW FAILED: {e}")
+            station_logger.critical(f"FLOW FAILED: {e}")
             pass
 
         # Plot waveform + map figure. Map may fail if we don't have appropriate
@@ -751,10 +756,10 @@ class Pyaflowa:
             the given file defined by `fid`
         """
         handler = logging.FileHandler(fid, mode="w")
-        logfmt = "[%(asctime)s] - %(name)s - %(levelname)s: %(message)s"
+        logfmt = "%(asctime)s [%(name)s %(levelname).4s] | %(message)s"
         formatter = logging.Formatter(logfmt, datefmt="%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        for log in ["pyflex", "pyadjoint", "pyatoa", "pysep"]:
+        for log in ["pyflex", "pyadjoint", "pysep", "pyatoa"]:
             # Set the overall log level
             logger = logging.getLogger(log)
             # Turn off any existing handlers (stream and file)

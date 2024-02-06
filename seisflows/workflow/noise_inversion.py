@@ -1081,3 +1081,19 @@ class NoiseInversion(Inversion):
         for force in cfg.keys():
             self._states[f"evaluate_line_search_misfit_{force}"] = 0
 
+    def custom_function_sum_kernels(self):
+        """Generate ZZ, RR and TT misfit kernels (summation of event kernels)"""
+        def sum_kernels(**kwargs):
+            kernels = ["ZZ"]  # For after 'evaluate_zz_adjoint_simulation'
+            # kernels = ["ZZ", "RR", "TT"]
+            parameters = [f"{par}_kernel" for par in self.solver._parameters]
+            base_path = os.path.join(self.path.eval_grad, "kernels")
+            for kernel in kernels:
+                input_paths = []
+                output_path = os.path.join(base_path, f"{kernel}")
+
+                for srcname in self.solver.source_names:
+                    input_paths.append(os.path.join(base_path, srcname, kernel))
+
+                self.solver.combine(input_paths, output_path, parameters)
+        self.system.run([sum_kernels], single=True)
