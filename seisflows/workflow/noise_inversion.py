@@ -303,7 +303,7 @@ class NoiseInversion(Inversion):
         self._cmpnt = "Z"
         super().run_adjoint_simulations()
 
-    def evaluate_rt_misfit(self):
+    def evaluate_rt_misfit(self, **kwargs):
         """
         Run the forward solver to generate E and N SGFs from E and N component
         FORCES. Preprocessing will wait until the N simulations have finished
@@ -325,12 +325,13 @@ class NoiseInversion(Inversion):
             self._force = force
             logger.info(f"running misfit evaluation for: '{self._force}'")
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
-            self.evaluate_initial_misfit(
-                save_residuals=os.path.join(
-                    self.path.eval_grad, "residuals",
-                    f"residuals_{{src}}_{self.evaluation}_RT.txt"),
-                sum_residuals=False
-            )
+            save_residuals = os.path.join(
+                self.path.eval_grad, "residuals",
+                f"residuals_{{src}}_{self.evaluation}_RT.txt"
+                )
+            self.evaluate_initial_misfit(save_residuals=save_residuals,
+                                         sum_residuals=False, **kwargs
+                                         )
         self._rename_preprocess_files(tag="RT")
 
     def run_rt_adjoint_simulations(self):
