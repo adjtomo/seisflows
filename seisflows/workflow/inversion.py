@@ -469,6 +469,7 @@ class Inversion(Migration):
         # and is required for the line search 
         logger.info("calculating search direction `p_new` from gradient")
         p_new = self.optimize.compute_direction()
+        self.optimize.checkpoint()
         self.optimize.save_vector(name="p_new", m=p_new)
 
     def initialize_line_search(self):
