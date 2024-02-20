@@ -193,23 +193,6 @@ class Pyaflowa:
         self.path["_datasets"] = os.path.join(self.path.scratch, "datasets")
         self.path["_figures"] = os.path.join(self.path.scratch, "figures")
 
-<<<<<<< HEAD
-        # Where to look for externally stored waveform data and response files
-        if self.path.data:
-            self.path["_waveforms"] = os.path.join(self.path.data, "mseed")
-            self.path["_responses"] = os.path.join(self.path.data, "seed")
-        else:
-            self.path["_waveforms"] = None
-            self.path["_responses"] = None
-
-        # SeisFlows parameters that should be set by other modules. Keep hidden
-        # so `seisflows configure` doesn't attribute these to preprocess.
-        self._syn_data_format = syn_data_format.upper()
-        if data_case is not None:
-            self._data_case = data_case.lower()
-        else:
-            self._data_case = data_case
-=======
         # Parameters that are defined by other modules but accessed by Pyaflowa
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
@@ -219,7 +202,6 @@ class Pyaflowa:
         self._ntask = ntask
         self._nproc = nproc
         self._source_prefix = source_prefix
->>>>>>> devel
         if components is not None:
             self._components = list(components)  # e.g. 'RTZ' -> ['R', 'T', 'Z']
         else:
