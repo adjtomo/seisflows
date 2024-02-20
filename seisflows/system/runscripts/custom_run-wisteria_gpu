@@ -8,7 +8,7 @@
 WORK_DIR=/work/01/gr58/share/adjtomo
 
 # Load MPI and activate Conda environment
-module load cuda
+module load cuda/12.2
 module load gcc
 module load ompi-cuda
 module load miniconda/py38_4.9.2
