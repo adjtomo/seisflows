@@ -6,6 +6,7 @@ Forward class represents the BASE workflow. All other workflows will build off
 of the scaffolding defined by the Forward class.
 """
 import os
+from glob import glob
 from time import asctime
 
 from seisflows import logger
