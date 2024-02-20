@@ -50,9 +50,6 @@ to get ZZ, RR and TT SGFs that can be compared to data.
 
     9. Sum kernels K = K_RR + K_TT
 
-    See also internal parameter `separate_t_r_kernels` for reducing the required 
-    TT and RR kernel simulation numbers from 4 to 2
-
 .. note:: References
 
     1. "Three‐dimensional sensitivity kernels for multicomponent empirical
@@ -116,14 +113,6 @@ class NoiseInversion(Inversion):
         steps laid out in Wang et al. (2019) and outlined below:
 
         Example inputs would be 'ZZ' or 'ZZ,TT' or 'ZZ,TT,RR'. Case insensitive
-    :type separate_t_r_kernels: bool
-    :param separate_t_r_kernels: only relevant if kernels has both TT and RR. 
-        saves computation time by combining the horizontal RR and TT
-        adjoint simulations and kernel summations into single tasks at the 
-        cost of not having separate gradients for each of your kernels. Under
-        the hood this computes K_E = K_ER + K_ET and K_N = K_NR + K_NT (2 sims), 
-        whereas to get separate kernels, you would compute K_R = K_ER + K_NR and
-        K_T = K_NR + K_NT (4 sims)
 
     Paths
     -----
@@ -132,14 +121,13 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
-    def __init__(self, kernels="ZZ", separate_t_r_kernels=False, **kwargs):
+    def __init__(self, kernels="ZZ", **kwargs):
         """
         Initialization of the Noise Inversion Workflow module
         """
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
-        self.separate_t_r_kernels = separate_t_r_kernels
 
         # Internal variables control behavior of spawned jobs. These should not
         # be set by the User, they are set by main processing functions here.
@@ -1082,19 +1070,4 @@ class NoiseInversion(Inversion):
         for force in cfg.keys():
             self._states[f"evaluate_line_search_misfit_{force}"] = 0
 
-    def custom_function_sum_kernels(self):
-        """Generate ZZ, RR and TT misfit kernels (summation of event kernels)"""
-        def sum_kernels(**kwargs):
-            kernels = ["ZZ"]  # For after 'evaluate_zz_adjoint_simulation'
-            # kernels = ["ZZ", "RR", "TT"]
-            parameters = [f"{par}_kernel" for par in self.solver._parameters]
-            base_path = os.path.join(self.path.eval_grad, "kernels")
-            for kernel in kernels:
-                input_paths = []
-                output_path = os.path.join(base_path, f"{kernel}")
 
-                for srcname in self.solver.source_names:
-                    input_paths.append(os.path.join(base_path, srcname, kernel))
-
-                self.solver.combine(input_paths, output_path, parameters)
-        self.system.run([sum_kernels], single=True)
