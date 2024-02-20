@@ -75,7 +75,6 @@ class Fujitsu(Cluster):
         self._failed_states = ["CANCEL", "HOLD", "ERROR"]
         self._pending_states = ["QUEUED", "RUNNING"]
 
-
     def check(self):
         """
         Checks parameters and paths
@@ -250,10 +249,10 @@ class Fujitsu(Cluster):
         for taskid in range(_ntask):
             run_call = " ".join([
                 f"{self.run_call_header}",
-		f"--funcs {funcs_fid}",
-		f"--kwargs {kwargs_fid}",
-		f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
-                f"{self.run_functions}",
+                f"--funcs {funcs_fid}",
+                f"--kwargs {kwargs_fid}",
+                f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
+                        f"{self.run_functions}",
             ])
 
             if taskid == 0:
@@ -266,7 +265,7 @@ class Fujitsu(Cluster):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = self.check_job_status(job_id)
+            status = self.monitor_job_status(job_id)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "
