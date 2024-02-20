@@ -360,7 +360,9 @@ class Forward:
 
         if self.data_case == "data":
             logger.info(f"copying data from `path_data`")
-            src = os.path.join(self.path.data, self.solver.source_name, "*")
+            src = glob(os.path.join(
+                self.path.data, self.solver.source_name, "*")
+                )
             dst = os.path.join(self.solver.cwd, "traces", "obs", "")
             unix.cp(src, dst)
         elif self.data_case == "synthetic":
