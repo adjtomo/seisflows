@@ -137,6 +137,11 @@ class Gradient:
             step_count_max=step_count_max, step_len_max=step_len_max,
         )
 
+    def __str__(self):
+        """Quickly access underlying line search search history, mostly for
+        debug purposes"""
+        return self._line_search.__str__()
+
     @property
     def step_count(self):
         """Convenience property to access `step_count` from line search"""
@@ -628,6 +633,7 @@ class Gradient:
                 header = ",".join(keys) + "\n"
                 f_.write(header)
                 # Write values for first iteration
+                _write_vals = []
                 for key in keys:
                     if key == "step_length":
                         val = x[0]
@@ -635,8 +641,9 @@ class Gradient:
                         val = f[0]
                     else:
                         val = 0
-                    f_.write(f"{val:6.3E}")  
-                f_.write("\n")
+                    _write_vals.append(f"{val:6.3E}") 
+                stats_str = ",".join(_write_vals) + "\n"
+                f_.write(stats_str)  
 
         # Write stats for the current, finished, line search
         stats = self.get_stats()

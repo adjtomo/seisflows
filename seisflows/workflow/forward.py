@@ -193,6 +193,7 @@ class Forward:
             _task_names = [task.__name__ for task in self.task_list]
             assert(self.stop_after in _task_names), \
                 f"workflow parameter `stop_after` must match {_task_names}"
+            logger.info(f"`workflow.stop_after` == {self.stop_after}")
 
     def setup(self):
         """
@@ -397,7 +398,8 @@ class Forward:
             # Manual overwrite to not run forward simulations
             if _preproc_only:
                 logger.warning("user request that NO forward simulation be run")
-                run_list = [self.evaluate_objective_function]
+                run_list = [self.prepare_data_for_solver, 
+                            self.evaluate_objective_function]
         else:
             run_list = [self.run_forward_simulations]
 
