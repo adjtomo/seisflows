@@ -1,15 +1,211 @@
 """
-Signal processing functions which are used to manipulate time series, or
-interact with ObsPy trace and stream objects
-
-.. note::
-    These functions have been refactored from the original SeisFlows but have
-    note been tested and frankly I am not sure what the intended use is
-    for the mute function is as it has not been documented or employed in
-    the SeisFlows example problems.
+Signal processing or manipulation functions which are used to manipulate time
+series, or interact with ObsPy Trace and Stream objects. Primarily used by
+the Preprocessing module
 """
 import numpy as np
+from seisflows import logger
 
+
+def filter(st, choice, min_freq=None, max_freq=None, zerophase=True, **kwargs):
+    """
+    Apply a filter to waveform data using ObsPy, throw on a standard
+    demean, detrened and taper prior to filtering. Options for different
+    filtering types. Uses default filter options from ObsPy.
+
+    Zerophase enforced to be True to avoid phase shifting data.
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to be filtered
+    :rtype: obspy.core.stream.Stream
+    :return: filtered traces
+    """
+    if choice.upper() == "BANDPASS":
+        st.filter("bandpass", zerophase=zerophase,
+                  freqmin=min_freq, freqmax=max_freq)
+    elif choice.upper() == "LOWPASS":
+        st.filter("lowpass", zerophase=zerophase, freq=max_freq)
+    elif choice.upper() == "HIGHPASS":
+        st.filter("highpass", zerophase=zerophase, freq=min_freq)
+    else:
+        raise NotImplementedError(f"filter choice {choice} is not available")
+
+    return st
+
+
+def trim(st, st_trim):
+    """
+    Trims the time waveform of `st_trim` to match the time series of `st`. This
+    allows cutting down longer observed waveform data so that preprocessing
+    steps are not performed on unncessarily long time series.
+
+    :type st: obspy.core.stream.Stream
+    :param st: Stream that sets the desired time series
+    :type st_trim: obspy.core.stream.Stream
+    :param st_trim: Stream that will have its time series cut to match `st`
+    :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
+    :return: (`st`, trimmed version of `st_trim`)
+    """
+    for tr, tr_trim in zip(st, st_trim):
+        starttime = tr.stats.starttime
+        endtime = tr.stats.endtime
+        tr_trim.trim(starttime, endtime)
+
+    return st, st_trim
+
+
+def resample(st_a, st_b):
+    """
+    Resample all traces in `st_a` to the sampling rate of `st_b`. Resamples
+    one to one, that is each trace in `obs` is resampled to the
+    corresponding indexed trace in `syn`
+
+    :type st_a: obspy.core.stream.Stream
+    :param st_a: stream to be resampled using sampling rates from `st_b`
+    :type st_b: obspy.core.stream.Stream
+    :param st_b:  stream whose sampling rates will be used to resample
+        `st_a`. Usually this is the synthetic data
+    :rtype: (obspy.core.stream.Stream, obspy.core.stream.Stream)
+    :return: `st_a` (resampled), `st_b` (original)
+    """
+    for tr_a, tr_b in zip(st_a, st_b):
+        sr_a = tr_a.stats.sampling_rate
+        sr_b = tr_b.stats.sampling_rate
+        if sr_a != sr_b:
+            logger.debug(f"resampling '{tr_a.get_id()}' "
+                         f"{sr_a:.3f}->{sr_b:.3f} Hz")
+            tr_a.resample(sampling_rate=tr_b.stats.sampling_rate)
+
+    return st_a, st_b
+
+
+def normalize(st, choice=None, st_rel=None):
+    """
+    Normalize amplitudes of Stream object waveforms based on the given choice of
+    normalization function.
+
+    :type st: obspy.core.stream.Stream
+    :param st: All of the data streams to be normalized
+    :type choice: str
+    :param choice: choice of normalization parameter, from the following:
+        - None: Do not normalize. Used to bypass procedure
+        TRACE-WISE NORMALIZATION
+        - TNORML1: normalize per trace by the L1 norm of itself
+        - TNORML2: normalize per trace by the L2 norm of itself
+        - TNORM_MAX: normalize by the maximum positive amplitude in the trace
+        - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
+        - TNORM_MEAN: normalize by the mean of the absolute trace
+        RELATIVE NORMALIZATION
+        - RNORM_MAX: normalize `st` by the max positive amplitude of `st_rel`
+        - RNORM_ABSMAX: normalize `st` by abs max amplitude of `st_rel`
+    :type st_rel: obspy.core.stream.Stream
+    :param st_rel: Second stream used for relative normalization. Optional
+        and only required if 'RNORM' set as `choice`
+    :rtype: obspy.core.stream.Stream
+    :return: stream with normalized traces
+    """
+    if choice is None:
+        return
+
+    choice = choice.upper()
+    st_out = st.copy()
+    if "RNORM" in choice:
+        assert(st_rel is not None), (
+            f"corresponding 'relative' stream is required for RNORM type "
+            f"normalizations"
+        )
+
+    # Normalize each trace by its L1 norm
+    if choice == "TNORML1":
+        for tr in st_out:
+            w = np.linalg.norm(tr.data, ord=1)
+            if w < 0:
+                logger.warning(f"CAUTION: L1 Norm for {tr.get_id()} is "
+                               f"negative, this will result in "
+                               f"unintentional sign flip")
+            tr.data /= w
+    # Normalize each trace by its L2 norm
+    elif choice == "TNORML2":
+        for tr in st_out:
+            w = np.linalg.norm(tr.data, ord=2)
+            if w < 0:
+                logger.warning(f"CAUTION: L2 Norm for {tr.get_id()} is "
+                               f"negative, this will result in "
+                               f"unintentional sign flip")
+            tr.data /= w
+    # Normalize each trace by its maximum positive amplitude
+    elif choice == "TNORM_MAX":
+        for tr in st_out:
+            w = np.abs(tr.data.max())
+            tr.data /= w
+    # Normalize each trace by the maximum amplitude (neg or pos)
+    elif choice == "TNORM_ABSMAX":
+        for tr in st_out:
+            w = tr.max()  # ObsPy's Trace.max() function gives absmax
+            tr.data /= w
+    # Normalize by the mean of absolute trace amplitudes
+    elif choice == "TNORM_MEAN":
+        for tr in st_out:
+            w = np.mean(np.abs(tr.data))
+            tr.data /= w
+    # Normalize by the max amplitude of the corresponding relative trace
+    elif "RNORM" in choice and "_MAX" in choice:
+        for tr, tr_rel in zip(st_out, st_rel):
+            w = np.abs(tr.data.max()) / np.abs(tr_rel.data.max())
+            tr.data /= w
+    # Normalize by the abs max amplitude of the corresponding relative trace
+    elif "RNORM" in choice and "ABSMAX" in choice:
+        for tr, tr_rel in zip(st_out, st_rel):
+            w = tr.max() / tr_rel.max()  # ObsPy's Trace.max() gives absmax
+            tr.data /= w
+    else:
+        raise NotImplementedError(f"normalization choice '{choice}' is not "
+                                  f"implemented")
+
+    # !!! These are not currently working. Open a GitHub issue if you
+    # !!! would like to see event-wise normalization
+    # Normalize an event by the L1 norm of all traces
+    # if 'ENORML1' in norm_choices:
+    #     w = 0.
+    #     for tr in st_out:
+    #         w += np.linalg.norm(tr.data, ord=1)
+    #     for tr in st_out:
+    #         tr.data /= w
+    # # Normalize an event by the L2 norm of all traces
+    # elif "ENORML2" in norm_choices:
+    #     w = 0.
+    #     for tr in st_out:
+    #         w += np.linalg.norm(tr.data, ord=2)
+    #     for tr in st_out:
+    #         tr.data /= w
+
+    return st_out
+
+
+def mute(st):
+    """
+    Apply mute on data based on early or late arrivals, and short or long
+    source receiver distances
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to mute
+    :rtype: obspy.core.stream.Stream
+    :return: muted stream object
+    """
+    raise NotImplementedError
+
+    if "EARLY" in mute_choices:
+        st = signal.mute_arrivals(st, slope=self.early_slope,
+                                  const=self.early_const, choice="EARLY")
+    if "LATE" in mute_choices:
+        st = signal.mute_arrivals(st, slope=self.late_slope,
+                                  const=self.late_const, choice="LATE")
+    if "SHORT" in mute_choices:
+        st = signal.mute_offsets(st, dist=self.short_dist, choice="SHORT")
+    if "LONG" in mute_choices:
+        st = signal.mute_offsets(st, dist=self.long_dist, choice="LONG")
+
+    return st
 
 def mask(slope, const, offset, nt, dt, length=400):
     """
@@ -17,6 +213,7 @@ def mask(slope, const, offset, nt, dt, length=400):
     late arrivals. Called by the Default preprocessing module.
 
     .. note::
+
         t_mask = slope * offset + const
         itmin = t_mask - length/2
         itmax = t_mask + length/2
@@ -41,6 +238,8 @@ def mask(slope, const, offset, nt, dt, length=400):
     :rtype: np.array
     :return: A mask array that can be directly multipled with a waveform
     """
+    logger.warning("this function is currently untested, use at your own risk")
+
     # Set up the data array
     mask_arr = np.ones(nt)
 
@@ -69,7 +268,8 @@ def mask(slope, const, offset, nt, dt, length=400):
 
 def mute_arrivals(st, slope, const, choice):
     """
-    Apply a tapered mask to a record section to mute early or late arrivals
+    Apply a tapered mask to a set of waveforms in a Stream to mute early or
+    late arrivals
 
     :type st: obspy.stream
     :param st: Stream object containing waveforms to mute
@@ -82,6 +282,8 @@ def mute_arrivals(st, slope, const, choice):
     :rtype: obspy.stream
     :return: muted stream object
     """
+    logger.warning("this function is currently untested, use at your own risk")
+
     assert choice.upper() in ["EARLY", "LATE"]
     st_out = st.copy()
 
@@ -108,19 +310,22 @@ def mute_arrivals(st, slope, const, choice):
 def mute_offsets(st, dist, choice):
     """
     Mute traces based on a given distance (`dist`)
+
     short: ||s-r|| < `dist`
     long:  ||s-r|| > `dist`
 
     :type st: obspy.stream
     :param st: Stream object containing waveforms to mute
     :type dist: float
-    :param dist: cutoff distance
+    :param dist: cutoff distancekil
     :type choice: str
     :param choice: "short" to mute short src-rcv distances,
         "long" to mute long src-rcv distances
     :rtype: obspy.stream
     :return: muted stream object
     """
+    logger.warning("this function is currently untested, use at your own risk")
+
     assert choice.upper() in ["LONG", "SHORT"]
     st_out = st.copy()
 
@@ -157,7 +362,7 @@ def get_receiver_coords(st):
     if hasattr(st[0].stats, "su"):
         rx, ry, rz = [], [], []
 
-        for tr in st:
+        for tr in st_out:
             rx += [tr.stats.su.trace_header.group_coordinate_x]
             ry += [tr.stats.su.trace_header.group_coordinate_y]
             rz += [0.]
@@ -180,63 +385,10 @@ def get_source_coords(st):
     """
     if hasattr(st[0].stats, "su"):
         sx, sy, sz = [], [], []
-        for tr in st:
+        for tr in st_out:
             sx += [tr.stats.su.trace_header.source_coordinate_x]
             sy += [tr.stats.su.trace_header.source_coordinate_y]
             sz += [0.]
         return sx, sy, sz
     else:
         raise NotImplementedError
-
-
-# From the original SeisFlows code, not used but left just incase
-# def correlate(u, v):
-#     w = np.convolve(u, np.flipud(v))
-#     return
-#
-#
-# def tukeywin(nt, imin, imax, alpha=0.05):
-#     t = np.linspace(0,1,imax-imin)
-#     w = np.zeros(imax-imin)
-#     p = alpha/2.
-#     lo = np.floor(p*(imax-imin-1))+1
-#     hi = imax-imin-lo
-#     w[:lo] = (1+np.cos(np.pi/p*(t[:lo]-p)))/2
-#     w[lo:hi] = np.ones((hi-lo))
-#     w[hi:] = (1+np.cos(np.pi/p*(t[hi:]-p)))/2
-#     win = np.zeros(nt)
-#     win[imin:imax] = w
-#     return win
-#
-# def sconvolve(s, h, w, inplace=True):
-#     nt = h.nt
-#     nr = h.nr
-#
-#     if inplace:
-#         for ir in range(nr):
-#             s[:,ir] = np.convolve(s[:,ir], w, 'same')
-#         return s
-#     else:
-#         s2 = np.zeros((nt,nr))
-#         for ir in range(nr):
-#             s2[:,ir] = np.convolve(s[:,ir], w, 'same')
-#         return s2
-#
-# def apply_filter_backwards(self, traces):
-#     """
-#     !!! This was located in seisflows.preprocess.default, but wasn't called
-#     !!! anywhere. Have relinquished it to this graveyard until further notice.
-#     Run the apply_filter() function but backwards
-#
-#     :param traces:
-#     :return:
-#     """
-#     for tr in traces:
-#         tr.data = np.flip(tr.data)
-#
-#     traces = self.apply_filter()
-#
-#     for tr in traces:
-#         tr.data = np.flip(tr.data)
-#
-#     return traces

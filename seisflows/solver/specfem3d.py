@@ -22,10 +22,6 @@ class Specfem3D(Specfem):
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
-    :type export_vtk: bool
-    :param export_vtk: anytime a model, kernel or gradient is considered,
-        generate a VTK file and store it in the scratch/ directory for the User
-        to visualize at their leisure.
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -39,14 +35,13 @@ class Specfem3D(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
-                 prune_scratch=True, **kwargs):
+    def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True, 
+                 **kwargs):
         """Instantiate a Specfem3D_Cartesian solver interface"""
 
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.prune_scratch = prune_scratch
-        self.export_vtk = export_vtk
 
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
@@ -58,7 +53,7 @@ class Specfem3D(Specfem):
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
-                                   "xsmooth_sem", "xcombine_vol_data_vtk"]
+                                   "xsmooth_sem"]  #, "xcombine_vol_data_vtk"]
 
         # Internally used parameters set by functions within class
         self._model_databases = None
@@ -193,12 +188,14 @@ class Specfem3D(Specfem):
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
-        # !!! Do we need to tailor this to output of preprocess module? !!!
+        # we expect that preprocessing has created ALL required adjoint sources
         dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
         if not os.path.exists(dst):
             src = os.path.join(self.cwd, "DATA", "STATIONS")
             unix.cp(src, dst)
 
+        # SPECFEM class takes care of simulation_type and save_forward params
+        # as well as kernel renaming and export
         super().adjoint_simulation(executables=executables,
                                    save_kernels=save_kernels,
                                    export_kernels=export_kernels)

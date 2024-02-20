@@ -85,10 +85,8 @@ class SFPyatoaEx2D(SFExample2D):
         # Adjust the existing parameter list
         self._parameters["smooth_h"] = 5000.
         self._parameters["smooth_v"] = 5000.
-        self._parameters["pyflex_preset"] = "null"  # no windowing in Pyaflowa
 
         # Pyaflowa preprocessing parameters
-        self._parameters["unit_output"] = "DISP"
         self._parameters["min_period"] = 10.  # filter bounds define windows
         self._parameters["max_period"] = 200.
 

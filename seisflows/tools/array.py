@@ -9,18 +9,6 @@ import scipy.interpolate as _interp
 from seisflows.tools.math import gaussian
 
 
-def count_zeros(a):
-    """
-    Counts number of zeros in a list or array
-
-    :type a: list or np.array
-    :param a: list to count the number of zeros in
-    :rtype: int
-    :return: number of zeros in a
-    """
-    return sum(np.array(a) == 0)
-
-
 def sortrows(a, return_index=False, return_inverse=False):
     """
     Sorts the rows of a numpy array. By default returns only the sorted array
