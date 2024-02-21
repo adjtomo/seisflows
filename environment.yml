@@ -11,4 +11,4 @@ dependencies:
       - pyatoa>=0.3.0
       - pysep-adjtomo
       - -e .
-       
+

@@ -17,9 +17,9 @@ dependencies = [
     "obspy",
     "pyyaml",
     "pypdf",
-	"IPython",
-	"dill",
-	"pyatoa>=0.4.0",
+    "IPython",
+    "dill",
+    "pyatoa>=0.3.0",
     "pysep-adjtomo",
 ]
 
