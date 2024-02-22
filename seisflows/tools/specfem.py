@@ -1,5 +1,5 @@
 """
-Utilities to interact with, manipulate or call on the external solver, 
+Utilities to interact with, manipulate or call on the external solver,
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
 import os
@@ -207,9 +207,9 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
 
     .. warning::
 
-        In SPECFEM3D_GLOBE, the FORCESOLUTION first line requires a specific 
+        In SPECFEM3D_GLOBE, the FORCESOLUTION first line requires a specific
         format. I haven't tested this thoroughly but it either cannot exceed
-        a char limit, or cannot have characters like spaces or hyphens. To be 
+        a char limit, or cannot have characters like spaces or hyphens. To be
         safe, something like FORCE{N} will work, where N should be the source
         number. This function enforces this just incase.
 
@@ -218,14 +218,14 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         formatted 'STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL',
         elevant and burial will not be used
     :type source_file: str
-    :param source_file: path to 
+    :param source_file: path to
     :type source_type: str
     :param source_type: tells SeisFlows what type of file we are using, which
-        in turn defines the specific keys and delimiters to use when editing 
-        the source file. 
+        in turn defines the specific keys and delimiters to use when editing
+        the source file.
 
         - SOURCE: SPECFEM2D source file
-        - FORCESOLUTION_3D: SPECFEM3D Cartesian FORCESOLUTION file 
+        - FORCESOLUTION_3D: SPECFEM3D Cartesian FORCESOLUTION file
         - FORCESOLUTION_3DGLOBE: SPECFEM3D_GLOBE FORCESOLUTION file
     """
     assert(source_type in SOURCE_KEYS.keys()), \
@@ -409,7 +409,7 @@ def check_source_names(path_specfem_data, source_prefix, ntask=None):
     return names
 
 
-def getpar(key, file, delim="=", match_partial=False, comment="#", 
+def getpar(key, file, delim="=", match_partial=False, comment="#",
            _fmt_dbl=True):
     """
     Reads and returns parameters from a SPECFEM or SeisFlows parameter file
@@ -433,11 +433,11 @@ def getpar(key, file, delim="=", match_partial=False, comment="#",
     :param comment: character used to delimit comments in the file. Defaults to
         '#' for the SPECFEM Par_file, but things like the FORCESOLUTION use '!'
     :type _fmt_dbl: bool
-    :param _fmt_dbl: the SPECFEM files use FORTRAN double precision notation 
-        to define floats (e.g., 2.5d0 == 2.5, or 1.2e2 == 1.2*10^2). Usually it 
+    :param _fmt_dbl: the SPECFEM files use FORTRAN double precision notation
+        to define floats (e.g., 2.5d0 == 2.5, or 1.2e2 == 1.2*10^2). Usually it
         is preferable to convert this notation directly to a Python float, so
         this is set True by default. However, in cases where we are doing string
-        replacement, like when using `setpar`, we do not want to format the 
+        replacement, like when using `setpar`, we do not want to format the
         double precision values, so this should be set False.
     :rtype: tuple (str, str, int)
     :return: a tuple of the key, value and line number (indexed from 0).
@@ -510,8 +510,8 @@ def setpar(key, val, file, delim="=", **kwargs):
 
     lines = open(file, "r").readlines()
 
-    # Replace value in place by splitting on the delimiter and replacing the 
-    # first instance of the old value (avoids replacing comment values or 
+    # Replace value in place by splitting on the delimiter and replacing the
+    # first instance of the old value (avoids replacing comment values or
     # matching values inside the key)
     if val_out != "":
         key, val_and_comment = lines[i].split(delim)
@@ -583,7 +583,7 @@ def setpar_vel_model(file, model):
     """
     _, nbmodels, i_start = getpar("nbmodels", file)
     i_start += 1  # increase by one to start AFTER nbmodels line
-    _, _, i_end = getpar("tomography_file", file)
+    _, _, i_end = getpar("interfacesfile", file)
 
     lines = open(file, "r").readlines()
     model_lines = []
