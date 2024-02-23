@@ -185,8 +185,7 @@ class Forward:
                     f"option `generate_data` requires 'path_model_true' "
                     f"to exist, which points to a target model"
                     )
-                assert(self.path.data is not None and
-                       os.path.exists(self.path.data)), \
+                assert(self.path.data is not None), \
                     f"`path_data` is required for data-synthetic comparisons"
 
         if self.stop_after is not None:

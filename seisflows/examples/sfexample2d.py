@@ -131,6 +131,7 @@ class SFExample2D:
             "ntask": self.ntask,  # default 3 sources for this example
             "materials": "elastic",  # how velocity model parameterized
             "update_density": False,  # update density or keep constant
+            "generate_data": True,  # run simulations through model_tru
             "syn_data_format": "ascii",  # how to output synthetic seismograms
             "obs_data_format": "ascii",
             "unit_output": "disp",
@@ -495,7 +496,7 @@ class SFExample2D:
         self.setup_specfem2d_for_model_init()
         self.run_xspecfem2d_binaries()
         self.cleanup_xspecfem2d_run(choice="INIT")
-        # Step 2b: Generate MODEL_INIT, rearrange consequent directory structure
+        # Step 2b: Generate MODEL_TRUE, rearrange consequent directory structure
         print(msg.cli("GENERATING TRUE/TARGET MODEL", border="="))
         self.setup_specfem2d_for_model_true()
         self.run_xspecfem2d_binaries()
