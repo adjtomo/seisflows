@@ -11,7 +11,15 @@ import re
 import yaml
 import numpy as np
 import traceback
-from pkgutil import find_loader
+
+# if python version is 3.12 or greater, use importlib.util.find_spec
+# because pkgutil.find_loader is deprecated.
+# otherwise use pkgutil.find_loader.
+if sys.version_info >= (3, 12):
+    from importlib.util import find_spec as find_loader
+else:
+    from pkgutil import find_loader
+
 from importlib import import_module
 
 from seisflows import logger, NAMES
@@ -83,7 +91,7 @@ def load_yaml(filename):
     """
     Define how the PyYaml yaml loading function behaves.
     Replaces None and inf strings with NoneType and numpy.inf respectively
-    Also expands all paths (parameters that start with 'path_') to be absolute 
+    Also expands all paths (parameters that start with 'path_') to be absolute
 
     :type filename: str
     :param filename: .yaml file to load in
