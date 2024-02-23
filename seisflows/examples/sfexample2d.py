@@ -418,7 +418,7 @@ class SFExample2D:
         """
         cd(self.cwd)
 
-        self.sf.setup(force=True)  # Force will delete existing parameter file
+        self.sf.init(force=True)  # Force will delete existing parameter file
         for key, val in self._modules.items():
             self.sf.par(key, val)
 
