@@ -549,7 +549,7 @@ def getpar_vel_model(file):
     :return: list of all the layers of the velocity model as strings
     """
     _, _, i_start = getpar("nbmodels", file)
-    _, _, i_end = getpar("tomography_file", file)
+    _, _, i_end = getpar("TOMOGRAPHY_FILE", file)
 
     # i_start + 1 to skip over the 'nbmodels' parameter
     lines = open(file, "r").readlines()[i_start + 1:i_end]
@@ -583,7 +583,7 @@ def setpar_vel_model(file, model):
     """
     _, nbmodels, i_start = getpar("nbmodels", file)
     i_start += 1  # increase by one to start AFTER nbmodels line
-    _, _, i_end = getpar("interfacesfile", file)
+    _, _, i_end = getpar("TOMOGRAPHY_FILE", file)
 
     lines = open(file, "r").readlines()
     model_lines = []
