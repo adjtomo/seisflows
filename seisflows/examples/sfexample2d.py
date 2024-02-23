@@ -130,7 +130,7 @@ class SFExample2D:
         self._parameters = {
             "ntask": self.ntask,  # default 3 sources for this example
             "materials": "elastic",  # how velocity model parameterized
-            "density": False,  # update density or keep constant
+            "update_density": False,  # update density or keep constant
             "syn_data_format": "ascii",  # how to output synthetic seismograms
             "obs_data_format": "ascii",
             "unit_output": "disp",
@@ -138,7 +138,6 @@ class SFExample2D:
             "start": 1,  # first iteration
             "end": self.niter,  # final iteration -- we will run 2
             "step_count_max": 5,  # will cause iteration 2 to fail
-            "data_case": "synthetic",  # synthetic-synthetic inversion
             "components": "Y",  # only Y component seismograms avail.
             "attenuation": False,
             "misfit": "traveltime",  # cross-correlation phase measure
