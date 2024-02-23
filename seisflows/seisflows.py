@@ -83,7 +83,7 @@ def sfparser():
     # =========================================================================
     init = subparser.add_parser(
         "init", help="Runs SeisFlows first-time initiation procedures.",
-        description="""In the specified working directory, copy template
+        description="""In the specified working directory, copy template 
         parameter file containing only module choices."""
     )
     init.add_argument("-f", "--force", action="store_true",
@@ -91,12 +91,12 @@ def sfparser():
     # =========================================================================
     configure = subparser.add_parser(
         "configure", help="Fill parameter file with defaults",
-        description="""SeisFlows parameter files will vary depending on
-        chosen modules and their respective required parameters. This function
-        will dynamically traverse the source code and generate a template
-        parameter file based on module choices. The resulting file incldues
-        docstrings and type hints for each parameter. Optional parameters will
-        be set with default values and required parameters and paths will be
+        description="""SeisFlows parameter files will vary depending on 
+        chosen modules and their respective required parameters. This function 
+        will dynamically traverse the source code and generate a template 
+        parameter file based on module choices. The resulting file incldues 
+        docstrings and type hints for each parameter. Optional parameters will 
+        be set with default values and required parameters and paths will be 
         marked appropriately. Required parameters must be set before a workflow
         can be submitted."""
     )
@@ -107,7 +107,7 @@ def sfparser():
     swap = subparser.add_parser(
         "swap", help="Swap module parameters in an existing parameter file",
         description="""During workflow development, it may be necessary to swap
-        between different sub-modules (e.g., system.workstation ->
+        between different sub-modules (e.g., system.workstation -> 
         system.cluster). However this would typically involving re-generating
         and re-filling a parameter file. The 'swap' function makes it easier
         to swap parameters between modules.
@@ -121,19 +121,19 @@ def sfparser():
     # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
-        description="""The main SeisFlows execution command. Submit a SeisFlows
-        workflow to the chosen system, equal to executing
-        seisflows.workflow.main(). This function will create and fill the
-        working directory with required paths, perform path and parameter
+        description="""The main SeisFlows execution command. Submit a SeisFlows 
+        workflow to the chosen system, equal to executing 
+        seisflows.workflow.main(). This function will create and fill the 
+        working directory with required paths, perform path and parameter 
         error checking, and establish the active working environment before
         executing the workflow."""
     )
     submit.add_argument("-s", "--stop_after", default=None, type=str,
                         help="Optional override of the 'STOP_AFTER' parameter")
-    # Argument `login` is shared between functions 'submit' and 'restart' so
+    # Argument `login` is shared between functions 'submit' and 'restart' so 
     # define its behavior once and for all here and provide to each parser
     _direct_kwargs = dict(
-            default=False, action="store_true",
+            default=False, action="store_true", 
             help="`cluster`-based systems only: submit master job 'direct'ly "
                  "to login node rather than as a separate process on a "
                  "compute node. Useful for avoiding queue times for master job "
@@ -144,8 +144,8 @@ def sfparser():
     # =========================================================================
     restart = subparser.add_parser(
         "restart", help="Remove current environment and submit new workflow",
-        description="""Akin to running seisflows clean; seisflows submit.
-        Restarts the workflow by removing the current state and submitting a
+        description="""Akin to running seisflows clean; seisflows submit. 
+        Restarts the workflow by removing the current state and submitting a 
         fresh workflow."""
     )
     restart.add_argument("-f", "--force", action="store_true",
@@ -154,7 +154,7 @@ def sfparser():
     # =========================================================================
     clean = subparser.add_parser(
         "clean", help="Remove files relating to an active working environment",
-        description="""Delete all SeisFlows related files in the working
+        description="""Delete all SeisFlows related files in the working 
         directory, except for the parameter file."""
     )
     clean.add_argument("-f", "--force", action="store_true",
@@ -164,7 +164,7 @@ def sfparser():
     par = subparser.add_parser(
         "par", help="View and edit SeisFlows parameter file",
         description="""Directly edit values in the parameter file by providing
-        the parameter and corresponding value. If no value is provided, will
+        the parameter and corresponding value. If no value is provided, will 
         simply print out the current value of the given parameter. Works also
         with path names."""
     )
@@ -181,9 +181,9 @@ def sfparser():
     # =========================================================================
     sempar = subparser.add_parser(
         "sempar", help="View and edit SPECFEM parameter file",
-        description="""Directly edit values in the SPECFEM parameter file by
-        providing the parameter and corresponding value. If no value is
-        provided, will simply print out the current value of the given
+        description="""Directly edit values in the SPECFEM parameter file by 
+        providing the parameter and corresponding value. If no value is 
+        provided, will simply print out the current value of the given 
         parameter. Works also with path names."""
     )
     sempar.add_argument("parameter", nargs="?", help="Parameter to edit or "
@@ -228,8 +228,8 @@ def sfparser():
     # =========================================================================
     plotst = subparser.add_parser(
         "plotst", formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="""Plots waveforms output by the solver. Uses ObsPy's
-Stream.plot() function under the hood. Example call would be
+        description="""Plots waveforms output by the solver. Uses ObsPy's 
+Stream.plot() function under the hood. Example call would be 
 `seisflows plotst scratch/solver/mainsolver/traces/syn/*`
         """)
 
@@ -253,8 +253,8 @@ Print information related to an active environment
     modules       List available module names for all available packages
     sources       List all source names and their respective task index
     tasks         Print out the workflow task list for valid `stop_after` values
-    inherit       Track inheritance chain for all modules, determine method
-                  ownership for a given function.
+    inherit       Track inheritance chain for all modules, determine method 
+                  ownership for a given function. 
                   seisflows print inherit {optional module} {optional function}
                   e.g., seisflows inherit workflow main
                     """,
@@ -268,7 +268,7 @@ Print information related to an active environment
     reset = subparser.add_parser(
         "reset", formatter_class=argparse.RawDescriptionHelpFormatter,
         help="Reset modules within an active state", description="""
-Occasionally the machinery of a given module must be reset within an active
+Occasionally the machinery of a given module must be reset within an active 
 working state before the workflow can be resumed
 
     line_search     Reset line search, step count returns to 1
@@ -292,7 +292,7 @@ working state before the workflow can be resumed
     examples = subparser.add_parser(
         "examples", help="Look at and run pre-configured example problems",
         description="""Lists out available example problems and allows the
-        user to run example problems directly from the command line. Some
+        user to run example problems directly from the command line. Some 
         example problems may have pre-run prompts mainly involving the
         numerical solver
         """
@@ -521,10 +521,10 @@ class SeisFlows:
             Defaults to False, uses relative paths.
         """
         from traceback import format_exc
-
+        
         # Paths/pars that are okay staying default and will be kept together
         # with -s/--show_hidden
-        _default_paths = ["workdir", "output_log", "state_file", "par_file",
+        _default_paths = ["workdir", "output_log", "state_file", "par_file", 
                           "output", "scratch", "log_files"]
         _ignore_paths = ["solver", "eval_func", "eval_grad"]
 
@@ -536,7 +536,7 @@ class SeisFlows:
             and remove the path docstrings, those come later.
 
             :type idx: int
-            :param idx: 0 returns parameter docstrings, 1 or -1 returns path
+            :param idx: 0 returns parameter docstrings, 1 or -1 returns path 
                 docstring
             """
             docstring = mod.__doc__.replace("\n", "\n#")
@@ -626,7 +626,7 @@ class SeisFlows:
                         if key not in defaults:
                             defaults[key] = val
                         continue
-
+                    
                     if val is None:
                         val = "null"
                     if absolute_paths:
@@ -698,7 +698,7 @@ class SeisFlows:
                     setpar(key=key, val=fx(val), file=self._args.parameter_file,
                            delim=":")
             return
-
+            
         if module not in NAMES:
             print(msg.cli(text=f"{module} does not match {NAMES}",
                           header="error"))
@@ -767,10 +767,6 @@ class SeisFlows:
         unix.mkdir(self._args.workdir)
         unix.cd(self._args.workdir)
 
-        # if the parameter file doesn't exist, create it
-        if not os.path.exists(self._args.parameter_file):
-            self.init(force=True)
-
         workflow = import_seisflows(workdir=self._args.workdir,
                                     parameter_file=self._args.parameter_file)
         try:
@@ -833,7 +829,7 @@ class SeisFlows:
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
-            for name in ["scratch", "output", "log_files", "state_file",
+            for name in ["scratch", "output", "log_files", "state_file", 
                          "output_log"]:
                 path = f"path_{name}"
                 if path in pars:

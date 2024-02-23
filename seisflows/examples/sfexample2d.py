@@ -45,7 +45,7 @@ class SFExample2D:
     A class for running SeisFlows examples. Simplifies calls structure so that
     multiple example runs can benefit from the code written here
     """
-    def __init__(self, ntask=None, event_id=None, niter=None, nsta=None,
+    def __init__(self, ntask=None, event_id=None, niter=None, nsta=None, 
                  nproc=None, method="run", specfem2d_repo=None, with_mpi=False,
                  mpiexec="mpirun", **kwargs):
         """
@@ -56,7 +56,7 @@ class SFExample2D:
         :param ntask: number of events to use in inversion, between 1 and 25.
             defaults to 3
         :type event_id: str
-        :param event_id: allow user to choose a specific event ID from the
+        :param event_id: allow user to choose a specific event ID from the 
             example problem. Must match source files in SPECFEM2D example DATA/
             directory. Overwrites `ntask` to be 1
         :type niter: int
@@ -124,8 +124,8 @@ class SFExample2D:
         self._modules = {
             "workflow": "inversion",
         }
-
-        # SeisFlows parameters are set as an attribute so that other examples
+        
+        # SeisFlows parameters are set as an attribute so that other examples 
         # can overwrite or override
         self._parameters = {
             "ntask": self.ntask,  # default 3 sources for this example
@@ -244,7 +244,7 @@ class SFExample2D:
         Last successfully tested 4/28/22
         """
         if not os.path.exists(self.sem2d_paths.repo):
-            cmd = ("git clone --recursive --branch devel --depth=1 "
+            cmd = ("git clone --recursive --branch devel --depth=1 " 
                    "https://github.com/geodynamics/specfem2d.git")
 
             print(f"Downloading SPECFEM2D with command: {cmd}")
