@@ -316,7 +316,10 @@ class Forward:
         """
         Barebones forward simulation to create synthetic data and export and 
         save the synthetics in the correct locations. Hijacks function
-        `run_forward_simulations` but uses some different path exports
+        `run_forward_simulations` but uses some different path exports. 
+
+        Exports data to disk in `path_data` and then symlinks to solver 
+        directories for each source.
 
         .. note::
 
@@ -330,13 +333,22 @@ class Forward:
         :param export_trace: full path to store synthetic observations so they 
             can be discovered by other functions. Defaulsts to solver/traces/obs
         """
+        # Set default arguments
+        path_model = path_model or self.path.model_true
+        export_traces = export_traces or os.path.join(self.path.data, 
+                                                      self.solver.source_name)
+        save_traces = os.path.join(self.path.data, self.solver.cwd)
+
+        # Run forward simulation with solver
         self.run_forward_simulations(
-                path_model=path_model or self.path.model_true,
-                export_traces=export_traces or 
-                        os.path.join(self.path.data, self.solver.source_name),
-                save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
-                save_forward=False
-                )
+            path_model=path_model, export_traces=export_traces,  
+            save_traces=save_traces, save_forward=False
+            )
+        
+        # Symlink data into solver directories so it can be found by preprocess
+        src = save_traces
+        dst = os.path.join(self.solver.cwd, "traces", "obs")
+        unix.ln(src, dst)
 
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
                                 _preproc_only=False, **kwargs):
