@@ -141,6 +141,7 @@ class SFExample2D:
             "step_count_max": 5,  # will cause iteration 2 to fail
             "components": "Y",  # only Y component seismograms avail.
             "attenuation": False,
+            "plot_waveforms": True,  
             "misfit": "traveltime",  # cross-correlation phase measure
             "adjoint": "traveltime",  # cross-correlation phase measure
             "path_specfem_bin": self.workdir_paths.bin,

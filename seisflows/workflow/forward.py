@@ -346,7 +346,7 @@ class Forward:
             )
         
         # Symlink data into solver directories so it can be found by preprocess
-        src = glob(os.path.join(save_traces, "*"))
+        src = os.path.join(save_traces, "*")
         dst = os.path.join(self.solver.cwd, "traces", "obs")
 
         for src_ in glob(src):
