@@ -150,7 +150,7 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
         output_str += "\n".join(items)
     # Add bottom border
     if border is not None:
-        output_str += f"\n{border * wraplen}"
+        output_str += f"\n{border * wraplen}\n"
     # Final newline to space from next cli
     # output_str += "\n"
     return output_str
