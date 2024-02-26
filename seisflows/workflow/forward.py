@@ -311,8 +311,8 @@ class Forward:
 
         self.system.run([self._generate_synthetic_data_single], **kwargs)
 
-    def _generate_synthetic_data_single(self, path_model, export_traces,
-                                        **kwargs):
+    def _generate_synthetic_data_single(self, path_model=None, 
+                                        export_traces=None, **kwargs):
         """
         Barebones forward simulation to create synthetic data and export and 
         save the synthetics in the correct locations. Hijacks function
@@ -322,11 +322,18 @@ class Forward:
 
             Must be run by system.run() so that solvers are assigned 
             individual task ids/ working directories.
+
+        :type path_model: str
+        :type path_model: path to the model files that will be used to evaluate,
+            defaults to `path_model_true`
+        :type export_trace: str
+        :param export_trace: full path to store synthetic observations so they 
+            can be discovered by other functions. Defaulsts to solver/traces/obs
         """
         self.run_forward_simulations(
-                path_model=self.path.model_true,
-                export_traces=os.path.join(self.path.data, 
-                                           self.solver.source_name),
+                path_model=path_model or self.path.model_true,
+                export_traces=export_traces or 
+                        os.path.join(self.path.data, self.solver.source_name),
                 save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
                 save_forward=False
                 )

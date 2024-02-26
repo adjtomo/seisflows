@@ -456,7 +456,10 @@ class Gradient:
                 else:
                     alpha = max_allowable_alpha
 
-        logger.info(f"step length `alpha` = {alpha:.3E}")
+        if alpha is not None:
+            logger.info(f"step length `alpha` = {alpha:.3E}")
+        else:
+            logger.info("step length `None`, assumed failed line search")
     
         return alpha, status
 
