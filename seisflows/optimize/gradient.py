@@ -458,8 +458,6 @@ class Gradient:
 
         if alpha is not None:
             logger.info(f"step length `alpha` = {alpha:.3E}")
-        else:
-            logger.info("step length `None`, assumed failed line search")
     
         return alpha, status
 
@@ -470,18 +468,23 @@ class Gradient:
         `alpha`
 
         :type alpha: float
-        :param alpha: step length recommended by the line search.
-        :rtype: np.array
-        :return: trial model that can be used for line search evaluation
+        :param alpha: step length recommended by the line search. if None,
+            due to failed line search, then this function returns None
+        :rtype: np.array or NoneType
+        :return: trial model that can be used for line search evaluation or 
+            None if alpha is None
         """
-        # The new model is the old model plus a step with a given magnitude 
-        m_try = self.load_vector("m_new").copy()
-        p = self.load_vector("p_new")  # current search direction
+        if alpha is not None:
+            # The new model is the old model plus a step with a given magnitude 
+            m_try = self.load_vector("m_new").copy()
+            p = self.load_vector("p_new")  # current search direction
 
-        dm = alpha * p.vector  # update = step length * step direction
-        logger.info(f"updating model with `dm` (dm_min={dm.min():.2E}, "
-                    f"dm_max = {dm.max():.2E})")
-        m_try.update(vector=m_try.vector + dm)
+            dm = alpha * p.vector  # update = step length * step direction
+            logger.info(f"updating model with `dm` (dm_min={dm.min():.2E}, "
+                        f"dm_max = {dm.max():.2E})")
+            m_try.update(vector=m_try.vector + dm)
+        else:
+            m_try = None
 
         return m_try
 
