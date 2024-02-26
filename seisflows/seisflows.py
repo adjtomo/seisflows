@@ -825,7 +825,7 @@ class SeisFlows:
             check = input(msg.cli("This will remove all workflow objects "
                                   "leaving only the parameter file. Are "
                                   "you sure you want to continue? "
-                                  "(y/[n])", header="clean", border="="))
+                                  "(y/[n])\n", header="clean", border="="))
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
