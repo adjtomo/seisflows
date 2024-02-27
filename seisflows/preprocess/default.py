@@ -415,8 +415,8 @@ class Default:
         if _serial:
             for o, s in zip(obs, syn):
                 residual = self._quantify_misfit_single(o, s, source_name, 
-                                                       save_residuals, 
-                                                       save_adjsrcs)
+                                                        save_residuals, 
+                                                        save_adjsrcs)
                 residuals.append(residual)
         # Process each pair in parallel. Max workers is total num. of cores        
         else:
@@ -433,7 +433,7 @@ class Default:
                     residual = future.result()
                     residuals.append(residual)
                 except Exception as e:
-                    logger.critical(f"preprocessing error: {e}")
+                    logger.critical(f"PREPROC FAILED: {e}")
                     sys.exit(-1)
 
         # Write residuals to text file for other modules to find
@@ -566,13 +566,13 @@ class Default:
                 fig_path = os.path.join(self.path.scratch, source_name)
                 if not os.path.exists(fig_path):
                     unix.mkdir(fig_path)
-                # e.g., path/to/figure/NN_SSS_LL_CCC.png
-                if self._iteration:
-                    _itr = self._iteration
+                # e.g., path/to/figure/NN_SSS_LL_CCC_IS.png 
+                if self._iteration is not None:
+                    _itr = f"_i{self._iteration:0>2}"
                 else:
                     _itr = ""
-                if self._step_count:
-                    _stp = self.step_count
+                if self._step_count is not None:
+                    _stp = f"s{self._step_count:0>2}"
                 else:
                     _stp = ""
                 fid_out = os.path.join(
@@ -630,7 +630,6 @@ class Default:
 
         return obs, syn
 
-
 def read(fid, data_format, **kwargs):
     """
     Waveform reading functionality. Imports waveforms as Obspy streams
@@ -650,7 +649,6 @@ def read(fid, data_format, **kwargs):
     else:
         st = obspy_read(fid, format=data_format.upper(), **kwargs)
     return st
-
 
 def write(st, fid, data_format):
     """
@@ -688,7 +686,6 @@ def write(st, fid, data_format):
                 time_offset = 0
             data_out = np.vstack((tr.times() + time_offset, tr.data)).T
             np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
-
 
 def read_ascii(fid, origintime=None, **kwargs):
     """
@@ -755,7 +752,6 @@ def read_ascii(fid, origintime=None, **kwargs):
 
     return st
 
-
 def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
     """
     SPECFEM requires that adjoint traces be present for every matching
@@ -786,7 +782,6 @@ def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
             ]
     # Simply wait until this task is completed
     wait(futures)
-
 
 def _write_adjsrc_single(st, fid, output, fmt):
     """Parallelizable function to write out empty adjoint source"""
