@@ -1214,7 +1214,7 @@ class SeisFlows:
         plot_model.coordinates = base_model.coordinates
         # plot2d has internal check for acceptable parameter value
         plot_model.plot2d(parameter=parameter, cmap=cmap, show=True,
-                          title=f"{name} // {parameter.upper()}", save=savefig)
+                          title=f"{name} // {parameter}", save=savefig)
 
     def reset(self, choice=None, **kwargs):
         """

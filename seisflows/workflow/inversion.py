@@ -560,8 +560,10 @@ class Inversion(Migration):
         m_try = self.optimize.compute_trial_model(alpha=alpha)
 
         # Save new model (m_try) and step length (alpha) for new trial step
-        self.optimize.save_vector("alpha", alpha)
-        self.optimize.save_vector("m_try", m_try)
+        if alpha is not None:
+            self.optimize.save_vector("alpha", alpha)
+        if m_try is not None:
+            self.optimize.save_vector("m_try", m_try)
 
         # Proceed based on the outcome of the line search
         if status.upper() == "PASS":
@@ -646,7 +648,7 @@ class Inversion(Migration):
         # Update optimization on disk 
         self.optimize.checkpoint()
 
-        # Thrifty Inversion keeps the last function evaluation for next iteration
+        # Thrifty Inversion keeps last function evaluation for next iteration
         self._thrifty_status = self._update_thrifty_status()
         if self._thrifty_status:
             unix.rm(self.path.eval_grad)

@@ -185,8 +185,7 @@ class Forward:
                     f"option `generate_data` requires 'path_model_true' "
                     f"to exist, which points to a target model"
                     )
-                assert(self.path.data is not None and
-                       os.path.exists(self.path.data)), \
+                assert(self.path.data is not None), \
                     f"`path_data` is required for data-synthetic comparisons"
 
         if self.stop_after is not None:
@@ -312,25 +311,46 @@ class Forward:
 
         self.system.run([self._generate_synthetic_data_single], **kwargs)
 
-    def _generate_synthetic_data_single(self, path_model, export_traces,
-                                        **kwargs):
+    def _generate_synthetic_data_single(self, path_model=None, 
+                                        _copy_function=unix.ln, **kwargs):
         """
         Barebones forward simulation to create synthetic data and export and 
         save the synthetics in the correct locations. Hijacks function
-        `run_forward_simulations` but uses some different path exports
+        `run_forward_simulations` but uses some different path exports. 
+
+        Exports data to disk in `path_data` and then symlinks to solver 
+        directories for each source.
 
         .. note::
 
             Must be run by system.run() so that solvers are assigned 
             individual task ids/ working directories.
+
+        :type path_model: str
+        :type path_model: path to the model files that will be used to evaluate,
+            defaults to `path_model_true`
+        :param _copy_function: how to transfer data from `path_data` to scratch
+            - unix.ln (default): symlink data to avoid copying large amounts of
+                data onto the scratch directory.
+            - unix.cp: copy data to avoid burdening filesystem that actual data
+                resides on, or to avoid touching the original data on disk. 
         """
+        # Set default arguments
+        path_model = path_model or self.path.model_true
+        save_traces = os.path.join(self.path.data, self.solver.source_name)
+
+        # Run forward simulation with solver
         self.run_forward_simulations(
-                path_model=self.path.model_true,
-                export_traces=os.path.join(self.path.data, 
-                                           self.solver.source_name),
-                save_traces=os.path.join(self.solver.cwd, "traces", "obs"),
-                save_forward=False
-                )
+            path_model=path_model, export_traces=None,  
+            save_traces=save_traces, save_forward=False
+            )
+        
+        # Symlink data into solver directories so it can be found by preprocess
+        src = os.path.join(save_traces, "*")
+        dst = os.path.join(self.solver.cwd, "traces", "obs")
+
+        for src_ in glob(src):
+            _copy_function(src_, dst)
 
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
                                 _preproc_only=False, **kwargs):

@@ -278,9 +278,6 @@ class Specfem:
 
         Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
-        self._initialize_working_directories()
-        self._export_starting_models()
-
         # Assign file extensions to be used for database file searching
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
@@ -291,6 +288,9 @@ class Specfem:
             logger.warning("no SPECFEM model type specified to define file "
                            "extension, defaulting to '.bin'")
             self._ext = ".bin"
+
+        self._initialize_working_directories()
+        self._export_starting_models()
 
     def check_model_values(self, path):
         """
