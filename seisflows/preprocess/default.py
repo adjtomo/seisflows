@@ -537,6 +537,9 @@ class Default:
                     obs=tr_obs.data, syn=tr_syn.data,
                     nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                 )
+                # Calculate misfit from measurement, ensure misfit is a positive
+                # value so that it can be correctly compared
+                residual = 1/2 * residual ** 2
                 logger.debug(f"{tr_syn.get_id()} residual={residual:.3E}")
             else:
                 residual = 0
