@@ -362,7 +362,7 @@ class SFExample2D:
         assert(os.path.exists("Par_file")), f"I cannot find the Par_file!"
 
         print("> Updating initial homogeneous velocity model values")
-        new_model = "1 1 2600.d0 5900.d0 3550.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
+        new_model = "1 1 2600.d0 6000.d0 3625.0d0 0 0 10.d0 10.d0 0 0 0 0 0 0"
         self.sf.sempar("velocity_model", new_model)
 
     def run_xspecfem2d_binaries(self):

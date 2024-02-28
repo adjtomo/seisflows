@@ -599,8 +599,10 @@ class Default:
         # synthetics because the output adjoint sources will need this samp rate
         obs, syn = resample(st_a=obs, st_b=syn)
 
-        # Trim the observed seismograms to the length of the synthetics
-        obs, syn = trim(st=syn, st_trim=obs)
+        # Trim the observed seismograms to the length of the synthetics. 
+        # Returned in the same order as input so syn first since we are trimming
+        # to syn
+        syn, obs = trim(st=syn, st_trim=obs)
 
         # Apply some basic detrends to clean up data
         for st in [obs, syn]:
