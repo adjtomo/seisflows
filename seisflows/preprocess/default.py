@@ -542,6 +542,7 @@ class Default:
                 residual = 0
 
             # Generate an adjoint source trace, write to file in scratch dir.
+            # SPECFEM expects non time-reversed adjoint sources
             if save_adjsrcs and self._generate_adjsrc:
                 adjsrc = tr_syn.copy()
                 adjsrc.data = self._generate_adjsrc(
