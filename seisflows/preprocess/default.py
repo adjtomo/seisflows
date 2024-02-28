@@ -537,10 +537,11 @@ class Default:
                     obs=tr_obs.data, syn=tr_syn.data,
                     nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                 )
-                # Calculate misfit from measurement, ensure misfit is a positive
-                # value so that it can be correctly compared
+                # Calculate misfit from measurement (e.g., Tromp et al. 2005 
+                # Eq. 1), ensuring misfit is a positive value so that it can be
+                # correctly compared during line search
                 residual = 1/2 * residual ** 2
-                logger.debug(f"{tr_syn.get_id()} residual={residual:.3E}")
+                logger.debug(f"{tr_syn.get_id()} misfit={residual:.3E}")
             else:
                 residual = 0
 
@@ -582,7 +583,7 @@ class Default:
                 fid_out = os.path.join(
                     fig_path, f"{tr_syn.id.replace('.', '_')}{_itr}{_stp}.png"
                 )
-                title = f"{tr_syn.id}; misfit={residual:.2f}"
+                title = f"{tr_syn.id}; misfit={residual:.3E}"
                 plot_waveforms(tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
                                fid_out=fid_out, title=title)
 
