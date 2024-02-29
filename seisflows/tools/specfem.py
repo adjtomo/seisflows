@@ -583,7 +583,7 @@ def setpar_vel_model(file, model):
     """
     _, nbmodels, i_start = getpar("nbmodels", file)
     i_start += 1  # increase by one to start AFTER nbmodels line
-    _, _, i_end = getpar("TOMOGRAPHY_FILE", file)
+    _, _, i_end = getpar("interfacesfile", file)
 
     lines = open(file, "r").readlines()
     model_lines = []
