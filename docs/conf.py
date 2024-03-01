@@ -21,17 +21,12 @@ import sphinx_rtd_theme
 project = 'SeisFlows'
 copyright = '2024'
 author = 'adjTomo Dev Team'
-<<<<<<< HEAD
 # Grab version number from 'pyproject.toml'
 with open("../pyproject.toml", "r") as f:
     _lines = f.readlines()
 for _line in _lines:
     if _line.startswith("version"):
         version = _line.split('"')[1].strip()
-=======
-version = '2.3.1'
-
->>>>>>> master
 
 # -- General configuration ---------------------------------------------------
 

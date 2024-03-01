@@ -4,11 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seisflows"
-<<<<<<< HEAD
 version = "3.0.0"
-=======
-version = "2.3.1"
->>>>>>> master
 description = "An automated workflow tool for full waveform inversion"
 readme = "README.md"
 requires-python = ">=3.7"
