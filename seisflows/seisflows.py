@@ -841,7 +841,7 @@ class SeisFlows:
         # formatted the same as the rest of the file
         if parameter == "VELOCITY_MODEL":
             key = parameter
-            items = getpar_vel_model(file=par_file)
+            items = getpar_vel_model(file=par_file, strip=True)
             cur_val = ""
         else:
             try:
@@ -861,7 +861,7 @@ class SeisFlows:
                 setpar_vel_model(file=par_file, model=value.split("+"))
                 if not skip_print:
                     items.append("->")
-                    items += getpar_vel_model(file=par_file)
+                    items += getpar_vel_model(file=par_file, strip=True)
                     print(msg.cli(f"{key}:", items=items))
             else:
                 setpar(key=parameter, val=value, file=par_file, delim="=")

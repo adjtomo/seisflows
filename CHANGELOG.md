@@ -57,3 +57,5 @@ A collection of bugfixes and feature improvement (big thanks to @evcano for majo
 - output_optim.txt was not writing the correct misfit values for each 
   iteration, fixed
 
+## v2.3.1
+- Hotfix for updated SPECFEM2D parameter file #197

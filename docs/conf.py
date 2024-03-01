@@ -19,9 +19,9 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'SeisFlows'
-copyright = '2023'
+copyright = '2024'
 author = 'adjTomo Dev Team'
-version = '2.3.0'
+version = '2.3.1'
 
 
 # -- General configuration ---------------------------------------------------
