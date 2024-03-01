@@ -137,8 +137,13 @@
   parallelized by concurrent futures. Previously these functions failed quietly**
 - solver.specfem3d_globe was not recognizing custom model types
 
+<<<<<<< HEAD
 ### Misc.
 - Removed hard requirement that `import_seisflows` required all Workflows have
   `modules` as their first argument. Only Forward workflow requires.
 - Removed Optimize load checkpoint from inversion setup because it was already
   run by Optimize setup
+=======
+## v2.3.1
+- Hotfix for updated SPECFEM2D parameter file #197
+>>>>>>> master
