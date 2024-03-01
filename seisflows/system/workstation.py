@@ -8,10 +8,11 @@ import os
 import sys
 import subprocess
 import time
+import numpy as np
 from contextlib import redirect_stdout
 
 from seisflows import logger
-from seisflows.tools import unix
+from seisflows.tools import unix, msg
 from seisflows.tools.config import Dict, import_seisflows
 from seisflows.tools.config import copy_file, set_task_id
 
