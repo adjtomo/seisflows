@@ -102,7 +102,7 @@ def traveltime(syn, obs, nt, dt, *args, **kwargs):
     cc = abs(np.convolve(obs, np.flipud(syn)))
     timeshift = (np.argmax(cc) - nt + 1) * dt
 
-    return 1/2 * timeshift ** 2
+    return timeshift
 
 
 def traveltime_inexact(syn, obs, nt, dt, *args, **kwargs):

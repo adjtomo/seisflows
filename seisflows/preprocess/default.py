@@ -6,6 +6,7 @@ seismic data, apply preprocessing such as filtering, quantify misfit,
 and write adjoint sources that are expected by the solver.
 """
 import os
+import sys
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
@@ -349,7 +350,8 @@ class Default:
 
     def quantify_misfit(self, source_name=None, save_residuals=None,
                         export_residuals=None, save_adjsrcs=None,
-                        components=None, **kwargs):
+                        components=None, iteration=1, step_count=0,
+                        _serial=False, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
@@ -387,7 +389,21 @@ class Default:
             traces that do not have matching components. The adjoint sources for
             these components will be 0. E.g., ['Z', 'N']. If None, all available
             components will be considered.
+        :type iteration: int
+        :param iteration: optional, current iteration of the workflow used for
+            tagging output waveform figures if internal parameter 
+            `plot_waveforms` is set
+        :type step_count: int
+        :param step_count: optional, current step count of the line search, 
+            used for tagging output waveform figures if internal parameter
+            `plot_waveforms` is set
+        :type _serial: bool
+        :param _serial: debug function to turn preprocessing to a serial task
+            whereas it is normally a multiprocessed parallel task
         """
+        self._iteration = iteration
+        self._step_count = step_count
+
         # Retrieve matching obs and syn trace filenames to run through misfit
         # and initialize empty adjoint sources
         obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
@@ -395,26 +411,35 @@ class Default:
 
         # Process each pair in parallel. Max workers is the total num. of cores
         # !!! see note in docstring !!!
-        with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-            futures = [
-                executor.submit(self._quantify_misfit_single, o, s,
-                                source_name, save_residuals, save_adjsrcs)
-                for (o, s) in zip(obs, syn)
-            ]
-        wait(futures)
-        for future in futures:
-            try:
-                future.result()
-            except Exception as e:
-                logger.critical(f"preprocessing error: {e}")
-                sys.exit(-1)
-
-        if save_residuals:
+        residuals = []
+        if _serial:
+            for o, s in zip(obs, syn):
+                residual = self._quantify_misfit_single(o, s, source_name, 
+                                                        save_residuals, 
+                                                        save_adjsrcs)
+                residuals.append(residual)
+        # Process each pair in parallel. Max workers is total num. of cores        
+        else:
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._quantify_misfit_single, o, s,
+                                    source_name, save_residuals, save_adjsrcs)
+                    for (o, s) in zip(obs, syn)
+                ]
+            wait(futures)
             # Results are returned in the order that they were submitted and
-            # writte to text file for other modules to find
-            with open(save_residuals, "a") as f:
-                for future in futures:
+            for future in futures:
+                try:
                     residual = future.result()
+                    residuals.append(residual)
+                except Exception as e:
+                    logger.critical(f"PREPROC FAILED: {e}")
+                    sys.exit(-1)
+
+        # Write residuals to text file for other modules to find
+        if save_residuals:
+            with open(save_residuals, "a") as f:
+                for residual in residuals:
                     f.write(f"{residual:.2E}\n")
 
             # Exporting residuals to disk (output/) for more permanent storage
@@ -512,11 +537,16 @@ class Default:
                     obs=tr_obs.data, syn=tr_syn.data,
                     nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
                 )
-                logger.debug(f"{tr_syn.get_id()} residual={residual:.3E}")
+                # Calculate misfit from measurement (e.g., Tromp et al. 2005 
+                # Eq. 1), ensuring misfit is a positive value so that it can be
+                # correctly compared during line search
+                residual = 1/2 * residual ** 2
+                logger.debug(f"{tr_syn.get_id()} misfit={residual:.3E}")
             else:
                 residual = 0
 
             # Generate an adjoint source trace, write to file in scratch dir.
+            # SPECFEM expects non time-reversed adjoint sources
             if save_adjsrcs and self._generate_adjsrc:
                 adjsrc = tr_syn.copy()
                 adjsrc.data = self._generate_adjsrc(
@@ -541,11 +571,19 @@ class Default:
                 fig_path = os.path.join(self.path.scratch, source_name)
                 if not os.path.exists(fig_path):
                     unix.mkdir(fig_path)
-                # e.g., path/to/figure/NN_SSS_LL_CCC.png
+                # e.g., path/to/figure/NN_SSS_LL_CCC_IS.png 
+                if self._iteration is not None:
+                    _itr = f"_i{self._iteration:0>2}"
+                else:
+                    _itr = ""
+                if self._step_count is not None:
+                    _stp = f"s{self._step_count:0>2}"
+                else:
+                    _stp = ""
                 fid_out = os.path.join(
-                    fig_path, f"{tr_syn.id.replace('.', '_')}.png"
+                    fig_path, f"{tr_syn.id.replace('.', '_')}{_itr}{_stp}.png"
                 )
-                title = f"{tr_syn.id}; misfit={residual:.2f}"
+                title = f"{tr_syn.id}; misfit={residual:.3E}"
                 plot_waveforms(tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
                                fid_out=fid_out, title=title)
 
@@ -566,8 +604,10 @@ class Default:
         # synthetics because the output adjoint sources will need this samp rate
         obs, syn = resample(st_a=obs, st_b=syn)
 
-        # Trim the observed seismograms to the length of the synthetics
-        obs, syn = trim(st=syn, st_trim=obs)
+        # Trim the observed seismograms to the length of the synthetics. 
+        # Returned in the same order as input so syn first since we are trimming
+        # to syn
+        syn, obs = trim(st=syn, st_trim=obs)
 
         # Apply some basic detrends to clean up data
         for st in [obs, syn]:
@@ -597,7 +637,6 @@ class Default:
 
         return obs, syn
 
-
 def read(fid, data_format, **kwargs):
     """
     Waveform reading functionality. Imports waveforms as Obspy streams
@@ -617,7 +656,6 @@ def read(fid, data_format, **kwargs):
     else:
         st = obspy_read(fid, format=data_format.upper(), **kwargs)
     return st
-
 
 def write(st, fid, data_format):
     """
@@ -655,7 +693,6 @@ def write(st, fid, data_format):
                 time_offset = 0
             data_out = np.vstack((tr.times() + time_offset, tr.data)).T
             np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
-
 
 def read_ascii(fid, origintime=None, **kwargs):
     """
@@ -722,7 +759,6 @@ def read_ascii(fid, origintime=None, **kwargs):
 
     return st
 
-
 def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
     """
     SPECFEM requires that adjoint traces be present for every matching
@@ -753,7 +789,6 @@ def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
             ]
     # Simply wait until this task is completed
     wait(futures)
-
 
 def _write_adjsrc_single(st, fid, output, fmt):
     """Parallelizable function to write out empty adjoint source"""

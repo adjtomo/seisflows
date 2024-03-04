@@ -452,9 +452,12 @@ class Pyaflowa:
         """
         # READ DATA
         # Event metadata from SPECFEM DATA/ (CMTSOLUTION, FORCESOLUTION etc.)
+        # TEMPORARY suppress warnings to avoid PySEP warning about some sources
+        # not having an origin time. This should be removed after a PySEP update
+        # to not throw this warning
         cat = read_events_plus(
             fid=os.path.join(self.path.specfem_data,
-                             f"{self._source_prefix}_{config.event_id}"),
+                            f"{self._source_prefix}_{config.event_id}"),
             format=self._source_prefix
         )
         # Waveform input; `origintime` will only be applied if format=='ASCII'

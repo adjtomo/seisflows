@@ -36,10 +36,8 @@ Installation
 
 To install SeisFlows and its dependencies, we recommend installing within
 a Conda environment to not affect your root environment. The 
-`master <https://github.com/adjtomo/seisflows/>`__ branch contains the most
-stable release and is the preferred installation branch. The 
-`devel <https://github.com/adjtomo/seisflows/tree/devel>`__ branch houses 
-the most up-to-date codebase, but is likely to be **unstable**.
+`devel <https://github.com/adjtomo/seisflows/tree/devel>`__ branch 
+houses the most up-to-date codebase.
 
 .. note::
 
@@ -49,7 +47,7 @@ the most up-to-date codebase, but is likely to be **unstable**.
 
 .. code:: bash
 
-   git clone https://github.com/adjtomo/seisflows.git
+   git clone --branch devel https://github.com/adjtomo/seisflows.git
    cd seisflows
    conda env create -f environment.yml
    conda activate seisflows
@@ -63,7 +61,7 @@ SeisFlows and it's dependencies there, you can run the following:
 
 .. code:: bash
 
-    git clone https://github.com/adjtomo/seisflows.git             
+    git clone --branch devel https://github.com/adjtomo/seisflows.git             
     cd seisflows 
     conda activate <your environment>
     conda env update --name <your environment> --file environment.yml

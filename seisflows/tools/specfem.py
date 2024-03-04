@@ -1,5 +1,5 @@
 """
-Utilities to interact with, manipulate or call on the external solver, 
+Utilities to interact with, manipulate or call on the external solver,
 i.e., SPECFEM2D/3D/3D_GLOBE
 """
 import os
@@ -207,9 +207,9 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
 
     .. warning::
 
-        In SPECFEM3D_GLOBE, the FORCESOLUTION first line requires a specific 
+        In SPECFEM3D_GLOBE, the FORCESOLUTION first line requires a specific
         format. I haven't tested this thoroughly but it either cannot exceed
-        a char limit, or cannot have characters like spaces or hyphens. To be 
+        a char limit, or cannot have characters like spaces or hyphens. To be
         safe, something like FORCE{N} will work, where N should be the source
         number. This function enforces this just incase.
 
@@ -218,14 +218,14 @@ def convert_stations_to_sources(stations_file, source_file, source_type,
         formatted 'STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL',
         elevant and burial will not be used
     :type source_file: str
-    :param source_file: path to 
+    :param source_file: path to
     :type source_type: str
     :param source_type: tells SeisFlows what type of file we are using, which
-        in turn defines the specific keys and delimiters to use when editing 
-        the source file. 
+        in turn defines the specific keys and delimiters to use when editing
+        the source file.
 
         - SOURCE: SPECFEM2D source file
-        - FORCESOLUTION_3D: SPECFEM3D Cartesian FORCESOLUTION file 
+        - FORCESOLUTION_3D: SPECFEM3D Cartesian FORCESOLUTION file
         - FORCESOLUTION_3DGLOBE: SPECFEM3D_GLOBE FORCESOLUTION file
     """
     assert(source_type in SOURCE_KEYS.keys()), \
@@ -409,7 +409,7 @@ def check_source_names(path_specfem_data, source_prefix, ntask=None):
     return names
 
 
-def getpar(key, file, delim="=", match_partial=False, comment="#", 
+def getpar(key, file, delim="=", match_partial=False, comment="#",
            _fmt_dbl=True):
     """
     Reads and returns parameters from a SPECFEM or SeisFlows parameter file
@@ -433,11 +433,11 @@ def getpar(key, file, delim="=", match_partial=False, comment="#",
     :param comment: character used to delimit comments in the file. Defaults to
         '#' for the SPECFEM Par_file, but things like the FORCESOLUTION use '!'
     :type _fmt_dbl: bool
-    :param _fmt_dbl: the SPECFEM files use FORTRAN double precision notation 
-        to define floats (e.g., 2.5d0 == 2.5, or 1.2e2 == 1.2*10^2). Usually it 
+    :param _fmt_dbl: the SPECFEM files use FORTRAN double precision notation
+        to define floats (e.g., 2.5d0 == 2.5, or 1.2e2 == 1.2*10^2). Usually it
         is preferable to convert this notation directly to a Python float, so
         this is set True by default. However, in cases where we are doing string
-        replacement, like when using `setpar`, we do not want to format the 
+        replacement, like when using `setpar`, we do not want to format the
         double precision values, so this should be set False.
     :rtype: tuple (str, str, int)
     :return: a tuple of the key, value and line number (indexed from 0).
@@ -510,8 +510,8 @@ def setpar(key, val, file, delim="=", **kwargs):
 
     lines = open(file, "r").readlines()
 
-    # Replace value in place by splitting on the delimiter and replacing the 
-    # first instance of the old value (avoids replacing comment values or 
+    # Replace value in place by splitting on the delimiter and replacing the
+    # first instance of the old value (avoids replacing comment values or
     # matching values inside the key)
     if val_out != "":
         key, val_and_comment = lines[i].split(delim)
@@ -529,38 +529,69 @@ def setpar(key, val, file, delim="=", **kwargs):
         f.writelines(lines)
 
 
-def getpar_vel_model(file):
+def _getidx_vel_model(lines):
     """
-    SPECFEM2D doesn't follow standard formatting when defining its internal
-    velocity models so we need a special function to address this specifically.
-    Velocity models are ASSUMED to be formatted in the following way in the
-    SPECFEM2D Par_file (with any number of comment lines in between)
+    Get the line indices of a velocity model, which can be used to retrieve 
+    or replace the model values in a SPECFEM2D paramter file. Used by 
+    `getpar_vel_model` and `setpar_vel_model`
 
-    nbmodels                        = 4
+    :type lines: list
+    :param lines: list of strings read from the par_file
+    :rtype idxs: list
+    :param idxs: list of integer indices of the velocity model lines
+    """
+    idxs = []
+    for l, line in enumerate(lines):
+        # Skip over all other parameters, comments, newlines etc.
+        if "=" in line:
+            continue
+        elif line.startswith(" "):
+            continue
+        elif line.startswith("#"):
+            continue
+        elif line.startswith("\n"):
+            continue
+
+        # Matches formatting expected by velocity model and starts with integer
+        # Should be enough to avoid matching other strings
+        lines = line.strip().split()
+        if len(lines) == 15 and lines[0].isdigit():
+            idxs.append(l)
+
+    return idxs
+
+
+def getpar_vel_model(file, strip=False):
+    """
+    SPECFEM2D doesn't follow standard key = val formatting when defining its 
+    internal velocity models so we need a special function to address this 
+    specifically.
+    
+    Velocity models are ASSUMED to be formatted in the following way
+
     1 1 2700.d0 3000.d0 1732.051d0 0 0 9999 9999 0 0 0 0 0 0
-    2 1 2500.d0 2700.d0 0 0 0 9999 9999 0 0 0 0 0 0
-    3 1 2200.d0 2500.d0 1443.375d0 0 0 9999 9999 0 0 0 0 0 0
-    4 1 2200.d0 2200.d0 1343.375d0 0 0 9999 9999 0 0 0 0 0 0
-    TOMOGRAPHY_FILE                 = ./DATA/tomo_file.xyz
 
+    That is, 15 entries separated by spaces. We use that to find all relevant 
+    lines of the model.
+    
     :type file: str
     :param file: The SPECFEM Par_file to match against
+    :type strip: bool
+    :param strip: strip newline '\n' from each of the model lines
     :rtype: list of str
     :return: list of all the layers of the velocity model as strings
     """
-    _, _, i_start = getpar("nbmodels", file)
-    _, _, i_end = getpar("tomography_file", file)
-
     # i_start + 1 to skip over the 'nbmodels' parameter
-    lines = open(file, "r").readlines()[i_start + 1:i_end]
+    lines = open(file, "r").readlines()
+    idxs = _getidx_vel_model(lines)
     vel_model = []
-    for line in lines:
-        # Skip comments, empty lines, newlines
-        for not_allowed in [" ", "#", "\n"]:
-            if line.startswith(not_allowed):
-                break
+    for idx in idxs:
+        if strip:
+            line = lines[idx].strip()
         else:
-            vel_model.append(line.strip())
+            line = lines[idx]
+        vel_model.append(line)
+
     return vel_model
 
 
@@ -581,34 +612,19 @@ def setpar_vel_model(file, model):
         model = ["1 1 2700.d0 3000.d0 1732.051d0 0 0 9999 9999 0 0 0 0 0 0",
                  "2 1 2500.d0 2700.d0 0 0 0 9999 9999 0 0 0 0 0 0"]
     """
-    _, nbmodels, i_start = getpar("nbmodels", file)
-    i_start += 1  # increase by one to start AFTER nbmodels line
-    _, _, i_end = getpar("tomography_file", file)
-
     lines = open(file, "r").readlines()
-    model_lines = []
-    # i_start + 1 to skip over the 'nbmodels' parameter
-    for i, line in enumerate(lines[i_start:i_end]):
-        # Skip comments, empty lines, newlines
-        for not_allowed in [" ", "#", "\n"]:
-            if line.startswith(not_allowed):
-                break
-        else:
-            # We will use these indices to delete the original model
-            model_lines.append(i)
+    model_lines = _getidx_vel_model(open(file, "r").readlines())
 
-    # Make sure that our indices are relative to the list and not enumeration
-    model_lines = [_ + i_start for _ in model_lines]
-
-    # one-liner to get rid of the original model
+    # one-liner to get rid of the original model from the file
     lines = [i for j, i in enumerate(lines) if j not in model_lines]
+    model_idx_start = model_lines[0]
 
     # Throw a new line onto the last line of the model to get proper formatting
     model[-1] = model[-1] + "\n"
 
     # Drop in the new model one line at a time
     for i, val in enumerate(model):
-        lines.insert(i + model_lines[0], f"{val.strip()}\n")
+        lines.insert(model_idx_start + i, f"{val.strip()}\n")
 
     # Overwrite with new lines containing updated velocity model
     with open(file, "w") as f:

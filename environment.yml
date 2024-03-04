@@ -8,7 +8,8 @@ dependencies:
     - pyyaml
     - pypdf
     - pip:
-      - pyatoa>=0.3.0
+      #- pyatoa>=0.4.0
+      - git+https://github.com/adjtomo/pyatoa.git@devel
       - pysep-adjtomo
       - -e .
-       
+
