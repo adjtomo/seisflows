@@ -145,7 +145,7 @@ class Fujitsu(Cluster):
              f"-N {self.title}",  # job name
              f"-o {os.path.join(self.path.log_files, '%j')}", 
              f"-j",  # merge stderr with stdout
-             f"-L elapse={self._walltime}",  # [[hour:]minute:]second
+             f"-L elapse={self._tasktime}",  # [[hour:]minute:]second
              f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
         ])
