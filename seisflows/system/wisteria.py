@@ -168,7 +168,7 @@ class Wisteria(Fujitsu):
                 # -x in 'pjsub' sets environment variables which are distributed
                 # in the run script, see custom run scripts for example how
                 f"-x SEISFLOWS_FUNCS={funcs_fid},SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid}",
+                f"SEISFLOWS_TASKID={taskid},{self.environs}",
                 f"{self.run_functions}",
             ])
 
