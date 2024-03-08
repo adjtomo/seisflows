@@ -80,7 +80,7 @@ class Wisteria(Fujitsu):
     submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts",
                                    "custom_submit-wisteria")   
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", 
-                                 "custom_run-wisteria_gpu")   
+                                 "custom_run-wisteria")   
 
     def __init__(self, user=None, group=None, rscgrp=None, gpu=None, **kwargs):
         """Wisteria init"""
@@ -97,7 +97,7 @@ class Wisteria(Fujitsu):
                 }
 
         if bool(self.gpu):
-            run_functions = f"{self.run_functions}_gpu"
+            self.run_functions = f"{self.run_functions}_gpu"
 
     @property
     def run_call_header(self):
