@@ -159,6 +159,10 @@ class Wisteria(Fujitsu):
                         f"system {self.ntask} times")
             _ntask = self.ntask
 
+        # If no environs, ensure there is not trailing comma
+        if self.environs:
+            self.environs = f",{self.environs}"
+
         # Default Fujitsu command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
         job_ids = []
@@ -168,7 +172,7 @@ class Wisteria(Fujitsu):
                 # -x in 'pjsub' sets environment variables which are distributed
                 # in the run script, see custom run scripts for example how
                 f"-x SEISFLOWS_FUNCS={funcs_fid},SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid},{self.environs}",
+                f"SEISFLOWS_TASKID={taskid}{self.environs}",
                 f"{self.run_functions}",
             ])
 

@@ -26,4 +26,4 @@ conda activate $WORK_DIR/conda/envs/adjtomo
 # SEISFLOWS_ENV: any additional environment variables
 # SEISFLOWS_TASKID: assigned processor number for given task
 # ---
-$WORK_DIR/conda/envs/adjtomo/bin/python $WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run --funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS --environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID
+$WORK_DIR/conda/envs/adjtomo/bin/python $WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run --funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS --environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID,$SEISFLOWS_ENV
