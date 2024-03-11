@@ -9,6 +9,7 @@ Wisteria runs on the Fujitsu/PJM job scheduler.
       (data/learning nodes w/ GPU)
     - Odyssey has 7680 nodes with 48 cores/node
     - Aquarius has 45 nodes with 36 cores/node
+    - Aquarius also contains 8x Nvidia A100
 
 .. note:: Wisteria Caveat 1     
                                                  
@@ -62,6 +63,9 @@ class Wisteria(Fujitsu):
         - debug-a: Aquarius debug, 30 min max, [1, 1] nodes available
         - short-a: Aquarius short, 2 hr. max, [1, 2] nodes available
         - regular-a: Aquarius regular, 24-48 hr. max, [1, 8] nodes available
+
+        - share-debug: Aquarius GPU debug, 30 min max, 1, 2, 4 GPU available
+        - share-short: Aquarius GPU short queue, 2 hr. max, 1, 2, 4 GPU avail.
     :type gpu: int
     :param gpu: if not None, tells SeisFlows to use the GPU version of SPECFEM, 
         the integer value of `gpu` will set the number of requested GPUs for a 
@@ -92,8 +96,12 @@ class Wisteria(Fujitsu):
 
         # Wisteria resource groups and their cores per node
         self._rscgrps = {
+                # Node-occupied resource allocation (Odyssey)
                 "debug-o": 48, "short-o": 48, "regular-o": 48, "priority-o": 48,
-                "debug-a": 48, "short-a": 48, "regular-a": 48, "share-debug": 48
+                # Node-occupied resource allocation (Aquarius)
+                "debug-a": 36, "short-a": 36, "regular-a": 36, 
+                # GPU-exclusive resource allocation
+                "share-debug": 48, "share-short": 48, "share": 48
                 }
 
         if bool(self.gpu):
