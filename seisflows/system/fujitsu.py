@@ -152,16 +152,8 @@ class Fujitsu(Cluster):
         ])
         return _call
     
-    @property
-    def run_call_footer(self):
-        """
-        The footer provides any additional command line arguments to the 
-        `custom_run-wisteria` run script. Can be empty
-        """
-        return ""
-    
     def submit(self, workdir=None, parameter_file="parameters.yaml", 
-               direct=False):
+               direct=True):
         """
         Submit main workflow to the System. Two options are available,
         submitting a Python job directly to the system, or submitting a 
@@ -174,14 +166,15 @@ class Fujitsu(Cluster):
             the SeisFlows package    
         :type direct: bool
         :param direct: (used for overriding system modules) submits the main 
-            workflow job directly to the login node rather than as a separate 
-            process on a compute node. Avoids queue times and walltimes but may 
-            be discouraged by sys admins as some  array processing will take 
-            place on the shared login node. 
+            workflow job directly to the login node as a Python process 
+            (default). If False, submits the main job as a separate subprocess.
+            Note that this is Fujitsu specific and main jobs should be run from
+            interactive jobs run on compute nodes to avoid running jobs on
+            shared login resources
         """
         if direct:
             workflow = import_seisflows(workdir=workdir or self.path.workdir,        
-                                parameter_file=parameter_file)               
+                                        parameter_file=parameter_file)               
             workflow.check()                                                         
             workflow.setup()                                                         
             workflow.run()    
@@ -269,10 +262,12 @@ class Fujitsu(Cluster):
                 f"{self.run_call_header}",
                 # -x in 'pjsub' sets environment variables which are distributed
                 # in the run script, see custom run scripts for example how
-                f"-x SEISFLOWS_FUNCS={funcs_fid},SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid}{self.environs}",
+                # Ensure that these are comma-separated, not space-separated
+                f"-x SEISFLOWS_FUNCS={funcs_fid},"  
+                f"SEISFLOWS_KWARGS={kwargs_fid},"
+                f"SEISFLOWS_TASKID={taskid}{self.environs},"
+                f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
                 f"{self.run_functions}",
-                f"{self.run_call_footer}",  
             ])
 
             if taskid == 0:

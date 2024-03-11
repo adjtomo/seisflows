@@ -112,18 +112,4 @@ class Wisteria(Fujitsu):
         else:
             return super().run_call_header
 
-    @property
-    def run_call_footer(self):
-        """
-        The footer provides any additional command line arguments to the 
-        `custom_run-wisteria` run script. In this case it tells the run 
-        script whether or not we are running in GPU mode which will toggle
-        on different compute node modules depending on whether or not we are
-        running GPU codes.
-        """
-        if self.gpu:
-            return "GPU" 
-        else:
-            return super().run_call_footer
-
 

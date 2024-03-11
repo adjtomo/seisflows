@@ -15,10 +15,9 @@
 # Defines where our Conda environment is saved and what its name is
 WORK_DIR=/work/01/gr58/share/adjtomo
 CONDA_ENV=adjtomo
-GPU_MODE=${!#}  # Last argument passed to the script, should be 'GPU' to set
 
 # Load MPI and activate Conda environment
-if $GPU_MODE = "GPU"; then
+if [ $GPU_MODE -eq 1 ]; then  # Use GPUs
     module load cuda/11.2
     module load gcc
     module load ompi-cuda
