@@ -31,12 +31,7 @@ Wisteria runs on the Fujitsu/PJM job scheduler.
     environment variables. We use these in place of command line arguments
 """
 import os
-import subprocess
-import sys
-import time
-from seisflows import ROOT_DIR, logger
-from seisflows.tools import msg
-from seisflows.tools.config import import_seisflows, pickle_function_list
+from seisflows import ROOT_DIR
 from seisflows.system.fujitsu import Fujitsu
 
 
@@ -87,12 +82,13 @@ class Wisteria(Fujitsu):
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", 
                                  "custom_run-wisteria")   
 
-    def __init__(self, user=None, group=None, rscgrp=None, gpu=None, **kwargs):
+    def __init__(self, group=None, rscgrp=None, gpu=None, **kwargs):
         """Wisteria init"""
         super().__init__(**kwargs)
 
         self.group = group
         self.rscgrp = rscgrp
+        self.gpu = gpu
 
         # Wisteria resource groups and their cores per node
         self._rscgrps = {
@@ -103,9 +99,6 @@ class Wisteria(Fujitsu):
                 # GPU-exclusive resource allocation
                 "share-debug": 1, "share-short": 2, "share": 5
                 }
-
-        if bool(self.gpu):
-            self.run_functions = f"{self.run_functions}_gpu"
 
     @property
     def run_call_header(self):
