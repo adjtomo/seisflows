@@ -35,6 +35,7 @@ import subprocess
 import sys
 import time
 from seisflows import ROOT_DIR, logger
+from seisflows.tools import msg
 from seisflows.tools.config import import_seisflows, pickle_function_list
 from seisflows.system.fujitsu import Fujitsu
 
@@ -92,7 +93,6 @@ class Wisteria(Fujitsu):
 
         self.group = group
         self.rscgrp = rscgrp
-        self.gpu = gpu
 
         # Wisteria resource groups and their cores per node
         self._rscgrps = {
@@ -101,7 +101,7 @@ class Wisteria(Fujitsu):
                 # Node-occupied resource allocation (Aquarius)
                 "debug-a": 36, "short-a": 36, "regular-a": 36, 
                 # GPU-exclusive resource allocation
-                "share-debug": 48, "share-short": 48, "share": 48
+                "share-debug": 1, "share-short": 2, "share": 5
                 }
 
         if bool(self.gpu):
@@ -119,99 +119,18 @@ class Wisteria(Fujitsu):
         else:
             return super().run_call_header
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml"):            
-        """                                                                      
-        Submits the main workflow job as a serial job submitted directly to      
-        the system that is running the master job                                
-                                                                                 
-        :type workdir: str                                                       
-        :param workdir: path to the current working directory                    
-        :type parameter_file: str                                                
-        :param parameter_file: parameter file name used to instantiate the       
-            SeisFlows package                                                    
-        """                                                                      
-        workflow = import_seisflows(workdir=workdir or self.path.workdir,        
-                                    parameter_file=parameter_file)               
-        workflow.check()                                                         
-        workflow.setup()                                                         
-        workflow.run()    
-
-    def run(self, funcs, single=False, **kwargs):
+    @property
+    def run_call_footer(self):
         """
-        Runs task multiple times in embarrassingly parallel fasion on a PJM
-        cluster. Executes the list of functions (`funcs`) NTASK times with each
-        task occupying NPROC cores.
-
-        .. note::
-            Completely overwrites the `Cluster.run()` command
-
-        :type funcs: list of methods
-        :param funcs: a list of functions that should be run in order. All
-            kwargs passed to run() will be passed into the functions.
-        :type single: bool
-        :param single: run a single-process, non-parallel task, such as
-            smoothing the gradient, which only needs to be run by once.
-            This will change how the job array and the number of tasks is
-            defined, such that the job is submitted as a single-core job to
-            the system.
+        The footer provides any additional command line arguments to the 
+        `custom_run-wisteria` run script. In this case it tells the run 
+        script whether or not we are running in GPU mode which will toggle
+        on different compute node modules depending on whether or not we are
+        running GPU codes.
         """
-        funcs_fid, kwargs_fid = pickle_function_list(funcs,
-                                                     path=self.path.scratch,
-                                                     **kwargs)
-        if single:
-            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                        f"system 1 time")
-            _ntask = 1
+        if self.gpu:
+            return "GPU" 
         else:
-            logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
-                        f"system {self.ntask} times")
-            _ntask = self.ntask
+            return super().run_call_footer
 
-        # If no environs, ensure there is not trailing comma
-        if self.environs:
-            self.environs = f",{self.environs}"
-
-        # Default Fujitsu command line input, can be overloaded by subclasses
-        # Copy-paste this default run_call and adjust accordingly for subclass
-        job_ids = []
-        for taskid in range(_ntask):
-            run_call = " ".join([
-                f"{self.run_call_header}",
-                # -x in 'pjsub' sets environment variables which are distributed
-                # in the run script, see custom run scripts for example how
-                f"-x SEISFLOWS_FUNCS={funcs_fid},SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid}{self.environs}",
-                f"{self.run_functions}",
-            ])
-
-            if taskid == 0:
-                logger.debug(run_call)
-
-            # Grab the job ids from each stdout message
-            stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
-                                    text=True, shell=True).stdout
-            job_ids.append(self._stdout_to_job_id(stdout))
-
-        # Monitor the job queue until all jobs have completed, or any one fails
-        try:
-            status = self.monitor_job_status(job_ids)
-        except FileNotFoundError:
-            logger.critical(f"cannot access job information through 'pjstat', "
-                            f"waited 50s with no return, please check job "
-                            f"scheduler and log messages")
-            sys.exit(-1)
-
-        if status == -1:  # Failed job
-            logger.critical(
-                msg.cli(f"Stopping workflow. Please check logs for details.",
-                        items=[f"TASKS:  {[_.__name__ for _ in funcs]}",
-                               f"PJSUB:  {run_call}"],
-                        header="PJM run error", border="=")
-            )
-            sys.exit(-1)
-        else:
-            logger.info(f"{self.ntask} tasks finished successfully")
-            # Wait for all processes to finish and write to disk (if they do)
-            # Moving on too quickly may result in required files not being avail
-            time.sleep(5)
 
