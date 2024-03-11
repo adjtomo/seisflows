@@ -18,12 +18,15 @@ CONDA_ENV=adjtomo
 
 # Load MPI and activate Conda environment
 if [ $GPU_MODE -eq 1 ]; then  # Use GPUs
+	echo "loading GPU modules on compute node"
     module load cuda/11.2
     module load gcc
     module load ompi-cuda
 else
+	echo "loading CPU modules on compute node"
     module load intel
     module load impi
+fi
 
 # Conda will be common to GPU or CPU versions
 module load miniconda/py38_4.9.2
@@ -40,6 +43,7 @@ conda activate $WORK_DIR/conda/envs/$CONDA_ENV
 # SEISFLOWS_TASKID: assigned processor number for given task
 # ---
 $WORK_DIR/conda/envs/$CONDA_ENV/bin/python \ 
-    $WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run \
-    --funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS \
-    --environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID,$SEISFLOWS_ENV
+$WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run \ 
+--funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS \ 
+--environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID,$SEISFLOWS_ENV 
+
