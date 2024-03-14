@@ -112,8 +112,8 @@ class Gradient:
         # Hidden paths to store checkpoint file in scratch directory
         self.path["_checkpoint"] = os.path.join(self.path.scratch,
                                                 "checkpoint.npz")
-        self.path["_stats_file"] = os.path.join(self.path.output,
-                                                "output_optim.txt")
+        # Hidden path to export stats log and figures
+        self.path["_optim_output"] = os.path.join(self.path.output, "optimize")
 
         # Internal check to see if the chosen line search algorithm exists
         if not hasattr(line_search_dir, line_search_method):
@@ -505,9 +505,11 @@ class Gradient:
             for fid in ["m_old.npz", "f_old.txt", "g_old.npz", "p_old.npz"]:
                 unix.rm(os.path.join(self.path.scratch, fid))
 
-        # Needs to be run before shifting model in next step
-        self.write_stats()
-        plot_optim_stats(fid=self.path._stats_file, path_out=self.path.output)
+        # Export stats and figures to output, must run before shifting model
+        self.write_stats(fid=os.path.join(self.path._optim_output, 
+                                          "output_optim.txt"))
+        plot_optim_stats(fid=self.path._stats_file, 
+                         path_out=self.path._optim_ouput)
 
         logger.info("setting current model as previous model (new -> old)")
         # e.g., m_new.npz -> m_old.npz
@@ -618,12 +620,16 @@ class Gradient:
     
         return dict_out
 
-    def write_stats(self):
+    def write_stats(self, fid="./optim_optim.txt"):
         """
         Write stats to file so that we don't lose information to subsequent
-        iterations. File is written to `path._stats_file`
+        iterations. File is written to path._output_optim/fid
+
+        :type fid: str
+        :param fid: full path and filename to save the text file. defaults to
+            ./output_optim.txt
         """
-        logger.info(f"writing optimization stats: '{self.path._stats_file}'")
+        logger.info(f"writing optimization stats: '{fid}'")
 
         keys = ["misfit", "step_count",  "step_length", 
                 "grad_norm_L1", "grad_norm_L2",
@@ -633,8 +639,8 @@ class Gradient:
         # First time, write header information and start model misfit. Note that
         # most of the statistics do not apply to the starting model so they
         # are set to 0 by default
-        if not os.path.exists(self.path._stats_file):
-            with open(self.path._stats_file, "w") as f_:
+        if not os.path.exists(fid):
+            with open(fid, "w") as f_:
                 x, f  = self._line_search.get_search_history()
                 header = ",".join(keys) + "\n"
                 f_.write(header)
@@ -653,7 +659,7 @@ class Gradient:
 
         # Write stats for the current, finished, line search
         stats = self.get_stats()
-        with open(self.path._stats_file, "a") as f_:
+        with open(fid, "a") as f_:
             stats_str = [f"{stats[key]:6.3E}" for key in keys]
             stats_str = ",".join(stats_str) + "\n"
             f_.write(stats_str)
