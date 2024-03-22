@@ -78,9 +78,8 @@ class Forward:
     """
     def __init__(self, modules=None, generate_data=False, stop_after=None,
                  export_traces=False, export_residuals=False, 
-                 custom_tasktimes=None,
-                 workdir=os.getcwd(), path_output=None, path_data=None,
-                 path_state_file=None, path_model_init=None,
+                 custom_tasktimes=None, workdir=os.getcwd(), path_output=None, 
+                 path_data=None, path_state_file=None, path_model_init=None,
                  path_model_true=None, path_eval_grad=None, **kwargs):
         """
         Set default forward workflow parameters
@@ -206,6 +205,7 @@ class Forward:
 
         # Create the desired directory structure
         for path in self.path.values():
+            # Ignore empty paths or paths that are actually files
             if path is not None and not os.path.splitext(path)[-1]:
                 unix.mkdir(path)
 

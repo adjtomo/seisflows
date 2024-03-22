@@ -19,6 +19,7 @@ import sys
 import argparse
 from glob import glob
 from inspect import getmro
+
 from seisflows import logger, ROOT_DIR, NAMES, __version__
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
@@ -834,6 +835,10 @@ class SeisFlows:
                 path = f"path_{name}"
                 if path in pars:
                     unix.rm(pars[path])
+            # Special case for data path, only delete if it's empty
+            if not os.listdir(pars["path_data"]):
+                unix.rm(pars["path_data"])
+
 
     def restart(self, force=False, **kwargs):
         """
