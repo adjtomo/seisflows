@@ -508,8 +508,9 @@ class Gradient:
         # Export stats and figures to output, must run before shifting model
         self.write_stats(fid=os.path.join(self.path._optim_output, 
                                           "output_optim.txt"))
-        plot_optim_stats(fid=self.path._stats_file, 
-                         path_out=self.path._optim_ouput)
+        plot_optim_stats(fid=os.path.join(self.path._optim_output,
+                                          "output_optim.txt"),
+                         path_out=self.path._optim_output)
 
         logger.info("setting current model as previous model (new -> old)")
         # e.g., m_new.npz -> m_old.npz
