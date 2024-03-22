@@ -829,7 +829,7 @@ class SeisFlows:
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
-            for name in ["scratch", "output", "data", "log_files", 
+            for name in ["scratch", "output", "log_files", 
                          "state_file", "output_log"]:
                 path = f"path_{name}"
                 if path in pars:
