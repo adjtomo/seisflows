@@ -178,6 +178,7 @@ class Gradient:
         Sets up nonlinear optimization machinery
         """
         unix.mkdir(self.path.scratch)
+        unix.mkdir(self.path._optim_ouput)
 
         # Load checkpoint (if resuming) or save current checkpoint
         self.load_checkpoint()
