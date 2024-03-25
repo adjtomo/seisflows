@@ -278,8 +278,9 @@ class Forward:
             # encountered for the first time
             else:
                 try:
-                    # Print the name of the function so we know what's run
-                    logger.info(msg.mnr(f"{func.__name__}()"))
+                    # Print called func name, e.g., test_func -> TEST FUNC
+                    _log_name = func.__name__.replace("_", " ").upper()
+                    logger.info(msg.mnr(_log_name))
                     func()
                     n += 1
                     self._states[func.__name__] = 1  # completed
@@ -626,4 +627,10 @@ def finalize_iteration(self):
     """
     Solver finalization procedures for the end of each iteration
     """
-    pass
+    # Run finalization/tear down procedures for all modules that have it
+    for name, module in self._modules.items():
+        if hasattr(module, "finalize"):
+            logger.info(f"running finalization for module "
+                        f"'{name}.{self._modules[name].__class__.__name__}'"
+                        )
+            module.finalize()
