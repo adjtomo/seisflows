@@ -194,11 +194,11 @@ class Inversion(Migration):
     def run(self):
         """Call the forward.run() function iteratively, from `start` to `end`"""
         while self.iteration < self.end + 1:
-            logger.info(msg.mnr(f"RUNNING ITERATION {self.iteration:0>2}"))
+            logger.info(msg.mjr(f"RUNNING ITERATION {self.iteration:0>2}"))
             super().run()  # Runs task list
             # Assuming that if `stop_after` is used, that we are NOT iterating
             if self.stop_after is None:
-                logger.info(msg.mnr(f"COMPLETE ITERATION {self.iteration:0>2}"))
+                logger.info(msg.mjr(f"COMPLETE ITERATION {self.iteration:0>2}"))
                 self.iteration += 1
                 logger.info(f"setting current iteration to: {self.iteration}")
                 # Set the state file to pending for new iteration
@@ -232,8 +232,11 @@ class Inversion(Migration):
 
         Add an additional criteria (iteration > 1) that skips over this function
         """
+        # We only want to generate synthetic data one time
         if self.iteration > 1:
+            logger.debug("inversion iteration > 1, skipping synthetic data gen")
             return
+        
         super().generate_synthetic_data(**kwargs)
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
@@ -484,8 +487,6 @@ class Inversion(Migration):
         direction (p_new) to recover the trial model (m_try). This model is
         then exposed on disk to the solver.
         """
-        logger.info(msg.mnr("INITIALIZING LINE SEARCH"))
-
         # Set up the line search machinery. Step count forced to 1
         self.optimize.initialize_search()
 
@@ -499,11 +500,9 @@ class Inversion(Migration):
         self.optimize.save_vector(name="alpha", m=alpha)
         self.optimize.checkpoint()
 
-        # Expose model `m_try` to the solver by placing it in eval_func dir.
+        # Expose model `m_try` to the solvers by placing it in eval_func dir.
         _path_m_try = os.path.join(self.path.eval_func, "model")
         m_try.write(path=_path_m_try)
-        logger.info(f"`m_try` model parameters for initial line search step")
-        self.solver.check_model_values(path=_path_m_try)
 
     def evaluate_line_search_misfit(self):
         """
@@ -515,6 +514,10 @@ class Inversion(Migration):
         """
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
+        
+        logger.info(f"`m_try` model parameters for line search evaluation:")
+        self.solver.check_model_values(path=os.path.join(self.path.eval_func, 
+                                                         "model"))
 
         self.system.run(
             [self.run_forward_simulations,
@@ -625,7 +628,7 @@ class Inversion(Migration):
         carried out. Contains some logic to consider whether or not to continue
         with a thrifty inversion.
         """
-        logger.info(msg.sub("FINALIZING ITERATION"))
+        super().finalize_iteration()
 
         # Export scratch files to output if requested
         if self.export_model:

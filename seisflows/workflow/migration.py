@@ -96,7 +96,8 @@ class Migration(Forward):
                 self.evaluate_initial_misfit,
                 self.run_adjoint_simulations,
                 self.postprocess_event_kernels,
-                self.evaluate_gradient_from_kernels
+                self.evaluate_gradient_from_kernels,
+                self.finalize_iteration,
                 ]
 
     def run_adjoint_simulations(self, **kwargs):
@@ -110,9 +111,7 @@ class Migration(Forward):
             general by allowing other workflows to include pre- and post-
             processing tasks, or to overwrite the adjoint simulation task
         """
-        logger.info(msg.mnr("EVALUATING EVENT KERNELS W/ ADJOINT SIMULATIONS"))
         self.system.run([self._run_adjoint_simulation_single], **kwargs)
-
 
     def _run_adjoint_simulation_single(self, save_kernels=None, 
                                        export_kernels=None, **kwargs):
@@ -268,7 +267,6 @@ class Migration(Forward):
             if os.path.exists(scratch_path):
                 shutil.rmtree(scratch_path)
 
-        logger.info(msg.mnr("GENERATING/PROCESSING MISFIT KERNEL"))
         self.system.run([mask_source_event_kernels, combine_event_kernels, 
                          smooth_misfit_kernel], single=True)
 
@@ -281,8 +279,6 @@ class Migration(Forward):
         :raises SystemError: if the gradient vector is zero, which means that
             none of the kernels returned usable values.
         """
-        logger.info("scaling gradient to absolute model perturbations")
-
         # Check that kernel files exist before attempting to manipulate
         misfit_kernel_path = os.path.join(self.path.eval_grad, "misfit_kernel")
         if not glob(os.path.join(misfit_kernel_path, "*")):
@@ -312,6 +308,7 @@ class Migration(Forward):
 
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
+        logger.info("scaling gradient to absolute model perturbations")
         gradient.update(vector=gradient.vector * model.vector)
         gradient.write(path=os.path.join(self.path.eval_grad, "gradient"))
 

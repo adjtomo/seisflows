@@ -617,11 +617,10 @@ class Pyaflowa:
         more permanent output/ directory. Scratch files are deleted during 
         this operation to free up disk space.
         """
-        # Create or update the Inspector class used for inversion review
+        # Create or overwrite the Inspector CSVs used for inversion review
         insp = Inspector()
         insp.discover(path=self.path._datasets)
-        insp.save(path=self.path._preproce_output)
-
+        insp.save(path=self.path._preproc_output)
 
         # Move scratch/ directory results into more permanent storage. Do not
         # bomb out datasets because we use them to store window information
