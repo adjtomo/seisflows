@@ -430,7 +430,7 @@ class Inversion(Migration):
         # Set default value for `export_kernels` or take program default
         if export_kernels is None:
             export_kernels = os.path.join(
-                self.path.output, "kernels", self.evaluation,
+                self.solver.path._solver_output,, "kernels", self.evaluation,
                 self.solver.source_name
             )
 
@@ -670,14 +670,6 @@ class Inversion(Migration):
 
             unix.mkdir(os.path.join(self.path.eval_grad, "residuals"))
             unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
-
-        # Run finalization/tear down procedures for all modules that have it
-        for name, module in self._modules.items():
-            if hasattr(module, "finalize"):
-                logger.info(f"running finalization for module "
-                            f"'{name}.{self._modules[name].__class__.__name__}'"
-                            )
-                module.finalize()
 
     def _update_thrifty_status(self):
         """

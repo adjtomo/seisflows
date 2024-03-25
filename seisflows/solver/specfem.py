@@ -150,7 +150,8 @@ class Specfem:
             model_init=path_model_init,
             model_true=path_model_true,
         )
-        self.path.mainsolver = os.path.join(self.path.scratch, "mainsolver")
+        self.path["mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
+        self.path["_solver_output"] = os.path.join(self.path.output, "solver")
 
         # Private internal parameters for keeping track of solver requirements
         self._parameters = []
@@ -1051,3 +1052,8 @@ class Specfem:
             for par in parameters:
                 src = glob(os.path.join(model, f"*{par}{self._ext}"))
                 unix.cp(src, dst)
+
+    def finalize(self):
+        """
+        General finalization procedures for SPECFEM-based solver activities
+        """

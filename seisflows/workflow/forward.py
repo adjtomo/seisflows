@@ -543,7 +543,7 @@ class Forward:
         if self.export_traces:
             # e.g., output/solver/{source}/syn/*
             export_traces = export_traces or \
-                            os.path.join(self.path.output, "solver",
+                            os.path.join(self.solver.path._solver_output,
                                          self.solver.source_name, "syn")
         else:
             export_traces = False
