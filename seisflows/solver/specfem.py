@@ -279,6 +279,10 @@ class Specfem:
 
         Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
+        # Create the internal directory structure required for storing results
+        for pathname in ["_solver_output"]:
+            unix.mkdir(self.path[pathname])
+
         # Assign file extensions to be used for database file searching
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,

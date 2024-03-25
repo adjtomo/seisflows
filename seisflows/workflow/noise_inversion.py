@@ -256,10 +256,9 @@ class NoiseInversion(Inversion):
         """
         # Skip if not valid
         if "ZZ" not in self.kernels:
+            logger.info("ZZ not specified in parameter 'kernels'. Skipping")
             return 
-
-        logger.info("running ZZ misfit evaluation")
-
+        
         # Internal tracking parameters used to name sub-directories, save files
         self._force = "Z"
         self._cmpnt = "Z"
@@ -282,9 +281,8 @@ class NoiseInversion(Inversion):
         """
         # Skip if not valid
         if "ZZ" not in self.kernels:
+            logger.info("ZZ not specified in parameter 'kernels'. Skipping")
             return 
-
-        logger.info("running ZZ adjoint simulation")
 
         # Internal tracking parameters used to name sub-directories, save files
         self._force = "Z"
@@ -305,9 +303,8 @@ class NoiseInversion(Inversion):
         """
         # Skip if not valid
         if ("RR" not in self.kernels) and ("TT" not in self.kernels):
+            logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
             return 
-
-        logger.info("evaluating RR and/or TT misfit")
 
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
@@ -328,6 +325,11 @@ class NoiseInversion(Inversion):
         two adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
+        # Skip if not valid
+        if ("RR" not in self.kernels) and ("TT" not in self.kernels):
+            logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
+            return 
+        
         # Two adjoint simulations required per kernel T or R
         for pair in ["ET", "NT", "ER", "NR"]:
             self._force, self._cmpnt = pair
