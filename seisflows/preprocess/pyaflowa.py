@@ -254,7 +254,7 @@ class Pyaflowa:
         """
         # Create the internal directory structure required for storing results
         for pathname in ["scratch", "_logs", "_tmplogs", "_datasets",
-                         "_figures"]:
+                         "_figures", "_preproc_output"]:
             unix.mkdir(self.path[pathname])
 
         if self._data_case == "synthetic":
@@ -617,6 +617,12 @@ class Pyaflowa:
         more permanent output/ directory. Scratch files are deleted during 
         this operation to free up disk space.
         """
+        # Create or update the Inspector class used for inversion review
+        insp = Inspector()
+        insp.discover(path=self.path._datasets)
+        insp.save(path=self.path._preproce_output)
+
+
         # Move scratch/ directory results into more permanent storage. Do not
         # bomb out datasets because we use them to store window information
         if self.export_datasets:
@@ -682,7 +688,7 @@ class Pyaflowa:
         unix.rm(self.path._figures)
         unix.mkdir(self.path._figures)
 
-        # Bomb out the scratch directory regardless of export status
+        # Bomb out the log files regardless of export status
         unix.rm(self.path._logs)
         unix.mkdir(self.path._logs)
         unix.mkdir(os.path.join(self.path._logs, "tmp"))
