@@ -1125,21 +1125,20 @@ class Specfem:
                     parameters.append(par)
         
         # Make the VTK files one at a time incase one errors out
-        for par in parameters:
-            self.combine_vol_data_vtk(
-                input_path=input_path, output_path=output_path, 
-                parameters=parameters, hi_res=hi_res
-                )
-            # Wait for the process to finish before trying to rename files
-            time.sleep(5)
+        self.combine_vol_data_vtk(
+            input_path=input_path, output_path=output_path, 
+            parameters=parameters, hi_res=hi_res
+            )
+        # Wait for the process to finish before trying to rename files
+        time.sleep(5 * len(parameters))
         
             # SPECFEM3D_GLOBE will tag files based on region
+        for par in parameters:
             if self._regions is not None:
                 for region in self._regions:
                     src = os.path.join(output_path, f"reg_{region}_{par}.vtk")
                     dst = os.path.join(
-                        output_path, f"{tag}_reg_{region}_{par}.vtk"
-                        )
+                        output_path, f"{tag}_reg_{region}_{par}.vtk")
                     if os.path.exists(src):
                         unix.mv(src, dst)
             else:
