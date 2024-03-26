@@ -256,10 +256,9 @@ class NoiseInversion(Inversion):
         """
         # Skip if not valid
         if "ZZ" not in self.kernels:
+            logger.info("ZZ not specified in parameter 'kernels'. Skipping")
             return 
-
-        logger.info("running ZZ misfit evaluation")
-
+        
         # Internal tracking parameters used to name sub-directories, save files
         self._force = "Z"
         self._cmpnt = "Z"
@@ -282,9 +281,8 @@ class NoiseInversion(Inversion):
         """
         # Skip if not valid
         if "ZZ" not in self.kernels:
+            logger.info("ZZ not specified in parameter 'kernels'. Skipping")
             return 
-
-        logger.info("running ZZ adjoint simulation")
 
         # Internal tracking parameters used to name sub-directories, save files
         self._force = "Z"
@@ -305,9 +303,8 @@ class NoiseInversion(Inversion):
         """
         # Skip if not valid
         if ("RR" not in self.kernels) and ("TT" not in self.kernels):
+            logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
             return 
-
-        logger.info("evaluating RR and/or TT misfit")
 
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
@@ -328,6 +325,11 @@ class NoiseInversion(Inversion):
         two adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
+        # Skip if not valid
+        if ("RR" not in self.kernels) and ("TT" not in self.kernels):
+            logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
+            return 
+        
         # Two adjoint simulations required per kernel T or R
         for pair in ["ET", "NT", "ER", "NR"]:
             self._force, self._cmpnt = pair
@@ -998,8 +1000,9 @@ class NoiseInversion(Inversion):
         # NOTE: May need to increase the tasktime by a factor of 2 because 
         # there are many more kernel manipulations that need to happen and this 
         # task usually fails due to timeout when `tasktime` is set for an 
-        # adjoint simulation
-        self.system.run([generate_event_kernels], single=True)
+        # adjoint simulation (tasktime=self.system.tasktime * 2)
+        self.system.run([generate_event_kernels], single=True, 
+                        tasktime=self.system.tasktime)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.

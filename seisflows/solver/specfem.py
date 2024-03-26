@@ -18,6 +18,7 @@ TODO
     - Add density scaling based on Vp?
 """
 import os
+from re import I
 import sys
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -150,7 +151,8 @@ class Specfem:
             model_init=path_model_init,
             model_true=path_model_true,
         )
-        self.path.mainsolver = os.path.join(self.path.scratch, "mainsolver")
+        self.path["mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
+        self.path["_solver_output"] = os.path.join(self.path.output, "solver")
 
         # Private internal parameters for keeping track of solver requirements
         self._parameters = []
@@ -225,11 +227,10 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        # !!! BC UNCOMMENT THIS !!!
-        # assert(model_type in self._available_model_types), (
-        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-        #     f"match acceptable model types: {self._available_model_types}"
-        #     )
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
@@ -278,6 +279,10 @@ class Specfem:
 
         Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
+        # Create the internal directory structure required for storing results
+        for pathname in ["_solver_output"]:
+            unix.mkdir(self.path[pathname])
+
         # Assign file extensions to be used for database file searching
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
@@ -1051,3 +1056,10 @@ class Specfem:
             for par in parameters:
                 src = glob(os.path.join(model, f"*{par}{self._ext}"))
                 unix.cp(src, dst)
+
+    def finalize(self):
+        """
+        General finalization procedures for SPECFEM-based solver activities
+        """
+        pass
+

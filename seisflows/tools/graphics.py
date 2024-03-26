@@ -210,6 +210,9 @@ def plot_optim_stats(fid="output_optim.txt", path_out="./"):
 
     :type fid: str
     :param fid: path to the optimization stats file to plot
+    :type path_out: str
+    :param path_out: full path (no filename) to save figures. filenames will
+        be determined by the header values
     """
     header = open(fid).readlines()[0].strip().split(",")
     stats = np.loadtxt(fid, delimiter=",", skiprows=1).T

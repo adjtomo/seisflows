@@ -192,6 +192,8 @@ class Pyaflowa:
         self.path["_tmplogs"] = os.path.join(self.path._logs, "tmp")
         self.path["_datasets"] = os.path.join(self.path.scratch, "datasets")
         self.path["_figures"] = os.path.join(self.path.scratch, "figures")
+        self.path["_preproc_output"] = os.path.join(self.path.output, 
+                                                    "preprocess")
 
         # Parameters that are defined by other modules but accessed by Pyaflowa
         self.syn_data_format = syn_data_format.upper()
@@ -252,7 +254,7 @@ class Pyaflowa:
         """
         # Create the internal directory structure required for storing results
         for pathname in ["scratch", "_logs", "_tmplogs", "_datasets",
-                         "_figures"]:
+                         "_figures", "_preproc_output"]:
             unix.mkdir(self.path[pathname])
 
         if self._data_case == "synthetic":
@@ -615,12 +617,17 @@ class Pyaflowa:
         more permanent output/ directory. Scratch files are deleted during 
         this operation to free up disk space.
         """
+        # Create or overwrite the Inspector CSVs used for inversion review
+        insp = Inspector()
+        insp.discover(path=self.path._datasets)
+        insp.save(path=self.path._preproc_output)
+
         # Move scratch/ directory results into more permanent storage. Do not
         # bomb out datasets because we use them to store window information
         if self.export_datasets:
             src = glob(os.path.join(self.path._datasets, "*.h5"))
             src += glob(os.path.join(self.path._datasets, "*.csv"))  # inspector
-            dst = os.path.join(self.path.output, "pyaflowa", "datasets", "")
+            dst = os.path.join(self.path._preproc_output, "datasets", "")
             unix.mkdir(dst)
             unix.cp(src, dst)
 
@@ -647,7 +654,7 @@ class Pyaflowa:
 
             # Save figure files to output (if requested)
             src = glob(os.path.join(self.path._figures, "i??s??"))
-            dst = os.path.join(self.path.output, "pyaflowa", "figures", "")
+            dst = os.path.join(self.path._preproc_output, "figures", "")
             unix.mkdir(dst)
             unix.mv(src, dst)
 
@@ -672,7 +679,7 @@ class Pyaflowa:
                 unix.mv(src, dst)
 
             src = glob(os.path.join(self.path._logs, "i??s??"))
-            dst = os.path.join(self.path.output, "pyaflowa", "logs", "")
+            dst = os.path.join(self.path._preproc_output, "logs", "")
             unix.mkdir(dst)
             unix.mv(src, dst)
 
@@ -680,7 +687,7 @@ class Pyaflowa:
         unix.rm(self.path._figures)
         unix.mkdir(self.path._figures)
 
-        # Bomb out the scratch directory regardless of export status
+        # Bomb out the log files regardless of export status
         unix.rm(self.path._logs)
         unix.mkdir(self.path._logs)
         unix.mkdir(os.path.join(self.path._logs, "tmp"))
