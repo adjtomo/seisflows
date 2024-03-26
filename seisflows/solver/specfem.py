@@ -1118,13 +1118,17 @@ class Specfem:
                 # e.g., reg1_vsh -> vsh
                 if self._regions:
                     par = par[5:]
-                check = os.path.join(output_path, f"{tag}_{par}.vtk")
-                if os.path.exists(check):
-                    continue
-                else:
+                # File naming should follow a standard format that we validate
+                check = glob(os.path.join(output_path, f"{tag}*{par}.vtk"))
+                if not check:
                     parameters.append(par)
+                else:
+                    continue
+        if not parameters:
+            return
         
-        # Make the VTK files one at a time incase one errors out
+        import pdb;pdb.set_trace()
+
         self.combine_vol_data_vtk(
             input_path=input_path, output_path=output_path, 
             parameters=parameters, hi_res=hi_res
@@ -1154,7 +1158,7 @@ class Specfem:
         # Generate VTK files for everything in output path
         if self._export_vtk:
             for name in ["MODEL", "GRADIENT"]:
-                for fid in glob(os.path.join(self.path.output, f"{name}_??")):
+                for fid in glob(os.path.join(self.path.output, f"{name}_*")):
                     self.make_output_vtk_files(
                         input_path=fid, kernel=bool(name=="GRADIENT")
                         )

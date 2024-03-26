@@ -24,7 +24,7 @@ import os
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.specfem import read_fortran_binary, setpar, getpar
+from seisflows.tools.specfem import setpar, getpar
 from seisflows.solver.specfem import Specfem
 
 
