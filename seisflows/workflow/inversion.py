@@ -96,7 +96,6 @@ class Inversion(Migration):
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
             self.iteration = int(self._states["iteration"])
-            logger.info(f"`workflow.iteration` == {self.iteration}")
         else:
             self.iteration = None
 
