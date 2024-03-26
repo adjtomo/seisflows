@@ -18,6 +18,7 @@ TODO
     - Add density scaling based on Vp?
 """
 import os
+from re import I
 import sys
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -1060,16 +1061,5 @@ class Specfem:
         """
         General finalization procedures for SPECFEM-based solver activities
         """
-
-    def _make_vtk(self):
-        """
-        Generate .vtk files using the SPECFEM binary xcombine_vol_data_vtk, 
-        and rename the output files to not be so generic.
-        """
-        # Check that we are using the correct Solver type (3D, 3D_GLOBE)
-        if not hasattr(self, "combine_vol_data_vtk"):
-            logger.warning("solver does not have the capability to generate "
-                           "VTK files, skipping")
-        elif not os.path.exists()
-
+        pass
 

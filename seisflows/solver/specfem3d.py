@@ -4,6 +4,7 @@ This class provides utilities for the Seisflows solver interactions with
 Specfem3D Cartesian.
 """
 import os
+import time
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
@@ -225,7 +226,7 @@ class Specfem3D(Specfem):
         :type input_path: str
         :param input_path: path to database files to be summed.
         :type output_path: strs
-        :param output_path: path to export the outputs of xcombine_sem
+        :param output_path: path to export the outputs of the binary
         :type hi_res: bool
         :param hi_res: Set the high resolution flag to 1 or True, which will
             generate .vtk files with data at EACH GLL point, rather than at each
@@ -252,3 +253,99 @@ class Specfem3D(Specfem):
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)
 
+    def make_output_vtk_files(self, input_path, output_path=None, 
+                              parameters=None, hi_res=False, tag=None, 
+                              kernel=False):
+        """
+        A warpper on `combine_vol_data_vtk()` that automatically tries to 
+        generate .vtk files using the SPECFEM binary xcombine_vol_data_vtk, 
+        and rename the output files to not be so generic. Files will be stored
+        in the `output_path` directory, and will be named based on the `tag` 
+        unless overwritten by the User.
+
+        :type input_path: str
+        :param input_path: path to database files to be summed.
+        :type output_path: strs
+        :param output_path: path to export the outputs of the binary
+        :type parameters: list
+        :param parameters: optional list of parameters, defaults to 
+            `self._parameters` if None provided (e.g., ['vp', 'vs'])
+        :type tag: str
+        :param tag: optional tag to rename output vtk files. If not provided,
+            will use the name of the directory holding the files
+        :type kernel: bool
+        :param kernel: whether the files being converted are kernel files or
+            model files. This changes the file naming convention
+        :type hi_res: bool
+        :param hi_res: Set the high resolution flag to 1 or True, which will
+            generate .vtk files with data at EACH GLL point, rather than at each
+            nodal vertex. These files are LARGE, and we discourage using
+            `hi_res`==True unless you know you want these files.
+        """
+        # Set some default parameters if not overwritten by User
+        if not output_path:
+            output_path = os.path.join(self.path._solver_output, "VTK")
+
+        # Check that we are using the correct Solver type (3D, 3D_GLOBE)
+        if not hasattr(self, "combine_vol_data_vtk"):
+            logger.warning("solver does not have the capability to generate "
+                           "VTK files, skipping")
+            return
+        elif not os.path.exists(os.path.join(self.path.specfem_bin, 
+                                             "xcombine_vol_data_vtk")):
+            logger.warning("solver does not have the required binary "
+                           "'xcombine_vol_data_vtk', please re-compile SPECFEM "
+                           "to make VTK files. Skipping")
+            return
+        
+        # Determine how to rename files after creation
+        if not tag:
+            tag = os.path.basename(input_path)
+        
+        # Set which parameters will be made into VTK files. Do not re-create
+        # files that already exist. Add '_kernel' for kernel and gradient files
+        if not parameters:
+            parameters = []
+            for par in self._parameters:
+                if kernel:
+                    par = f"{par}_kernel"
+                check = os.path.join(output_path, f"{tag}_{par}.vtk")
+                if os.path.exists(check):
+                    continue
+                else:
+                    parameters.append(par)
+        
+        # Make the VTK files
+        self.combine_vol_data_vtk(
+            input_path=input_path, output_path=output_path, 
+            parameters=parameters, hi_res=hi_res
+            )
+        # Wait for the process to finish before trying to rename files
+        time.sleep(5 * len(parameters))
+        
+        # SPECFEM3D_GLOBE will tag files based on region
+        if self._regions is not None:
+            for region in self._regions:
+                src = os.path.join(output_path, f"reg_{region}_{par}.vtk")
+                dst = os.path.join(output_path, f"{tag}_reg_{region}_{par}.vtk")
+                if os.path.exists(src):
+                    unix.mv(src, dst)
+        else:
+            src = os.path.join(output_path, f"{par}.vtk")
+            dst = os.path.join(output_path, f"{tag}_{par}.vtk")
+            if os.path.exists(src):
+                unix.mv(src, dst)
+
+    def finalize(self):
+        """
+        General finalization procedures for SPECFEM3D and derivative classes
+        """
+        super().finalize()
+
+        # Generate VTK files for everything in output path
+        for name in ["MODEL", "GRADIENT"]:
+            for fid in glob(os.path.join(self.path.output, f"{name}_??")):
+                self.make_output_vtk_files(
+                    input_path=fid, kernel=bool(name=="GRADIENT")
+                    )
+        
