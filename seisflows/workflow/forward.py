@@ -623,14 +623,14 @@ class Forward:
             iteration=iteration, step_count=step_count
         )
 
-def finalize_iteration(self):
-    """
-    Solver finalization procedures for the end of each iteration
-    """
-    # Run finalization/tear down procedures for all modules that have it
-    for name, module in self._modules.items():
-        if hasattr(module, "finalize"):
-            logger.info(f"running finalization for module "
-                        f"'{name}.{self._modules[name].__class__.__name__}'"
-                        )
-            module.finalize()
+    def finalize_iteration(self):
+        """
+        Solver finalization procedures for the end of each iteration
+        """
+        # Run finalization/tear down procedures for all modules that have it
+        for name, module in self._modules.items():
+            if hasattr(module, "finalize"):
+                logger.info(f"running finalization for module "
+                            f"'{name}.{self._modules[name].__class__.__name__}'"
+                            )
+                module.finalize()
