@@ -430,7 +430,7 @@ class Inversion(Migration):
         # Set default value for `export_kernels` or take program default
         if export_kernels is None:
             export_kernels = os.path.join(
-                self.solver.path._solver_output,, "kernels", self.evaluation,
+                self.solver.path._solver_output, "kernels", self.evaluation,
                 self.solver.source_name
             )
 
@@ -583,11 +583,6 @@ class Inversion(Migration):
             # Expose the new model to the solver directories for the next step
             _path_m_try = os.path.join(self.path.eval_func, "model")
             m_try.write(path=_path_m_try)
-
-            # Provide `m_try` parameters to log file for sanity checks
-            logger.info(f"`m_try` model parameters for step count "
-                        f"{self.optimize.step_count}")
-            self.solver.check_model_values(path=_path_m_try)
 
             # Re-set state file to ensure that job failure will recover
             self._states["evaluate_line_search_misfit"] = 0
