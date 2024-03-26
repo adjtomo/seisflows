@@ -855,24 +855,19 @@ class SeisFlows:
         Does not allow stepping through of code (not a breakpoint).
         """
         from IPython import embed
+        logger.info(
+            msg.cli("SeisFlows' debug mode is an embedded IPython "
+                    "environment. All modules are loaded by default. "
+                    "To save changes made, type: 'workflow.checkpoint()'. "
+                    "To exit debug mode, type: 'exit()'",
+                    header="debug", border="=")
+                    )
 
         workflow = import_seisflows(workdir=self._args.workdir,
                                     parameter_file=self._args.parameter_file)
 
         # Break out sub-modules and parameters so they're more easily accesible
-        parameters = load_yaml(self._args.parameter_file)
         system, solver, preprocess, optimize = workflow._modules.values()
-
-        print("Loaded SeisFlows Modules:")
-        for module in [workflow, system, solver, preprocess, optimize]:
-            print(f"{module.__class__}")
-
-        print(msg.cli("SeisFlows' debug mode is an embedded IPython "
-                      "environment. All modules are loaded by default. "
-                      "To save changes made, type: 'workflow.checkpoint()'. "
-                      "To exit debug mode, type: 'exit()'",
-                      header="debug", border="="))
-
         embed(colors="Neutral")
 
     def sempar(self, parameter, value=None, skip_print=False,

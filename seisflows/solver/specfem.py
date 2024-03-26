@@ -1114,32 +1114,39 @@ class Specfem:
             for par in self._parameters:
                 if kernel:
                     par = f"{par}_kernel"
+                # Strip reg?_ from SPECFEM3D_GLOBE parameter names
+                # e.g., reg1_vsh -> vsh
+                if self._regions:
+                    par = par[5:]
                 check = os.path.join(output_path, f"{tag}_{par}.vtk")
                 if os.path.exists(check):
                     continue
                 else:
                     parameters.append(par)
         
-        # Make the VTK files
-        self.combine_vol_data_vtk(
-            input_path=input_path, output_path=output_path, 
-            parameters=parameters, hi_res=hi_res
-            )
-        # Wait for the process to finish before trying to rename files
-        time.sleep(5 * len(parameters))
+        # Make the VTK files one at a time incase one errors out
+        for par in parameters:
+            self.combine_vol_data_vtk(
+                input_path=input_path, output_path=output_path, 
+                parameters=parameters, hi_res=hi_res
+                )
+            # Wait for the process to finish before trying to rename files
+            time.sleep(5)
         
-        # SPECFEM3D_GLOBE will tag files based on region
-        if self._regions is not None:
-            for region in self._regions:
-                src = os.path.join(output_path, f"reg_{region}_{par}.vtk")
-                dst = os.path.join(output_path, f"{tag}_reg_{region}_{par}.vtk")
+            # SPECFEM3D_GLOBE will tag files based on region
+            if self._regions is not None:
+                for region in self._regions:
+                    src = os.path.join(output_path, f"reg_{region}_{par}.vtk")
+                    dst = os.path.join(
+                        output_path, f"{tag}_reg_{region}_{par}.vtk"
+                        )
+                    if os.path.exists(src):
+                        unix.mv(src, dst)
+            else:
+                src = os.path.join(output_path, f"{par}.vtk")
+                dst = os.path.join(output_path, f"{tag}_{par}.vtk")
                 if os.path.exists(src):
                     unix.mv(src, dst)
-        else:
-            src = os.path.join(output_path, f"{par}.vtk")
-            dst = os.path.join(output_path, f"{tag}_{par}.vtk")
-            if os.path.exists(src):
-                unix.mv(src, dst)
 
     def finalize(self):
         """
