@@ -226,11 +226,10 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        # !!! BC UNCOMMENT THIS !!!
-        # assert(model_type in self._available_model_types), (
-        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-        #     f"match acceptable model types: {self._available_model_types}"
-        #     )
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
@@ -1061,3 +1060,16 @@ class Specfem:
         """
         General finalization procedures for SPECFEM-based solver activities
         """
+
+    def _make_vtk(self):
+        """
+        Generate .vtk files using the SPECFEM binary xcombine_vol_data_vtk, 
+        and rename the output files to not be so generic.
+        """
+        # Check that we are using the correct Solver type (3D, 3D_GLOBE)
+        if not hasattr(self, "combine_vol_data_vtk"):
+            logger.warning("solver does not have the capability to generate "
+                           "VTK files, skipping")
+        elif not os.path.exists()
+
+
