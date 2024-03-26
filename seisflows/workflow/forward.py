@@ -78,7 +78,7 @@ class Forward:
     """
     def __init__(self, modules=None, generate_data=False, stop_after=None,
                  export_traces=False, export_residuals=False, 
-                 custom_tasktimes=None, workdir=os.getcwd(), path_output=None, 
+                 workdir=os.getcwd(), path_output=None, 
                  path_data=None, path_state_file=None, path_model_init=None,
                  path_model_true=None, path_eval_grad=None, **kwargs):
         """
@@ -145,7 +145,7 @@ class Forward:
         """
         return [self.generate_synthetic_data,
                 self.evaluate_initial_misfit,
-                self.finalize,
+                self.finalize_iteration,
                 ]
 
     def check(self):

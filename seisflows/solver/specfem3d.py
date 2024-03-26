@@ -80,16 +80,6 @@ class Specfem3D(Specfem):
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
 
-    def setup(self):
-        """
-        Generate .vtk files for the initial and target (if applicable) models,
-        which the User can use for external visualization
-        """
-        super().setup()
-
-        # Work-in-progress
-        # self.combine_vol_data_vtk()
-
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
