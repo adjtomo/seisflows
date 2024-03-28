@@ -2,20 +2,41 @@
 # ==============================================================================
 # This is a Wisteria (UTokyo HPC) specific run script that is required 
 # because the compute node does not inherit the login node's Conda environment.
-# Instead we need to load the module and environment manually, before run
+# Instead we need to load the module and environment manually, before run.
+#
+# User needs to set the following paths:
+# WORK_DIR: path to the directory where the Conda environment is stored, and 
+#   where the SeisFlows repository has been cloned
+# CONDA_ENV: name of the Conda environment to be used
+# GPU_MODE: needs to be set by the calling function, if GPU_MODE=='GPU', then
+#  the script will load the GPU specific environment
 # ==============================================================================
 
+# Defines where our Conda environment is saved and what its name is
 WORK_DIR=/work/01/gr58/share/adjtomo
+CONDA_ENV=adjtomo
+echo "work environment set as: '$WORK_DIR'"
 
 # Load MPI and activate Conda environment
-module load intel
-module load impi
+if [ $GPU_MODE -eq 1 ]; then  # Use GPUs
+	echo "loading GPU modules on compute node"
+    module load cuda/12.2
+    module load gcc
+    module load ompi-cuda
+else
+	echo "loading CPU modules on compute node"
+    module load intel
+    module load impi
+fi
+
+# Conda will be common to GPU or CPU versions
+echo "loading Conda environment: $CONDA_ENV"
 module load miniconda/py38_4.9.2
 source $MINICONDA_DIR/etc/profile.d/conda.sh
-conda activate $WORK_DIR/conda/envs/adjtomo 
+conda activate $WORK_DIR/conda/envs/$CONDA_ENV 
+
 
 # Run Functions: ensure that we are using the correct Python version 
-
 # The following environment variables must be set by the '-x' flag in the 
 # corresponding system.run() function:
 # ---
@@ -24,4 +45,5 @@ conda activate $WORK_DIR/conda/envs/adjtomo
 # SEISFLOWS_ENV: any additional environment variables
 # SEISFLOWS_TASKID: assigned processor number for given task
 # ---
-$WORK_DIR/conda/envs/adjtomo/bin/python $WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run --funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS --environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID,$SEISFLOWS_ENV
+$WORK_DIR/conda/envs/$CONDA_ENV/bin/python $WORK_DIR/REPOSITORIES/seisflows/seisflows/system/runscripts/run --funcs $SEISFLOWS_FUNCS --kwargs $SEISFLOWS_KWARGS --environment SEISFLOWS_TASKID=$SEISFLOWS_TASKID,$SEISFLOWS_ENV 
+

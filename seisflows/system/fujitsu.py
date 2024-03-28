@@ -4,6 +4,7 @@ Fujitsu brand clusters run their own Job Management System (Fujitsu Technical
 Computing Suite). 
 
 .. note::
+
     The nickname `PJM`, based on the batch job script directives, may be used 
     as a shorthand to refer to the Fujitsu job management system.
 
@@ -18,10 +19,10 @@ import time
 import subprocess
 
 from datetime import timedelta
-from seisflows import ROOT_DIR, logger
+from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
-from seisflows.tools.config import pickle_function_list
+from seisflows.tools.config import pickle_function_list, import_seisflows   
 
 
 class Fujitsu(Cluster):
@@ -74,7 +75,6 @@ class Fujitsu(Cluster):
         self._completed_states = ["END"]
         self._failed_states = ["CANCEL", "HOLD", "ERROR"]
         self._pending_states = ["QUEUED", "RUNNING"]
-
 
     def check(self):
         """
@@ -146,42 +146,51 @@ class Fujitsu(Cluster):
              f"-N {self.title}",  # job name
              f"-o {os.path.join(self.path.log_files, '%j')}", 
              f"-j",  # merge stderr with stdout
-             f"-L elapse={self._walltime}",  # [[hour:]minute:]second
+             f"-L elapse={self._tasktime}",  # [[hour:]minute:]second
              f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
         ])
         return _call
+    
+    def submit(self, workdir=None, parameter_file="parameters.yaml", 
+               direct=True):
+        """
+        Submit main workflow to the System. Two options are available,
+        submitting a Python job directly to the system, or submitting a 
+        subprocess.
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml"):            
-        """                                                                      
-        Submits the main workflow job as a separate job submitted directly to    
-        the system that is running the master job. 
-
-        .. note::
-                
-            Fujitsu scheduler doesn't allow command line arugments 
-            (e.g., --workdir), so these are assumed to be default values where
-            the workdir is ${pwd} and the parameter file is called 
-            'parameters.yaml'
-                                                                                 
         :type workdir: str                                                       
         :param workdir: path to the current working directory                    
         :type parameter_file: str                                                
         :param parameter_file: paramter file file name used to instantiate       
-            the SeisFlows package                                                
-        """                                                                      
-        # e.g., submit -w ./ -p parameters.yaml                                  
-        submit_call = " ".join([                                                 
-            f"{self.submit_call_header}",
-            f"{self.submit_workflow}",
-        ])
-                                                                                 
-        logger.debug(submit_call)                                                
-        try:                                                                     
-            subprocess.run(submit_call, shell=True)                              
-        except subprocess.CalledProcessError as e:                               
-            logger.critical(f"SeisFlows master job has failed with: {e}")        
-            sys.exit(-1)     
+            the SeisFlows package    
+        :type direct: bool
+        :param direct: (used for overriding system modules) submits the main 
+            workflow job directly to the login node as a Python process 
+            (default). If False, submits the main job as a separate subprocess.
+            Note that this is Fujitsu specific and main jobs should be run from
+            interactive jobs run on compute nodes to avoid running jobs on
+            shared login resources
+        """
+        if direct:
+            workflow = import_seisflows(workdir=workdir or self.path.workdir,        
+                                        parameter_file=parameter_file)               
+            workflow.check()                                                         
+            workflow.setup()                                                         
+            workflow.run()    
+        else:
+            # e.g., submit -w ./ -p parameters.yaml                                  
+            submit_call = " ".join([                                                 
+                f"{self.submit_call_header}",
+                f"{self.submit_workflow}",
+            ])
+                                                                                    
+            logger.debug(submit_call)                                                
+            try:                                                                     
+                subprocess.run(submit_call, shell=True)                              
+            except subprocess.CalledProcessError as e:                               
+                logger.critical(f"SeisFlows master job has failed with: {e}")        
+                sys.exit(-1)                                        
 
     @staticmethod                                                                
     def _stdout_to_job_id(stdout):                                               
@@ -215,11 +224,8 @@ class Fujitsu(Cluster):
         cluster. Executes the list of functions (`funcs`) NTASK times with each
         task occupying NPROC cores.
 
-        .. warning::
-            This has not been tested generally on Fujitsu systems, see system
-            Wisteria for a working application of the Fujitsu module
-
         .. note::
+        
             Completely overwrites the `Cluster.run()` command
 
         :type funcs: list of methods
@@ -244,15 +250,23 @@ class Fujitsu(Cluster):
                         f"system {self.ntask} times")
             _ntask = self.ntask
 
+        # If no environs, ensure there is not trailing comma
+        if self.environs:
+            self.environs = f",{self.environs}"
+
         # Default Fujitsu command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
         job_ids = []
         for taskid in range(_ntask):
             run_call = " ".join([
                 f"{self.run_call_header}",
-		f"--funcs {funcs_fid}",
-		f"--kwargs {kwargs_fid}",
-		f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
+                # -x in 'pjsub' sets environment variables which are distributed
+                # in the run script, see custom run scripts for example how
+                # Ensure that these are comma-separated, not space-separated
+                f"-x SEISFLOWS_FUNCS={funcs_fid},"  
+                f"SEISFLOWS_KWARGS={kwargs_fid},"
+                f"SEISFLOWS_TASKID={taskid}{self.environs},"
+                f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
                 f"{self.run_functions}",
             ])
 
@@ -266,7 +280,7 @@ class Fujitsu(Cluster):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = self.check_job_status(job_id)
+            status = self.monitor_job_status(job_ids)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "
@@ -351,7 +365,7 @@ class Fujitsu(Cluster):
             if _recheck > (timeout_s // wait_time_s):
                 raise TimeoutError(f"cannot access job ID {job_id}")
             time.sleep(wait_time_s)
-            query_job_states(job_id, _recheck=_recheck)
+            self.query_job_states(job_id, _recheck=_recheck)
 
         return job_ids, job_states
 

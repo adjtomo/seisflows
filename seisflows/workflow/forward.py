@@ -549,7 +549,7 @@ class Forward:
             export_traces = False
 
         assert(os.path.exists(path_model)), \
-            f"Model path for objective function does not exist"
+            f"Model path '{path_model}' for objective function does not exist"
 
         # We will run the forward simulation with the given input model
         self.solver.import_model(path_model=path_model)

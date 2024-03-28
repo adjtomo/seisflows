@@ -1,6 +1,16 @@
 # CHANGELOG
 
-## v3.0.1 (#203)
+## v3.0.2 (#204)
+System Wisteria GPU Upgrades
+
+- Bugfix: Fujitsu tasktime for individual job submission was using `walltime` value, not `tasktime` value
+- Combined and condensed main System functionality in Fujitsu system from Wisteria child class. Prior to this Wisteria child class was overwriting most of the functionality of Fujitsu which is not really the point of inheritance
+- New Custom Run and Submit scriopts for Wisteria GPU. Better comments and slightly easier to modify for others
+- Added new `rscgrps` to include GPU partitions on Wisteria
+- Improved run call header for easier switching between CPU and GPU nodes
+
+## v3.0.1 (#203) 
+Quality of Life Updates
 
 - Solver now automatically generates VTK files for Models and Gradients at the end of each iteration
     - New function `solver.specfem.make_output_vtk_files` that generates .vtk files for all files in the output/ directory
