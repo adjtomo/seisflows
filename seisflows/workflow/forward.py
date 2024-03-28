@@ -357,7 +357,8 @@ class Forward:
             _copy_function(src_, dst)
 
     def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
-                                _preproc_only=False, **kwargs):
+                                save_forward_arrays=None, _preproc_only=False, 
+                                **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
         before generating synthetics, which is either copied from user-supplied
@@ -491,7 +492,7 @@ class Forward:
             _copy_function(src_, dst)
 
     def run_forward_simulations(self, path_model, save_traces=None,
-                                export_traces=None, save_forward=None, 
+                                export_traces=None, flag_save_forward=None, 
                                 **kwargs):
         """
         Performs forward simulation through model saved in `path_model` for a
@@ -525,8 +526,8 @@ class Forward:
             waveform data. Set parameter `export_traces` True in the parameter
             file to access this option. Overriding classes may re-direct
             synthetics by setting this variable.
-        :type save_forward: bool
-        :param save_forward: whether to turn on the flag for saving the forward
+        :type flag_save_forward: bool
+        :param flag_save_forward: whether to turn on the flag for saving the forward
             arrays which are used for adjoint simulations. Not required if only
             running forward simulations
         """

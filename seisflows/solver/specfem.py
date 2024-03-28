@@ -535,7 +535,8 @@ class Specfem:
         return "OUTPUT_FILES"
 
     def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False, save_forward=True, **kwargs):
+                           export_traces=False, flag_save_forward=True, 
+                           **kwargs):
         """
         Wrapper for SPECFEM binaries: 'xmeshfem?D' 'xgenerate_databases',
                                       'xspecfem?D'
@@ -561,17 +562,17 @@ class Specfem:
         :param export_traces: export traces from the scratch directory to a more
             permanent storage location. i.e., copy files from their original
             location
-        :type save_forward: bool
-        :param save_forward: whether to turn on the flag for saving the forward
-            arrays which are used for adjoint simulations. Not required if only
-            running forward simulations.
+        :type flag_save_forward: bool
+        :param flag_save_forward: whether to turn on the flag for saving the 
+            forward arrays which are used for adjoint simulations. Not required 
+            if only running forward simulations.
         """
         if executables is None:
             executables = ["bin/xmeshfem2D", "bin/xspecfem2D"]
 
         unix.cd(self.cwd)
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
-        setpar(key="SAVE_FORWARD", val=f".{str(save_forward).lower()}.",
+        setpar(key="SAVE_FORWARD", val=f".{str(flag_save_forward).lower()}.",
                file="DATA/Par_file")
 
         # Calling subprocess.run() for each of the binary executables listed
@@ -581,12 +582,7 @@ class Specfem:
             self._run_binary(executable=exc, stdout=stdout)
 
         # Error check to ensure that mesher and solver have been run succesfully
-        # !!! Temporarily removed check because SPECFEM2D does not create this
-        # !!! file
-        # _mesh = os.path.exists(os.path.join("OUTPUT_FILES", 
-        #                                     "output_mesher.txt"))
         _solv = bool(glob(os.path.join("OUTPUT_FILES", self.data_wildcard())))
-        #if not _mesh or not _solv:
         if not _solv:
             logger.critical(msg.cli(f"solver failed to produce expected files",
                             header="external solver error", border="="))
@@ -613,6 +609,11 @@ class Specfem:
                 src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
                 dst=save_traces
             )
+        # Delete unncessary visualization files which may be large. This is 
+        # only relevant for SPECFEM3D/3D_GLOBE, but will not throw errors for 2D
+        if self.prune_scratch:
+            logger.debug("removing '*.vt?' files from database directory")
+            unix.rm(glob(os.path.join(self.model_databases, "proc*_*.vt?")))
 
     def adjoint_simulation(self, executables=None, save_kernels=False,
                            export_kernels=False):
@@ -696,6 +697,18 @@ class Specfem:
                                     f"please check adjoint solver log for "
                                     f"{self.source_name}")
                     sys.exit(-1)
+
+        # Working around fact that `absorb_buffer` files have diff naming w.r.t
+        # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
+        # since we no longer need these
+        if self.prune_scratch:                                                   
+            for glob_key in ["proc??????_absorb_field.bin",  # SPECFEM3D
+                             "proc??????_reg?_absorb_buffer.bin",  # 3D_GLOBE
+                             "proc??????_save_forward_array.bin",  # 3D_GLOBE
+                             ]: 
+                logger.debug(f"removing '{glob_key}' files from database "       
+                             f"directory")                                       
+                unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
     def _rename_kernel_parameters(self):
         """

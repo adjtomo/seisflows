@@ -218,10 +218,11 @@ class Specfem3DGlobe(Specfem):
                                                     "Par_file"))[1]
         return os.path.basename(self._model_databases)
 
-    def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False, **kwargs):
+    def forward_simulation(self, executables=None, **kwargs):
         """
         Calls SPECFEM3D_GLOBE forward solver, exports solver outputs to traces.
+
+        See `solver.specfem.forward_simulation` for more details on parameters
 
         :type executables: list or None                                          
         :param executables: list of SPECFEM executables to run, in order, to     
@@ -229,33 +230,16 @@ class Specfem3DGlobe(Specfem):
             which will select default values based on the specific solver        
             being called (2D/3D/3D_GLOBE). It is made an optional parameter      
             to keep the function more general for inheritance purposes.          
-        :type save_traces: str                                                   
-        :param save_traces: move files from their native SPECFEM output location 
-            to another directory. This is used to move output waveforms to       
-            'traces/obs' or 'traces/syn' so that SeisFlows knows where to look   
-            for them, and so that SPECFEM doesn't overwrite existing files       
-            during subsequent forward simulations                                
-        :type export_traces: str                                                 
-        :param export_traces: export traces from the scratch directory to a more 
-            permanent storage location. i.e., copy files from their original     
-            location 
         """
         # Forward simulations REQUIRE re-running the mesher to instantiate
         # iterative model updates
         if executables is None:
             executables = ["bin/xmeshfem3D", "bin/xspecfem3D"]
 
-        super().forward_simulation(executables=executables, 
-                                   save_traces=save_traces, 
-                                   export_traces=export_traces, 
-                                   **kwargs)
+        super().forward_simulation(executables=executables, **kwargs)
 
-        if self.prune_scratch:
-            logger.debug("removing '*.vt?' files from database directory")
-            unix.rm(glob(os.path.join(self.model_databases, "proc*_*.vt?")))
-
-    def adjoint_simulation(self, executables=None, save_kernels=False,
-                           export_kernels=False):
+    def adjoint_simulation(self, executables=None, **kwargs):
+                           # save_kernels=False, export_kernels=False):
         """
         Supers SPECFEM for adjoint solver and removes GLOBE-specific fwd files
         Also deals with anisotropic kernels (or lack thereof)
@@ -303,9 +287,7 @@ class Specfem3DGlobe(Specfem):
                file="DATA/Par_file")
         
         # SPECFEM3D class takes care of attenuation and STATIONS_ADJOINT file
-        super().adjoint_simulation(executables=executables,                      
-                                   save_kernels=save_kernels,                    
-                                   export_kernels=export_kernels)
+        super().adjoint_simulation(executables=executables, **kwargs)
         
         # Export the source mask files so that Workflow can find them later.
         if self.mask_source:
@@ -330,14 +312,6 @@ class Specfem3DGlobe(Specfem):
             logger.debug(f"moving source mask files to {dst}")
             unix.mv(src=mask_files, dst=dst)
 
-        # Working around fact that `absorb_buffer` files have diff naming w.r.t
-        # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
-        # since we no longer need these
-        if self.prune_scratch:                                                   
-            for glob_key in ["proc??????_reg?_absorb_buffer.bin"]: 
-                logger.debug(f"removing '{glob_key}' files from database "       
-                             f"directory")                                       
-                unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
     def combine(self, input_paths, output_path, parameters=None):                 
         """
