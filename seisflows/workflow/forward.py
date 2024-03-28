@@ -78,8 +78,8 @@ class Forward:
     """
     def __init__(self, modules=None, generate_data=False, stop_after=None,
                  export_traces=False, export_residuals=False, 
-                 workdir=os.getcwd(), path_output=None, path_data=None,
-                 path_state_file=None, path_model_init=None,
+                 workdir=os.getcwd(), path_output=None, 
+                 path_data=None, path_state_file=None, path_model_init=None,
                  path_model_true=None, path_eval_grad=None, **kwargs):
         """
         Set default forward workflow parameters
@@ -144,7 +144,8 @@ class Forward:
         :return: list of methods to call in order during a workflow
         """
         return [self.generate_synthetic_data,
-                self.evaluate_initial_misfit
+                self.evaluate_initial_misfit,
+                self.finalize_iteration,
                 ]
 
     def check(self):
@@ -201,10 +202,11 @@ class Forward:
         Makes required path structure for the workflow, runs setup functions
         for all the required modules of this workflow.
         """
-        logger.info(f"setup {self.__class__.__name__} workflow")
+        logger.info(f"running setup for '{self.__class__.__name__}' workflow")
 
         # Create the desired directory structure
         for path in self.path.values():
+            # Ignore empty paths or paths that are actually files
             if path is not None and not os.path.splitext(path)[-1]:
                 unix.mkdir(path)
 
@@ -245,6 +247,8 @@ class Forward:
         the workflow can be resumed following a crash, pause or termination of
         workflow.
         """
+        logger.debug("checkpointing workflow to seisflows state file")
+
         # Grab State file header values
         with open(self.path.state_file, "r") as f:
             lines = f.readlines()
@@ -263,8 +267,6 @@ class Forward:
         to keep track of completed tasks and avoids re-running tasks that have
         previously been completed (e.g., if you are restarting your workflow)
         """
-        logger.info(msg.mjr(f"RUNNING {self.__class__.__name__.upper()} "
-                            f"WORKFLOW"))
         n = 0  # To keep track of number of tasks completed
         for func in self.task_list:
             # Skip over functions which have already been completed
@@ -276,6 +278,9 @@ class Forward:
             # encountered for the first time
             else:
                 try:
+                    # Print called func name, e.g., test_func -> TEST FUNC
+                    _log_name = func.__name__.replace("_", " ").upper()
+                    logger.info(msg.mnr(_log_name))
                     func()
                     n += 1
                     self._states[func.__name__] = 1  # completed
@@ -286,7 +291,9 @@ class Forward:
                     raise
             # Allow user to prematurely stop a workflow after a given task
             if self.stop_after and func.__name__ == self.stop_after:
-                logger.info(f"stop workflow at `stop_after`: {self.stop_after}")
+                logger.info(
+                    msg.mjr(f"stop workflow at `stop_after`: {self.stop_after}")
+                    )
                 break
 
         self.checkpoint()
@@ -301,8 +308,6 @@ class Forward:
         """
         if not self.generate_data:
             return
-
-        logger.info(msg.mnr("GENERATING SYNTHETIC DATA W/ TARGET MODEL"))
 
         # Check the target model that will be used to generate data
         logger.info("checking true/target model parameters:")
@@ -384,8 +389,6 @@ class Forward:
             Recommended this be run in debug mode and that you change `tasktime`
             to reflect that no forward simulation will be run.
         """
-        logger.info(msg.mnr("EVALUATING MISFIT FOR INITIAL MODEL"))
-
         # Forward workflow may not have access to optimization module, so we 
         # only tag residuals files with the source name
         if save_residuals is None:
@@ -540,7 +543,7 @@ class Forward:
         if self.export_traces:
             # e.g., output/solver/{source}/syn/*
             export_traces = export_traces or \
-                            os.path.join(self.path.output, "solver",
+                            os.path.join(self.solver.path._solver_output,
                                          self.solver.source_name, "syn")
         else:
             export_traces = False
@@ -619,3 +622,15 @@ class Forward:
             export_residuals=export_residuals,
             iteration=iteration, step_count=step_count
         )
+
+    def finalize_iteration(self):
+        """
+        Solver finalization procedures for the end of each iteration
+        """
+        # Run finalization/tear down procedures for all modules that have it
+        for name, module in self._modules.items():
+            if hasattr(module, "finalize"):
+                logger.info(f"running finalization for module "
+                            f"'{name}.{self._modules[name].__class__.__name__}'"
+                            )
+                module.finalize()

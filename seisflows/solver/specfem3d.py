@@ -4,6 +4,7 @@ This class provides utilities for the Seisflows solver interactions with
 Specfem3D Cartesian.
 """
 import os
+import time
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
@@ -22,6 +23,11 @@ class Specfem3D(Specfem):
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
+    :type export_vtk: bool
+    :param export_vtk: at the finalization step of each iteration, convert
+        all eligible model and gradient directories in the `path_output`
+        to .vtk files for visualization using ParaView (or similar programs). 
+        Files are exported to `path_output`/VTK
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -35,14 +41,29 @@ class Specfem3D(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True, 
-                 **kwargs):
-        """Instantiate a Specfem3D_Cartesian solver interface"""
+    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True, 
+                 prune_scratch=True, **kwargs):
+        """
+        Instantiate a Specfem3D_Cartesian solver interface
+        
+        .. note:: Repeated variables
+
+            For variables that are expressed as both public and private (one
+            leading underscore), we have a public version so that the parameter
+            will show up in the parameter file, and a private one so that the 
+            other SPECFEM versions can use it for boolean logic without
+            necessarily needing to include it in their parameter file since it
+            is not accessed and therefore not necessary.
+        """
 
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.prune_scratch = prune_scratch
 
+        # See note about repeated variables above
+        self.export_vtk = export_vtk
+        self._export_vtk = export_vtk
+        
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
             self._parameters += ["vp"]
@@ -58,16 +79,6 @@ class Specfem3D(Specfem):
         # Internally used parameters set by functions within class
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
-
-    def setup(self):
-        """
-        Generate .vtk files for the initial and target (if applicable) models,
-        which the User can use for external visualization
-        """
-        super().setup()
-
-        # Work-in-progress
-        # self.combine_vol_data_vtk()
 
     def data_wildcard(self, comp="?"):
         """
@@ -225,7 +236,7 @@ class Specfem3D(Specfem):
         :type input_path: str
         :param input_path: path to database files to be summed.
         :type output_path: strs
-        :param output_path: path to export the outputs of xcombine_sem
+        :param output_path: path to export the outputs of the binary
         :type hi_res: bool
         :param hi_res: Set the high resolution flag to 1 or True, which will
             generate .vtk files with data at EACH GLL point, rather than at each

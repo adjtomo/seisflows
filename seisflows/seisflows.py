@@ -19,6 +19,7 @@ import sys
 import argparse
 from glob import glob
 from inspect import getmro
+
 from seisflows import logger, ROOT_DIR, NAMES, __version__
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
@@ -829,11 +830,15 @@ class SeisFlows:
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
-            for name in ["scratch", "output", "log_files", "state_file", 
-                         "output_log"]:
+            for name in ["scratch", "output", "log_files", 
+                         "state_file", "output_log"]:
                 path = f"path_{name}"
                 if path in pars:
                     unix.rm(pars[path])
+            # Special case for data path, only delete if it's empty
+            if not os.listdir(pars["path_data"]):
+                unix.rm(pars["path_data"])
+
 
     def restart(self, force=False, **kwargs):
         """
@@ -850,23 +855,20 @@ class SeisFlows:
         Does not allow stepping through of code (not a breakpoint).
         """
         from IPython import embed
-
         workflow = import_seisflows(workdir=self._args.workdir,
-                                    parameter_file=self._args.parameter_file)
+                            parameter_file=self._args.parameter_file)
+        
+        logger.info(msg.mjr("ENTERING DEBUG MODE"))
+        print(msg.cli(
+            "SeisFlows' debug mode is an embedded IPython environment. All "
+            "modules are loaded by default and can be accessed by name "
+            "(e.g., workflow, solver, optimize, etc.)", border="-")
+            )
 
         # Break out sub-modules and parameters so they're more easily accesible
+        # within debug mode
         parameters = load_yaml(self._args.parameter_file)
         system, solver, preprocess, optimize = workflow._modules.values()
-
-        print("Loaded SeisFlows Modules:")
-        for module in [workflow, system, solver, preprocess, optimize]:
-            print(f"{module.__class__}")
-
-        print(msg.cli("SeisFlows' debug mode is an embedded IPython "
-                      "environment. All modules are loaded by default. "
-                      "To save changes made, type: 'workflow.checkpoint()'. "
-                      "To exit debug mode, type: 'exit()'",
-                      header="debug", border="="))
 
         embed(colors="Neutral")
 
