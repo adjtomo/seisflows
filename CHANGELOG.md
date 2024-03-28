@@ -1,4 +1,23 @@
-### Major Changes
+# CHANGELOG
+
+## v3.0.1 (#203)
+
+- Solver now automatically generates VTK files for Models and Gradients at the end of each iteration
+    - New function `solver.specfem.make_output_vtk_files` that generates .vtk files for all files in the output/ directory
+    - solver.finalize() runs `make_output_vtk_files` at the end of each iteration
+    - new solver parameter `export_vtk` controls whether the above option is run, default to True, only available for SPECFEM3D/3D_GLOBE
+- Improve organization for files exported to `path_output` 
+    - Optimization stats file and figures saved the `workdir/output/optimize` whereas before they were saved directly to output/
+    - Changed pyaflowa export directory to `workdir/output/preprocess` (before it was `workdir/output/pyaflowa`)
+- Quality of Life Updates
+    - `path_data` directory is deleted by `seisflows clean` iff empty, since it is created by solver.setup()
+    - Logging updates: better visual demarcation of workflow tasks, headers relate to workflow function run
+    - `seisflows debug` has a cleaner log message
+    - shuffled workflow finalization procedures so that base class (forward) contains standard finalization procedures
+- Bugfix
+    - Uncommented gll model check which had been commented for devel purposes
+
+## v3.0.0
 - Workflow:
     - State file changed states from words to integers (completed -> 1, 
       failed -> -1, pending -> 0), and full state file is created at workflow

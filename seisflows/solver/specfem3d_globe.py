@@ -24,7 +24,7 @@ import os
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.specfem import read_fortran_binary, setpar, getpar
+from seisflows.tools.specfem import setpar, getpar
 from seisflows.solver.specfem import Specfem
 
 
@@ -39,6 +39,11 @@ class Specfem3DGlobe(Specfem):
     :type source_prefix: str
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
+    :type export_vtk: bool
+    :param export_vtk: at the finalization step of each iteration, convert
+        all eligible model and gradient directories in the `path_output`
+        to .vtk files for visualization using ParaView (or similar programs). 
+        Files are exported to `path_output`/VTK
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -83,10 +88,21 @@ class Specfem3DGlobe(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", prune_scratch=True, 
-                 regions="123", smooth_type="laplacian", mask_source=False, 
-                 scale_mask_region=False, **kwargs):
-        """Instantiate a Specfem3D_Globe solver interface"""
+    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
+                 prune_scratch=True,  regions="123", smooth_type="laplacian", 
+                 mask_source=False, scale_mask_region=False, **kwargs):
+        """
+        Instantiate a Specfem3D_Globe solver interface
+        
+        .. note:: Repeated variables
+
+            For variables that are expressed as both public and private (one
+            leading underscore), we have a public version so that the parameter
+            will show up in the parameter file, and a private one so that the 
+            other SPECFEM versions can use it for boolean logic without
+            necessarily needing to include it in their parameter file since it
+            is not accessed and therefore not necessary.
+        """
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
@@ -94,9 +110,11 @@ class Specfem3DGlobe(Specfem):
         self.mask_source = mask_source
         self.scale_mask_region = scale_mask_region
 
-        # These two variables are the same but we have a public version so it 
-        # will show up in the parameter file (for 3D_GLOBE only), and a private
-        # one so that the other SPECFEM versions can set it as None and use it
+        # See note about repeated variables above
+        self.export_vtk = export_vtk
+        self._export_vtk = export_vtk
+
+        # See note about repeated variables above
         self.regions = str(regions)
         self._regions = sorted(self.regions) 
 

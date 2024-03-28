@@ -20,6 +20,7 @@ TODO
 import os
 import sys
 import subprocess
+import time
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
 
@@ -150,7 +151,8 @@ class Specfem:
             model_init=path_model_init,
             model_true=path_model_true,
         )
-        self.path.mainsolver = os.path.join(self.path.scratch, "mainsolver")
+        self.path["mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
+        self.path["_solver_output"] = os.path.join(self.path.output, "solver")
 
         # Private internal parameters for keeping track of solver requirements
         self._parameters = []
@@ -173,8 +175,9 @@ class Specfem:
                                    "xsmooth_sem"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCE", "FORCESOLUTION"]
         
-        # Empty variable that will need to be overwritten by SPECFEM3D_GLOBE
+        # Empty variables that will need to be overwritten by SPECFEM3D/3D_GLOBE
         self._regions = None
+        self._export_vtk = False
 
     def check(self):
         """
@@ -225,11 +228,10 @@ class Specfem:
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
                                               "Par_file"))[1]
-        # !!! BC UNCOMMENT THIS !!!
-        # assert(model_type in self._available_model_types), (
-        #     f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-        #     f"match acceptable model types: {self._available_model_types}"
-        #     )
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
         # Make sure the initial model is set and actually contains files
         assert(self.path.model_init is not None and
@@ -278,6 +280,10 @@ class Specfem:
 
         Exports INIT/STARTING and TRUE/TARGET models to disk (output/ dir.)
         """
+        # Create the internal directory structure required for storing results
+        for pathname in ["_solver_output"]:
+            unix.mkdir(self.path[pathname])
+
         # Assign file extensions to be used for database file searching
         model_type = getpar(key="MODEL",
                             file=os.path.join(self.path.specfem_data,
@@ -1051,3 +1057,108 @@ class Specfem:
             for par in parameters:
                 src = glob(os.path.join(model, f"*{par}{self._ext}"))
                 unix.cp(src, dst)
+
+    def make_output_vtk_files(self, input_path, output_path=None, 
+                              parameters=None, hi_res=False, tag=None, 
+                              kernel=False):
+        """
+        A warpper on `combine_vol_data_vtk()` that automatically tries to 
+        generate .vtk files using the SPECFEM binary xcombine_vol_data_vtk, 
+        and rename the output files to not be so generic. Files will be stored
+        in the `output_path` directory, and will be named based on the `tag` 
+        unless overwritten by the User.
+
+        :type input_path: str
+        :param input_path: path to database files to be summed.
+        :type output_path: strs
+        :param output_path: path to export the outputs of the binary
+        :type parameters: list
+        :param parameters: optional list of parameters, defaults to 
+            `self._parameters` if None provided (e.g., ['vp', 'vs'])
+        :type tag: str
+        :param tag: optional tag to rename output vtk files. If not provided,
+            will use the name of the directory holding the files
+        :type kernel: bool
+        :param kernel: whether the files being converted are kernel files or
+            model files. This changes the file naming convention
+        :type hi_res: bool
+        :param hi_res: Set the high resolution flag to 1 or True, which will
+            generate .vtk files with data at EACH GLL point, rather than at each
+            nodal vertex. These files are LARGE, and we discourage using
+            `hi_res`==True unless you know you want these files.
+        """
+        # Check that we are using the correct Solver type (3D, 3D_GLOBE)
+        if not hasattr(self, "combine_vol_data_vtk"):
+            logger.warning("solver does not have the capability to generate "
+                           "VTK files, skipping")
+            return
+        elif not os.path.exists(os.path.join(self.path.specfem_bin, 
+                                             "xcombine_vol_data_vtk")):
+            logger.warning("solver does not have the required binary "
+                           "'xcombine_vol_data_vtk', please compile this "
+                           "binary to make VTK files. Skipping ")
+            return
+        
+        # Set some default parameters if not overwritten by User
+        if not output_path:
+            output_path = os.path.join(self.path._solver_output, "VTK")
+
+        # Determine how to rename files after creation
+        if not tag:
+            tag = os.path.basename(input_path)
+        
+        # Set which parameters will be made into VTK files. Do not re-create
+        # files that already exist. Add '_kernel' for kernel and gradient files
+        if not parameters:
+            parameters = []
+            for par in self._parameters:
+                if kernel:
+                    par = f"{par}_kernel"
+                # Strip reg?_ from SPECFEM3D_GLOBE parameter names
+                # e.g., reg1_vsh -> vsh
+                if self._regions:
+                    par = par[5:]
+                # File naming should follow a standard format that we validate
+                check = glob(os.path.join(output_path, f"{tag}*{par}.vtk"))
+                if not check:
+                    parameters.append(par)
+                else:
+                    continue
+        if not parameters:
+            return
+        
+        self.combine_vol_data_vtk(
+            input_path=input_path, output_path=output_path, 
+            parameters=parameters, hi_res=hi_res
+            )
+        # Wait for the process to finish before trying to rename files
+        time.sleep(5 * len(parameters))
+        
+            # SPECFEM3D_GLOBE will tag files based on region
+        for par in parameters:
+            if self._regions is not None:
+                for region in self._regions:
+                    src = os.path.join(output_path, f"reg_{region}_{par}.vtk")
+                    dst = os.path.join(
+                        output_path, f"{tag}_reg_{region}_{par}.vtk")
+                    if os.path.exists(src):
+                        unix.mv(src, dst)
+            else:
+                src = os.path.join(output_path, f"{par}.vtk")
+                dst = os.path.join(output_path, f"{tag}_{par}.vtk")
+                if os.path.exists(src):
+                    unix.mv(src, dst)
+
+    def finalize(self):
+        """
+        General finalization procedures for SPECFEM-based solver activities
+        """
+        # Generate VTK files for everything in output path
+        if self._export_vtk:
+            for name in ["MODEL", "GRADIENT"]:
+                for fid in glob(os.path.join(self.path.output, f"{name}_*")):
+                    self.make_output_vtk_files(
+                        input_path=fid, kernel=bool(name=="GRADIENT")
+                        )
+        
+
