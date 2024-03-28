@@ -1127,8 +1127,6 @@ class Specfem:
         if not parameters:
             return
         
-        import pdb;pdb.set_trace()
-
         self.combine_vol_data_vtk(
             input_path=input_path, output_path=output_path, 
             parameters=parameters, hi_res=hi_res
