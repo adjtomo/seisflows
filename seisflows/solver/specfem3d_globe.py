@@ -425,7 +425,7 @@ class Specfem3DGlobe(Specfem):
                      f"{span_h}m and vertical span {span_v}m")               
 
         # NOTE: Converting smoothing lengths 'm' -> 'km' as laplacian smoothing
-        #   function is epxecting things in 'km' while SeisFlows expects things
+        #   function is expecting things in 'km' while SeisFlows expects things
         #   in 'm'
         span_h *= 1E-3
         span_v *= 1E-3
