@@ -637,7 +637,8 @@ class Specfem:
             unix.rm(glob(os.path.join(self.model_databases, 
                                       "proc??????_*.vt?")))
 
-    def adjoint_simulation(self, save_kernels=False, export_kernels=False):
+    def adjoint_simulation(self, save_kernels=False, export_kernels=False,
+                           load_forward_arrays=False):
         """
         Wrapper for SPECFEM binary 'xspecfem?D'
 
@@ -660,6 +661,12 @@ class Specfem:
             directory to a more permanent storage location. i.e., copy files
             from their original location. Note that kernel file sizes are LARGE,
             so exporting kernels can lead to massive storage requirements.
+        :type load_forward_arrays: str
+        :param load_forward_arrays: relative path (relative to solver.cwd) to 
+            load previously generated forward arrays which are used for adjoint 
+            simulations. Mainly used for ambient noise adjoint tomography. Will 
+            OVERWRITE any forward array files already located in the database 
+            directory.
         """
         unix.cd(self.cwd)
 

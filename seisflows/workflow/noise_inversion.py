@@ -73,7 +73,7 @@ from obspy import Stream
 from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
-from seisflows.tools.specfem import (rename_as_adjoint_source, 
+from seisflows.tools.specfem import (rename_as_adjoint_source, getpar,
                                      get_src_rcv_lookup_table)
 from seisflows.preprocess.default import read, write
 from seisflows.workflow.inversion import Inversion
@@ -173,20 +173,14 @@ class NoiseInversion(Inversion):
         assert(set(self.kernels.split(",")).issubset(acceptable_kernels)), \
             f"`kernels` must be a subset of {acceptable_kernels}"
 
-        # TODO: Check whether data exists for all sources/master stations
-
-        # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
-
-        # TODO: Check that Par_file 'USE_FORCE_POINT_SOURCE' = .true.
-        use_force_point_source = \
-            getpar(key="USE_FORCE_POINT_SOURCE", 
-                   file=os.path.join(self.path.specfem_data, "Par_file"))[1]
-                   )
-
-        assert(model_type in self._available_model_types), (
-            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
-            f"match acceptable model types: {self._available_model_types}"
-            )
+        # FORCESOLUTIONS required
+        use_force_point_source = getpar(
+            key="USE_FORCE_POINT_SOURCE", 
+            file=os.path.join(self._modules.solver.path.specfem_data, 
+                              "Par_file")
+            )[1]   
+        assert(use_force_point_source == ".true."), \
+            "SPECFEM Par_file parameter `USE_FORCE_POINT_SOURCE` must be True"
 
     def setup(self):
         """Set up some required attributes for Noise Inversion"""
