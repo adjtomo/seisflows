@@ -114,8 +114,7 @@ class Migration(Forward):
         self.system.run([self._run_adjoint_simulation_single], **kwargs)
 
     def _run_adjoint_simulation_single(self, save_kernels=None, 
-                                       export_kernels=None, 
-                                       load_forward_arrays=False, **kwargs):
+                                       export_kernels=None, **kwargs):
         """
         Run an adjoint simulation for a single source. Allow saving kernels by 
         moving them out of the run directory to another location. Allow 
@@ -126,6 +125,11 @@ class Migration(Forward):
             Must be run by system.run() so that solvers are assigned
             individual task ids/working directories.
 
+        .. note:: 
+
+            see solver.specfem.adjoint_simulation() for full 
+            detailed list of input parameters
+
         :type save_kernels: str
         :param save_kernels: path to a directory where kernels created by the 
             adjoint simulation are moved to for further use in the workflow
@@ -134,12 +138,6 @@ class Migration(Forward):
         :param export_kernels: path to a directory where kernels are copied for
             more permanent storage, where they will not be wiped by `clean` or
             `restart`. User parameter `export_kernels` must be set `True`.
-        :type load_forward_arrays: str
-        :param load_forward_arrays: relative path (relative to solver.cwd) to 
-            load previously generated forward arrays which are used for adjoint 
-            simulations. Mainly used for ambient noise adjoint tomography. Will 
-            OVERWRITE any forward array files already located in the database 
-            directory.
         """
         # Set default value for `export_kernels` or take program default
         if self.export_kernels:
@@ -161,7 +159,7 @@ class Migration(Forward):
         # path `eval_grad`. Optionally export those kernels
         self.solver.adjoint_simulation(save_kernels=save_kernels,
                                        export_kernels=export_kernels,
-                                       load_forward_arrays=load_forward_arrays)
+                                       **kwargs)
 
     def postprocess_event_kernels(self):
         """

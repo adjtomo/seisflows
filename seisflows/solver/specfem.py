@@ -636,10 +636,11 @@ class Specfem:
             unix.rm(glob(os.path.join(self.model_databases, 
                                       "proc??????_*.vt?")))
 
-        logger.info(f"FINISH FORWARD SIMULATION: '{self.source_name}'")
+        logger.info(f"FINISH FORWARD SIMULATION: {self.source_name}")
 
     def adjoint_simulation(self, save_kernels=False, export_kernels=False,
-                           load_forward_arrays=False):
+                           load_forward_arrays=False, 
+                           del_loaded_forward_arrays=False):
         """
         Wrapper for SPECFEM binary 'xspecfem?D'
 
@@ -668,6 +669,11 @@ class Specfem:
             simulations. Mainly used for ambient noise adjoint tomography. Will 
             OVERWRITE any forward array files already located in the database 
             directory.
+        :type del_loaded_forward_arrays: bool
+        :param del_loaded_forward_arrays: only used if `load_forward_arrays` is
+            set. After adjoint simulation completes nominally, delete the 
+            forward arrays that were used to run the adjoint simulation to 
+            save space. Usually
         """
         unix.cd(self.cwd)
 
@@ -751,12 +757,12 @@ class Specfem:
                              f"from database ")                                  
                 unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
-            if load_forward_arrays:
-                logger.debug(f"removing loaded forward arrays: "
-                             f"{load_forward_arrays}")
-                unix.rm(load_forward_arrays)
+        if load_forward_arrays and del_loaded_forward_arrays:
+            logger.debug(f"removing loaded forward arrays: "
+                         f"{load_forward_arrays}")
+            unix.rm(load_forward_arrays)
 
-        logger.info(f"FINISH FORWARD SIMULATION: '{self.source_name}'")
+        logger.info(f"FINISH ADJOINT SIMULATION: {self.source_name}")
 
     def _rename_kernel_parameters(self):
         """

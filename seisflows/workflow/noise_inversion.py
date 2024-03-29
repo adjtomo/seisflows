@@ -362,24 +362,37 @@ class NoiseInversion(Inversion):
         two adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
-        # Two adjoint simulations required per kernel T or R
-        for pair in ["ET", "NT", "ER", "NR"]:
-            self._force, self._cmpnt = pair
+        # Four possible adjoint simulations: ER, NR, ET, NT
+        for force in ["E", "N"]:
+            # e.g., E_FWD_ARR (for E component force)
+            load_forward_arrays = f"{force}_FWD_ARR"
+            for cmpnt in ["R", "T"]:
+                # Don't run a simulation if we don't need the kernels
+                if cmpnt not in self.kernels:
+                    continue
 
-            # Don't run a simulation if we don't need the kernels
-            if self._cmpnt not in self.kernels:
-                continue
+                # Assign internal variables used for bookkeeping
+                self._force = force
+                self._cmpnt = cmpnt
 
-            # Intermediate state check to avoid rerunning all after failure
-            _state_check = f"run_rt_adjoint_simulations_{pair}"
-            if _state_check in self._states and bool(self._states[_state_check]):
-                continue
+                # Intermediate state check to avoid rerunning all after failure
+                _state_check = f"run_rt_adjoint_simulations_{pair}"
+                if _state_check in self._states and \
+                                        bool(self._states[_state_check]):
+                    continue
 
-            logger.info(f"running {self._force}{self._cmpnt} adjoint "
-                        f"simulation")
-            self.run_adjoint_simulations()
-            self._states[_state_check] = 1
-            self.checkpoint()
+                logger.info(
+                    msg.sub(f"ADJOINT SIMULATION {self._force}{self._cmpnt}")
+                    )
+
+                # Fwd arrays will not be deleted until all simulations for a 
+                # given FORCE are finished, that is, when we run the T adj sims
+                self.run_adjoint_simulations(
+                    load_forward_arrays=load_forward_arrays,
+                    del_forward_arrays=bool(self._cmpnt == "T")  # last index
+                )
+                self._states[_state_check] = 1
+                self.checkpoint()
 
     def _run_rt_adjoint_simulations_combined(self):
         """
@@ -856,8 +869,22 @@ class NoiseInversion(Inversion):
 
         .. note::
 
-            Must be run by system.run() soj, that solvers are assigned
+            Must be run by system.run() so that solvers are assigned
             individual task ids/working directories.
+
+        .. note:: 
+
+            see solver.specfem.adjoint_simulation() for full 
+            detailed list of input parameters
+
+        :type save_kernels: str
+        :param save_kernels: path to a directory where kernels created by the 
+            adjoint simulation are moved to for further use in the workflow
+            Defaults to saving kernels in `scratch/eval_grad/kernels/<source>`
+        :type export kernels: str
+        :param export_kernels: path to a directory where kernels are copied for
+            more permanent storage, where they will not be wiped by `clean` or
+            `restart`. User parameter `export_kernels` must be set `True`.
         """
         # Internal variable check
         assert(self._force is not None), (
@@ -885,7 +912,8 @@ class NoiseInversion(Inversion):
         if self._force == "Z":
             self._generate_empty_adjsrcs(components=["E", "N"])
             
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels)
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                   **kwargs)
         elif self._force in ["E", "N"]:
             # Remove any existing adjoint sources from directory 
             unix.rm(self.trace_path(tag="adj"))
@@ -902,14 +930,8 @@ class NoiseInversion(Inversion):
             for src in glob(os.path.join(adj_dir, "*")):
                 unix.ln(src, self.trace_path("adj"))
 
-            # Load the correct forward array connected with this force
-            # ! Make sure this matches the file naming convention in forward sim
-            load_forward_arrays = f"{self._force}_FWD_ARR"
-
-            super()._run_adjoint_simulation_single(
-                save_kernels=save_kernels, export_kernels=export_kernels,
-                load_forward_arrays=load_forward_arrays
-                )
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                   **kwargs)
 
     def _generate_empty_adjsrcs(self, components):
         """
