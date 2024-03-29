@@ -409,15 +409,6 @@ class Forward:
                 f"Workflow path `save_residuals` requires string formatter "
                 "{src} within the string name"
             )
-        # Forward workflow may not have access to optimization module, so we 
-        # only tag residuals files with the source name
-        if save_forward_arrays:
-            # Require that `save_residuals` has an f-string formatter 'src' that
-            # allows each source process to write to its own file
-            assert("{src}" in save_forward_arrays), (
-                f"Workflow path `save_forward_arrays` requires string "
-                "formatter {src} within the string name"
-            )
 
         # Check if we can read in the models to disk prior to submitting jobs
         # this may exit the workflow if we get a read error
