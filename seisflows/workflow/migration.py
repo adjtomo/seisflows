@@ -154,7 +154,6 @@ class Migration(Forward):
             save_kernels = os.path.join(self.path.eval_grad, "kernels",
                                         self.solver.source_name, "")
 
-
         logger.info(f"running adjoint simulation for source "
                     f"{self.solver.source_name}")
 

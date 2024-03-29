@@ -901,7 +901,14 @@ class NoiseInversion(Inversion):
             for src in glob(os.path.join(adj_dir, "*")):
                 unix.ln(src, self.trace_path("adj"))
 
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels)
+            # Load the correct forward array connected with this force
+            # ! Make sure this matches the file naming convention in forward sim
+            load_forward_arrays = f"{self._force}_FWD_ARR"
+
+            super()._run_adjoint_simulation_single(
+                save_kernels=save_kernels, export_kernels=export_kernels,
+                load_forward_arrays=load_forward_arrays
+                )
 
     def _generate_empty_adjsrcs(self, components):
         """
