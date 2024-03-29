@@ -323,9 +323,13 @@ class NoiseInversion(Inversion):
                 self.path.eval_grad, "residuals",
                 f"residuals_{{src}}_{self.evaluation}_RT.txt"
                 )
-            self.evaluate_initial_misfit(save_residuals=save_residuals,
-                                         sum_residuals=False, **kwargs
-                                         )
+            # saves to `scratch/solver/{source_name}/E_FWD_ARR` or `N_FWD_ARR`
+            # ! Make sure this matches naming convention in adjoint simulations
+            save_forward_arrays = f"{self._force}_FWD_ARR"
+            self.evaluate_initial_misfit(
+                save_residuals=save_residuals, sum_residuals=False, 
+                save_forward_arrays=save_forward_arrays, **kwargs
+                )
         self._rename_preprocess_files(tag="RT")
 
     def run_rt_adjoint_simulations(self):
@@ -380,24 +384,7 @@ class NoiseInversion(Inversion):
         two adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
-        # Two adjoint simulations required per kernel T or R
-        for pair in ["ET", "NT", "ER", "NR"]:
-            self._force, self._cmpnt = pair
-
-            # Don't run a simulation if we don't need the kernels
-            if self._cmpnt not in self.kernels:
-                continue
-
-            # Intermediate state check to avoid rerunning all after failure
-            _state_check = f"run_rt_adjoint_simulations_{pair}"
-            if _state_check in self._states and bool(self._states[_state_check]):
-                continue
-
-            logger.info(f"running {self._force}{self._cmpnt} adjoint "
-                        f"simulation")
-            self.run_adjoint_simulations()
-            self._states[_state_check] = 1
-            self.checkpoint()
+        raise NotImplementedError
 
     def _rename_preprocess_files(self, tag):
         """

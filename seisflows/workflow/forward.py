@@ -356,8 +356,8 @@ class Forward:
         for src_ in glob(src):
             _copy_function(src_, dst)
 
-    def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
-                                save_forward_arrays=None, _preproc_only=False, 
+    def evaluate_initial_misfit(self, path_model=None, save_residuals=False,
+                                save_forward_arrays=False, _preproc_only=False, 
                                 **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
@@ -381,6 +381,13 @@ class Forward:
             each source. Remainder of string is some combination of the
             iteration, step count etc. Allows inheriting workflows to
             override this path if more specific file naming is required.
+        :type save_forward_arrays: str
+        :param save_forward_arrays: relative path (relative to 
+            /scratch/solver/<source_name>/<model_database>) to move the forward 
+            arrays which are used for adjoint simulations. Mainly used for 
+            ambient noise adjoint tomography which requires multiple forward 
+            simulations prior to adjoint simulations, putting forward arrays 
+            at the risk of overwrite. Normal Users can leave this default.
         :type _preproc_only: bool
         :param _preproc_only: a debug tool to ONLY run the preprocessing 
             contained in `evaluate_objective_function`, skipping over the 
@@ -401,6 +408,15 @@ class Forward:
             assert("{src}" in save_residuals), (
                 f"Workflow path `save_residuals` requires string formatter "
                 "{src} within the string name"
+            )
+        # Forward workflow may not have access to optimization module, so we 
+        # only tag residuals files with the source name
+        if save_forward_arrays:
+            # Require that `save_residuals` has an f-string formatter 'src' that
+            # allows each source process to write to its own file
+            assert("{src}" in save_forward_arrays), (
+                f"Workflow path `save_forward_arrays` requires string "
+                "formatter {src} within the string name"
             )
 
         # Check if we can read in the models to disk prior to submitting jobs
@@ -426,8 +442,9 @@ class Forward:
         else:
             run_list = [self.run_forward_simulations]
 
-        self.system.run(run_list, path_model=path_model,
-                        save_residuals=save_residuals,
+        self.system.run(run_list, path_model=path_model, 
+                        save_residuals=save_residuals, 
+                        save_forward_arrays=save_forward_arrays,
                         **kwargs
                         )
 
@@ -492,8 +509,8 @@ class Forward:
             _copy_function(src_, dst)
 
     def run_forward_simulations(self, path_model, save_traces=None,
-                                export_traces=None, flag_save_forward=None, 
-                                **kwargs):
+                                export_traces=None,  save_forward_arrays=False, 
+                                flag_save_forward=None, **kwargs):
         """
         Performs forward simulation through model saved in `path_model` for a
         single event. Upon successful completion of forward simulation,
@@ -526,10 +543,17 @@ class Forward:
             waveform data. Set parameter `export_traces` True in the parameter
             file to access this option. Overriding classes may re-direct
             synthetics by setting this variable.
+        :type save_forward_arrays: str
+        :param save_forward_arrays: relative path (relative to solver.cwd) to 
+            move the forward arrays which are used for adjoint simulations. 
+            Mainly used for  ambient noise adjoint tomography which requires 
+            multiple forward  simulations prior to adjoint simulations, putting 
+            forward arrays  at the risk of overwrite. Normal Users can leave 
+            this default.
         :type flag_save_forward: bool
-        :param flag_save_forward: whether to turn on the flag for saving the forward
-            arrays which are used for adjoint simulations. Not required if only
-            running forward simulations
+        :param flag_save_forward: whether to turn on the flag for saving the 
+            forward arrays which are used for adjoint simulations. Not required 
+            if only running forward simulations
         """
         logger.info(f"evaluating objective function for source "
                     f"{self.solver.source_name}")
@@ -557,16 +581,18 @@ class Forward:
 
         # Forward workflows do not require saving the large forward arrays
         # because the assumption is that we will not be running adj simulations
-        if save_forward is None:
+        if flag_save_forward is None:
             if self.__class__.__name__ == "Forward":
-                save_forward = False
+                flag_save_forward = False
+                save_forward_arrays = False
                 logger.info("'Forward' workflow, will not save forward array")
             else:
-                save_forward = True
+                flag_save_forward = True
 
         self.solver.forward_simulation(save_traces=save_traces,
                                        export_traces=export_traces, 
-                                       save_forward=save_forward
+                                       save_forward_arrays=save_forward_arrays,
+                                       flag_save_forward=flag_save_forward
                                        )
 
     def evaluate_objective_function(self, save_residuals=False, components=None,

@@ -583,6 +583,13 @@ class Specfem:
         :param export_traces: export traces from the scratch directory to a more
             permanent storage location. i.e., copy files from their original
             location
+        :type save_forward_arrays: str
+        :param save_forward_arrays: relative path (relative to 
+            /scratch/solver/<source_name>/<model_database>) to move the forward 
+            arrays which are used for adjoint simulations. Mainly used for 
+            ambient noise adjoint tomography which requires multiple forward 
+            simulations prior to adjoint simulations, putting forward arrays 
+            at the risk of overwrite. Normal Users can leave this default.
         :type flag_save_forward: bool
         :param flag_save_forward: whether to turn on the flag for saving the 
             forward arrays which are used for adjoint simulations. Not required 
@@ -635,6 +642,9 @@ class Specfem:
         # forward simulations are required prior to the adjoint simulation,
         # which would overwrite existing forward arrays
         if save_forward_arrays:
+            # scratch/solver/<source_name>/DATABASES_MPI/<save_forward_arrays>
+            save_forward_arrays = os.path.join(self.cwd, self.model_databases,
+                                               save_forward_arrays)
             if not os.path.exists(save_forward_arrays):
                 unix.mkdir(save_forward_arrays)
             for glob_key in [self.forward_array_wildcard, self.absorb_wildcard]:                                   
@@ -645,7 +655,8 @@ class Specfem:
         # only relevant for SPECFEM3D/3D_GLOBE, but will not throw errors for 2D
         if self.prune_scratch:
             logger.debug("removing '*.vt?' files from database directory")
-            unix.rm(glob(os.path.join(self.model_databases, "proc*_*.vt?")))
+            unix.rm(glob(os.path.join(self.model_databases, 
+                                      "proc??????_*.vt?")))
 
     def adjoint_simulation(self, executables=None, save_kernels=False,
                            export_kernels=False):
@@ -688,6 +699,31 @@ class Specfem:
 
         unix.rm("SEM")
         unix.ln("traces/adj", "SEM")
+
+        # Pre-load forward arrays if necessary
+        if load_forward_arrays:
+            # scratch/solver/<source_name>/<load_forward_arrays>
+            load_forward_arrays = os.path.join(self.solver.cwd, 
+                                               load_forward_arrays)
+            logger.info(f"loading forward arrays: from: {load_forward_arrays}")
+
+            # Few sanity checks to make sure something is actually loaded
+            if not os.path.exists(load_forward_arrays):
+                logger.critical(f"forward arrays not found:
+                                 {load_forward_arrays}")
+                sys.exit(-1)
+            if not glob(os.path.join(load_forward_arrays, "*")):
+                logger.critical(f"forward array's empty {load_forward_arrays}")
+                sys.exit(-1)
+            
+            # 'cp' command will OVERWRITE existing forward arrays in the dir.
+            for fwd_arr in glob(os.path.join(load_forward_arrays, "*")):
+                fid = os.path.basename(fwd_arr)
+                unix.cp(
+                    src=fwd_arr, dst=os.path.join(self.solver.cwd, 
+                                                  self.solver.model_databases, 
+                                                  fid)
+                                                  )
 
         # Calling subprocess.run() for each of the binary executables listed
         for exc in executables:
@@ -734,13 +770,15 @@ class Specfem:
         # SPECFEM3D. Will also remove `save_forward_arrays` to free up space
         # since we no longer need these
         if self.prune_scratch:                                                   
-            for glob_key in ["proc??????_absorb_field.bin",  # SPECFEM3D
-                             "proc??????_reg?_absorb_buffer.bin",  # 3D_GLOBE
-                             "proc??????_save_forward_array.bin",  # 3D_GLOBE
-                             ]: 
+            for glob_key in [self.forward_array_wildcard, self.absorb_wildcard]:
                 logger.debug(f"removing '{glob_key}' files from database "       
                              f"directory")                                       
                 unix.rm(glob(os.path.join(self.model_databases, glob_key)))
+
+            if load_forward_arrays:
+                logger.debug(f"removing loaded forward arrays: "
+                             f"{load_forward_arrays}")
+                unix.rm(load_forward_arrays)
 
     def _rename_kernel_parameters(self):
         """
