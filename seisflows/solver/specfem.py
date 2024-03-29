@@ -1055,7 +1055,8 @@ class Specfem:
         else:
             source_name = os.path.basename(cwd)
 
-        logger.debug(f"mkdir {source_name}")
+        _idx = self.source_names.index(source_name)
+        logger.debug(f"source {_idx}: {source_name}")
         # Starting from a fresh working directory
         unix.rm(cwd)
         unix.mkdir(cwd)

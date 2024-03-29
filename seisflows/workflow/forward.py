@@ -202,7 +202,8 @@ class Forward:
         Makes required path structure for the workflow, runs setup functions
         for all the required modules of this workflow.
         """
-        logger.info(f"running setup for '{self.__class__.__name__}' workflow")
+        logger.info("running setup for all modules")
+        logger.debug(f"workflow.{self.__class__.__name__}")
 
         # Create the desired directory structure
         for path in self.path.values():
@@ -213,8 +214,7 @@ class Forward:
         # Run setup() for each of the required modules
         for req_mod in self._required_modules:
             logger.debug(
-                f"running setup for module "
-                f"'{req_mod}.{self._modules[req_mod].__class__.__name__}'"
+                f"{req_mod}.{self._modules[req_mod].__class__.__name__}"
             )
             self._modules[req_mod].setup()
 
@@ -222,8 +222,7 @@ class Forward:
         for opt_mod in self._optional_modules:
             if self._modules[opt_mod] and opt_mod not in self._required_modules:
                 logger.debug(
-                    f"running setup for module "
-                    f"'{opt_mod}.{self._modules[opt_mod].__class__.__name__}'"
+                    f"{opt_mod}.{self._modules[opt_mod].__class__.__name__}"
                 )
                 self._modules[opt_mod].setup()
 

@@ -178,6 +178,15 @@ class NoiseInversion(Inversion):
         # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
 
         # TODO: Check that Par_file 'USE_FORCE_POINT_SOURCE' = .true.
+        use_force_point_source = \
+            getpar(key="USE_FORCE_POINT_SOURCE", 
+                   file=os.path.join(self.path.specfem_data, "Par_file"))[1]
+                   )
+
+        assert(model_type in self._available_model_types), (
+            f"SPECFEM Par_file parameter `model`='{model_type}' does not "
+            f"match acceptable model types: {self._available_model_types}"
+            )
 
     def setup(self):
         """Set up some required attributes for Noise Inversion"""
@@ -317,7 +326,7 @@ class NoiseInversion(Inversion):
 
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
-            logger.info(f"running misfit evaluation for: '{self._force}'")
+            logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             save_residuals = os.path.join(
                 self.path.eval_grad, "residuals",
@@ -1087,7 +1096,7 @@ class NoiseInversion(Inversion):
                 bool(self._states[_state_check]):
                 continue
 
-            logger.info(f"running misfit evaluation for: '{self._force}'")
+            logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             self.system.run(
                 [self.prepare_data_for_solver,
                  self.run_forward_simulations,
