@@ -291,12 +291,12 @@ class Forward:
             # Allow user to prematurely stop a workflow after a given task
             if self.stop_after and func.__name__ == self.stop_after:
                 logger.info(
-                    msg.mjr(f"stop workflow at `stop_after`: {self.stop_after}")
+                    msg.mjr(f"STOP WORKFLOW (`stop_after`={self.stop_after})")
                     )
                 break
 
         self.checkpoint()
-        logger.info(f"completed {n} tasks in requested task list successfully")
+        logger.info(f"completed {n} tasks from task list")
 
     def generate_synthetic_data(self, **kwargs):
         """

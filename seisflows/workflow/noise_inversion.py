@@ -320,7 +320,7 @@ class NoiseInversion(Inversion):
 
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
-            logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
+            logger.info(msg.sub(f"MISFIT EVALUATION FORCE '{self._force}'"))
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             save_residuals = os.path.join(
                 self.path.eval_grad, "residuals",
@@ -512,9 +512,7 @@ class NoiseInversion(Inversion):
             # IMPORTANT: The order of simulations matters here! E must be first
             # ==================================================================
             if self._force == "E":
-                logger.info("waiting for additional 'N' component forward "
-                            "simulation before proceeding with R/T "
-                            "preprocessing")
+                logger.info("waiting for 'N' forward simulation for processing")
                 return
 
             # This will generate RR and TT synthetics in `traces/syn` with

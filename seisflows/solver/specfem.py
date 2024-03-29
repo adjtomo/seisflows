@@ -620,9 +620,8 @@ class Specfem:
         # forward simulations are required prior to the adjoint simulation,
         # which would overwrite existing forward arrays
         if save_forward_arrays:
-            # scratch/solver/<source_name>/DATABASES_MPI/<save_forward_arrays>
-            save_forward_arrays = os.path.join(self.cwd, self.model_databases,
-                                               save_forward_arrays)
+            # scratch/solver/<source_name>/<save_forward_arrays>
+            save_forward_arrays = os.path.join(self.cwd, save_forward_arrays)
             if not os.path.exists(save_forward_arrays):
                 unix.mkdir(save_forward_arrays)
             for glob_key in [self._forward_array_wildcard, 
@@ -633,9 +632,11 @@ class Specfem:
         # Delete unncessary visualization files which may be large. This is 
         # only relevant for SPECFEM3D/3D_GLOBE, but will not throw errors for 2D
         if self.prune_scratch:
-            logger.debug("removing '*.vt?' files from database directory")
+            logger.debug("prune scratch: removing '*.vt?' files from database")
             unix.rm(glob(os.path.join(self.model_databases, 
                                       "proc??????_*.vt?")))
+
+        logger.info(f"FINISH FORWARD SIMULATION: '{self.source_name}'")
 
     def adjoint_simulation(self, save_kernels=False, export_kernels=False,
                            load_forward_arrays=False):
@@ -679,9 +680,8 @@ class Specfem:
         # Pre-load forward arrays if necessary
         if load_forward_arrays:
             # scratch/solver/<source_name>/<load_forward_arrays>
-            load_forward_arrays = os.path.join(self.solver.cwd, 
-                                               load_forward_arrays)
-            logger.info(f"loading forward arrays: from: {load_forward_arrays}")
+            load_forward_arrays = os.path.join(self.cwd, load_forward_arrays)
+            logger.info(f"loading forward arrays: '{load_forward_arrays}'")
 
             # Few sanity checks to make sure something is actually loaded
             if not os.path.exists(load_forward_arrays):
@@ -695,11 +695,10 @@ class Specfem:
             # 'cp' command will OVERWRITE existing forward arrays in the dir.
             for fwd_arr in glob(os.path.join(load_forward_arrays, "*")):
                 fid = os.path.basename(fwd_arr)
-                unix.cp(
-                    src=fwd_arr, dst=os.path.join(self.solver.cwd, 
-                                                  self.solver.model_databases, 
-                                                  fid)
-                                                  )
+                unix.cp(src=fwd_arr, dst=os.path.join(self.cwd, 
+                                                      self.model_databases, 
+                                                      fid)
+                        )
 
         # Calling subprocess.run() for each of the binary executables listed
         for exc in self._adj_simulation_executables:
@@ -748,14 +747,16 @@ class Specfem:
         if self.prune_scratch:                                                   
             for glob_key in [self._forward_array_wildcard, 
                              self._absorb_wildcard]:
-                logger.debug(f"removing '{glob_key}' files from database "       
-                             f"directory")                                       
+                logger.debug(f"prune scratch: removing '{glob_key}' files"
+                             f"from database ")                                  
                 unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
             if load_forward_arrays:
                 logger.debug(f"removing loaded forward arrays: "
                              f"{load_forward_arrays}")
                 unix.rm(load_forward_arrays)
+
+        logger.info(f"FINISH FORWARD SIMULATION: '{self.source_name}'")
 
     def _rename_kernel_parameters(self):
         """

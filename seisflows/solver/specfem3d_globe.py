@@ -146,8 +146,8 @@ class Specfem3DGlobe(Specfem):
         # Overwriting constants that will be referenced during simulations 
         self._fwd_simulation_executables = ["bin/xmeshfem3D", "bin/xspecfem3D"]
         self._adj_simulation_executables = ["bin/xspecfem3D"]
-        self._absorb_wildcard = "proc??????_absorb_field*"
-        self._forward_array_wildcard = "proc??????_reg?_absorb_buffer*"
+        self._absorb_wildcard = "proc??????_reg?_absorb_buffer*"
+        self._forward_array_wildcard = "proc??????_save_forward_arrays*"
 
         # Internally used parameters set by functions within class
         self._model_databases = None
