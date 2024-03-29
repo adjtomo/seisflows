@@ -87,7 +87,8 @@ class Specfem:
     Paths
     -----
     :type path_data: str
-    :param path_data: path to any externally stored data required by the solver
+    :param path_data: path to any externally stored waveform data required for 
+        data-synthetic comparison
     :type path_specfem_bin: str
     :param path_specfem_bin: path to SPECFEM bin/ directory which
         contains binary executables for running SPECFEM
@@ -677,8 +678,8 @@ class Specfem:
 
             # Few sanity checks to make sure something is actually loaded
             if not os.path.exists(load_forward_arrays):
-                logger.critical(f"forward arrays not found:
-                                 {load_forward_arrays}")
+                logger.critical(f"forward arrays not found: "
+                                f"{load_forward_arrays}")
                 sys.exit(-1)
             if not glob(os.path.join(load_forward_arrays, "*")):
                 logger.critical(f"forward array's empty {load_forward_arrays}")

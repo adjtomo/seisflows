@@ -108,7 +108,7 @@ class Forward:
             model_true=path_model_true,
             state_file=path_state_file or
                        os.path.join(workdir, "sfstate.txt"),
-            data=path_data or os.path.join(workdir, "data"),
+            data=path_data or os.path.join(workdir, "waveforms"),
         )
 
         self._required_modules = ["system", "solver"]
