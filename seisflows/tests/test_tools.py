@@ -9,6 +9,7 @@ from seisflows import ROOT_DIR
 from seisflows.tools.config import Dict
 from seisflows.tools.model import Model
 from seisflows.tools.config import custom_import
+from seisflows.tools.state import State
 
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -76,3 +77,61 @@ def test_custom_import():
     module = custom_import(name="preprocess", module="default")
     assert(module.__name__ == "Default")
     assert(module.__module__ == "seisflows.preprocess.default")
+    
+
+def test_state_arr_2_str():
+    """
+    Test the state checkpointing system conversion system for arrays to strings
+    with a few test cases
+    """
+    state = State()
+
+    # Check arr2str and str2arr functionality
+    arr = [0,1,1,1,0,0,0,1,1,0,1,1,1,1,0,0,0,0,1,1,0]
+    str_ = "0,4-6,9,14-17,20"
+    assert(state._arr_to_str(arr) == str_)
+    assert(state._str_to_arr(str_, ntasks=len(arr)) == arr)    
+
+    arr = [0] * 100
+    str_ = "0-99"
+    assert(state._arr_to_str(arr) == str_)
+    assert(state._str_to_arr(str_, ntasks=len(arr)) == arr)    
+
+    arr = [1] * 100
+    str_ = ""
+    assert(state._arr_to_str(arr) == str_)
+    assert(state._str_to_arr(str_, ntasks=len(arr)) == arr)    
+
+    arr = [0]
+    str_  = "0"
+    assert(state._arr_to_str(arr) == str_)
+    assert(state._str_to_arr(str_, ntasks=len(arr)) == arr)    
+
+    arr = [1]
+    str_ = ""
+    assert(state._arr_to_str(arr) == str_)
+    assert(state._str_to_arr(str_, ntasks=len(arr)) == arr)    
+
+
+def test_state_read_write_single(tmpdir):
+    """
+    Test the state checkpointing system for reading and writing to disk
+    """
+    state = State(path="/Users/chow/Work/scratch")
+    state("test_function", 10)
+    state("test_function_2", 33)
+    state("test_function_3", 1000)
+
+
+def test_state_done_single(tmpdir):
+    """
+    Test the Done feature of completing tasks
+    """
+    state = State(path=tmpdir)
+    state("test_function", 10)
+    import pdb;pdb.set_trace()
+
+    for val in [1]:
+        state.done("test_function", val)
+
+    

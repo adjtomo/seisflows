@@ -32,13 +32,19 @@ class State:
             checkpointed. should match the `system.ntasks` in SeisFlows 
         """
         self.fid = os.path.join(path, fid)
-        self.checkpoint = {}
         self._lock_file = os.path.join(path, lock_file)
+        # Written a the top of the state file and ignored by rest of class
+        self._header = {
+            "_header0": "=====================================================",
+            "_header1": "               SEISFLOWS STATE FILE",
+            "_header2": "empty strings signify that a task is COMPLETE",
+            "_header3": "numerical values signify INCOMPLETE tasks by TASK ID",
+            "_header4": "======================================================"
+            }
 
-        if not os.path.exists(self.fid):
-            self.save()
-        else:
-            self.checkpoint = self.load()
+        self.checkpoint = {}
+        if os.path.exists(self.fid):
+            self.load()
 
     def __call__(self, name, ntasks):
         """
@@ -46,16 +52,30 @@ class State:
         Workflow's only need to run a single function to either checkpoint,
         or retrieve checkpoint data
         """
-        # If tasks is compelte, then return True
+        # Ensure we are using the most up to date checkpoint
+        if os.path.exists(self.fid):
+            self.load(ntasks)
+
+        # If tasks is complete, then return True
         if self.check_complete(name):
-            return True
+            status = [1] * ntasks
         # Else, either set up the task or return tasks that need to be rerun
         else:
+            # Return array representation of tasks status
             if name in self.checkpoint:
-                return self.checkpoint[name]
+                status = self.checkpoint[name]
             else:
-                self.set_task(name, ntasks=ntasks)
-                return False
+                # Set a task which h
+                status = [0] * ntasks
+                self.checkpoint[name] = status
+                self.save()
+                
+        return self._arr_to_str(status)
+            
+    def reset(self):
+        """Reset the state file, usually for the next iteration"""
+        self.checkpoint = {}
+        self.save()
         
     def check_complete(self, name, taskid=None):
         """
@@ -78,11 +98,58 @@ class State:
         to this file at the same time, which would result in lost data from one
         of the processes
         """
+        # Convert the arrays in the checkpoint to string representation for
+        # better readability
+        _to_save = {}
+        # Add a header to data since JSON cannot have comments
+        for key, val in self._header.items():
+            _to_save[key] = val
+        # Convert all arrays to string representations
+        for key, val in self.checkpoint.items():
+            _to_save[key] = self._arr_to_str(val)
+        
         with open(self.fid, "w") as f:
-            json.dump(self.checkpoint, f, indent=4)
+            json.dump(_to_save, f, indent=4)
 
-    def run_with_lock(self, func, wait_time_s=1, failsafe_s=60, *args, 
-                      **kwargs):
+    def load(self, ntasks=None):
+        """Load the internal checkpoint from JSON file"""
+        with open(self.fid, "r") as f:
+            loaded_checkpoint = json.load(f)
+
+        # Convert the string representations back to arrays
+        self.checkpoint = {}
+        for key, val in loaded_checkpoint.items():
+            if key.startswith("_"):
+                continue
+            self.checkpoint[key] = self._str_to_arr(val, ntasks)
+
+    def done(self, name, taskid):
+        """
+        Update the status of a task to complete. The thought is that only 
+        complete jobs need to signify status change, else the status stays 0.
+        This must be run with lock because the chance is high that multiple 
+        sub tasks finish at the same time, so we need to ensure they are
+        updating one at a time and not all at once, otherwise only the fastest
+        task gets to write
+        """
+        def _complete_task():
+            """Procedure for an individual task to set its status to complete"""
+            self.load()
+            self.checkpoint[name][taskid] = 1
+            self.save()
+
+        self._run_with_lock(_complete_task)
+
+    def lock(self):
+        """Create a lock file to prevent other processes from working"""
+        os.open(self._lock_file, os.O_CREAT | os.O_EXCL)
+
+    def unlock(self):
+        """Remove the lock file, unlocking the State class to allow new procs"""
+        os.remove(self._lock_file)
+
+    def _run_with_lock(self, func, wait_time_s=1, failsafe_s=60, *args, 
+                        **kwargs):
         """
         Only attempt to do a task when access to a specific lock file is 
         granted. This prevents multiple parallel processes from trying to
@@ -105,37 +172,106 @@ class State:
         failsafe = 0
         while True:
             try:    
-                os.open(self._lockfile, os.O_CREAT | os.O_EXCL)
+                self.lock()
                 func(*args, **kwargs)
-                os.remove(self._lock_file)
+                self.unlock()
             except FileExistsError:
                 time.sleep(wait_time_s)
                 failsafe += wait_time_s
                 if failsafe > failsafe_s:
                     raise Exception("run with lock exceeded failsafe time")
 
-    def load(self):
-        """Load the internal checkpoint from JSON file"""
-        with open(self.fid, "r") as f:
-            return json.load(f)
+    @staticmethod
+    def _arr_to_str(arr, check_val=0):
+        """
+        Convert a list containing 1's and 0's, signifying complete and 
+        incomplete, to a string representation where all 0's are counted and
+        all 1's are not. The string is based on SLURM array representation,
+        where '-' represent spans, ',' separates individual tasks
 
-    def set_task(self, name, ntasks=1):
+        :type arr: list
+        :param arr: list of 1's and 0's
+        :type check_val: int
+        :param check_val: value that signifies a task is incomplete, default 0
+        :rtype: str
+        :return: string representation of the array `arr`
         """
-        Set up a new task with all sub-tasks set to incomplete. Tasks are
-        set where task ID corresponds to the index in the list, and the 
-        corresponding value is either 0 for incomplete/failed/running etc. or 1 
-        for complete/successful
-        """
-        self.checkpoint[name] = [0] * ntasks
-        self.save()
+        # Collect all indices for values of 0 which are incomplete
+        zero_indices = [idx for idx, val in enumerate(arr) if val == check_val]
 
-    def end_task(self, name, taskid):
-        """
-        Update the status of a task to complete. The thought is that only 
-        complete jobs need to signify status change, else the status stays 0
-        """
-        self.checkpoint[name][taskid] = 1
-        self.save()
+        # If None, that means all jobs are complete, return empty
+        if not zero_indices:
+            return ""
+        
+        # First zero value starts us off
+        str_out = str(zero_indices[0])
+        running = False  # keeps track of runs of 0s
+        # Index i tracks the previous index since we start incremeting at 1
+        for i, jdx in enumerate(zero_indices[1:]):
+            idx = zero_indices[i]
+            if jdx - idx == 1:
+                running = True
+                # Edge case for the end of the array
+                if jdx == zero_indices[-1]:
+                    str_out += f"-{jdx}"
+                continue
+            else:
+                if running:
+                    str_out += f"-{idx},{jdx}"
+                else:
+                    str_out += f",{jdx}"
+                running = False
 
+        return str_out
     
-    
+    @staticmethod
+    def _str_to_arr(str_, ntasks=None, check_val=0):
+        """
+        Convert a string representation of job status into a list of 1's and 0's
+        Keeping the total number of tasks in mind
+
+        E.g., "1-2,4-7,9,11-14" => [0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1]
+
+        :type str_: str
+        :param str_: string representation of array
+        :type ntasks: int
+        :param ntasks: number of tasks to expect and therefore the size of the
+            array returned, if None, will be determined by the max value in the 
+            `str_` which may not be correct
+        :type check_val: int
+        :param check_val: value that signifies a task is incomplete, default 0
+        :rtype: list
+        :return: list of 1's and 0's based on the string representation `str_`
+        """
+        # Opposite of check_val
+        other_val = 1 if check_val == 0 else 0
+
+        # Get default ntask by the max value, being careful that last val
+        # may be a run
+        if ntasks is None:
+            if str_ == "":
+                return []
+            
+            val = str_.split(",")[-1]
+            if "-" in val:
+                ntasks = int(val.split("-")[-1])
+            else:
+                ntasks = int(val)
+        else:
+            if str_ == "":
+                return [other_val] * (ntasks + 1)
+
+        arr = [other_val] * (ntasks)
+        for s in str_.split(","):
+            if "-" in s:
+                start, end = s.split("-")
+                for i in range(int(start), int(end)):
+                    arr[i] = check_val 
+            else:
+                try:
+                    arr[int(s)] = check_val
+                except IndexError:
+                    import pdb; pdb.set_trace()
+                
+        return arr
+
