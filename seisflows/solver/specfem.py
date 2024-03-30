@@ -685,9 +685,10 @@ class Specfem:
 
         # Pre-load forward arrays if necessary
         if load_forward_arrays:
+            logger.info(f"loading forward arrays: '{load_forward_arrays}'")
+            
             # scratch/solver/<source_name>/<load_forward_arrays>
             load_forward_arrays = os.path.join(self.cwd, load_forward_arrays)
-            logger.info(f"loading forward arrays: '{load_forward_arrays}'")
 
             # Few sanity checks to make sure something is actually loaded
             if not os.path.exists(load_forward_arrays):
