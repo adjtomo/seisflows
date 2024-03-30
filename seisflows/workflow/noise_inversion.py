@@ -371,25 +371,25 @@ class NoiseInversion(Inversion):
                 if cmpnt not in self.kernels:
                     continue
 
-                # Assign internal variables used for bookkeeping
-                self._force = force
-                self._cmpnt = cmpnt
-
                 # Intermediate state check to avoid rerunning all after failure
-                _state_check = f"run_rt_adjoint_simulations_{pair}"
+                _state_check = f"run_rt_adjoint_simulations_{force}{cmpnt}"
                 if _state_check in self._states and \
                                         bool(self._states[_state_check]):
                     continue
 
                 logger.info(
-                    msg.sub(f"ADJOINT SIMULATION {self._force}{self._cmpnt}")
+                    msg.sub(f"ADJOINT SIMULATION {force}{cmpnt}")
                     )
+
+                # Assign internal variables used for bookkeeping
+                self._force = force
+                self._cmpnt = cmpnt
 
                 # Fwd arrays will not be deleted until all simulations for a 
                 # given FORCE are finished, that is, when we run the T adj sims
                 self.run_adjoint_simulations(
                     load_forward_arrays=load_forward_arrays,
-                    del_forward_arrays=bool(self._cmpnt == "T")  # last index
+                    del_loaded_forward_arrays=bool(cmpnt == "T")  # last index
                 )
                 self._states[_state_check] = 1
                 self.checkpoint()
