@@ -1096,7 +1096,7 @@ class NoiseInversion(Inversion):
         # task usually fails due to timeout when `tasktime` is set for an 
         # adjoint simulation (tasktime=self.system.tasktime * 2)
         self.system.run([generate_event_kernels], single=True, 
-                        tasktime=self.system.tasktime)
+                        tasktime=self.system.tasktime * 4)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
