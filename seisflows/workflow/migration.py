@@ -326,7 +326,7 @@ class Migration(Forward):
         if self.export_gradient:
             logger.info("exporting gradient to disk")
             src = os.path.join(self.path.eval_grad, "gradient")
-            dst = os.path.join(self.solver.path._solver_output, "gradient")
+            dst = os.path.join(self.solver.path.output, "gradient")
             unix.cp(src, dst)
 
         # Last minute check to see if the gradient is 0. If so then the adjoint
