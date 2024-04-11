@@ -1119,6 +1119,10 @@ class NoiseInversion(Inversion):
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
 
+        logger.info(f"`m_try` model parameters for line search evaluation:")
+        self.solver.check_model_values(path=os.path.join(self.path.eval_func,
+                                                         "model"))
+
         # Determine which forward simulations we will need to run
         cfg = {}
         if "ZZ" in self.kernels:
