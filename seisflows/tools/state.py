@@ -18,7 +18,8 @@ class State:
     """
     Simple checkpointing system for completed tasks and sub-tasks
     """
-    def __init__(self, path="./", fid="sfstate.json", lock_file="sflock"):
+    def __init__(self, path="./", fid="sfstate.json", 
+                 lock_file="sflock"):
         """
         :type path: str
         :param path: path to save the checkpoint file and the lock file used
@@ -28,9 +29,6 @@ class State:
         :type ftype: str
         :param ftype: file type for checkpoint file, either 'npz' for NumPy
             npz file, or 'txt' for text file
-        :type ntasks: int
-        :param ntasks: number of tasks to expect for each function that is
-            checkpointed. should match the `system.ntasks` in SeisFlows 
         """
         self.fid = os.path.join(path, fid)
         self._lock_file = os.path.join(path, lock_file)
@@ -38,8 +36,8 @@ class State:
         self._header = {
             "_header0": "=====================================================",
             "_header1": "               SEISFLOWS STATE FILE",
-            "_header2": "empty strings signify that a task is COMPLETE",
-            "_header3": "numerical values signify INCOMPLETE tasks by TASK ID",
+            "_header2": "Empty strings signify COMPLETED tasks",
+            "_header3": "Numerical values signify INCOMPLETE tasks by TASK ID",
             "_header4": "======================================================"
             }
 
@@ -47,7 +45,7 @@ class State:
         if os.path.exists(self.fid):
             self.load()
 
-    def __call__(self, name, ntasks):
+    def __call__(self, name, ntasks=None):
         """
         Main function that contains all of the logic of the State class so that
         Workflow's only need to run a single function to either checkpoint,
@@ -55,7 +53,7 @@ class State:
         """
         # Ensure we are using the most up to date checkpoint
         if os.path.exists(self.fid):
-            self.load(ntasks)
+            self.load()
 
         # If tasks is complete, then return True
         if self.check_complete(name):
@@ -72,7 +70,18 @@ class State:
                 self.save()
                 
         return self._arr_to_str(status)
-            
+    
+    def __str__(self):
+        """Return the string representation of the checkpoint"""
+        _str_out = ""
+        if self.checkpoint:
+            _max_key = max([len(key) for key in self.checkpoint.keys()])
+            for i, (key, val) in enumerate(self.checkpoint.items()):
+                # e.g., " 1 test_function: 1-2,4-7,9,11-14\n"
+                _str_out += \
+                    f"{i:>2} {key:<{_max_key}}: {self._arr_to_str(val)}\n"
+        return _str_out
+                      
     def reset(self):
         """Reset the state file, usually for the next iteration"""
         self.checkpoint = {}
@@ -112,7 +121,7 @@ class State:
         with open(self.fid, "w") as f:
             json.dump(_to_save, f, indent=4)
 
-    def load(self, ntasks=None):
+    def load(self):
         """Load the internal checkpoint from JSON file"""
         with open(self.fid, "r") as f:
             loaded_checkpoint = json.load(f)
@@ -122,7 +131,7 @@ class State:
         for key, val in loaded_checkpoint.items():
             if key.startswith("_"):
                 continue
-            self.checkpoint[key] = self._str_to_arr(val, ntasks)
+            self.checkpoint[key] = self._str_to_arr(val)
 
     def done(self, name, taskid):
         """
@@ -140,14 +149,6 @@ class State:
             self.save()
 
         self._run_with_lock(_complete_task)
-
-    def lock(self):
-        """Create a lock file to prevent other processes from working"""
-        os.open(self._lock_file, os.O_CREAT | os.O_EXCL)
-
-    def unlock(self):
-        """Remove the lock file, unlocking the State class to allow new procs"""
-        os.remove(self._lock_file)
 
     def _run_with_lock(self, func, wait_time_s=1, failsafe_s=60, *args, 
                         **kwargs):
@@ -173,9 +174,9 @@ class State:
         failsafe = 0
         while True:
             try:    
-                self.lock()
+                os.open(self._lock_file, os.O_CREAT | os.O_EXCL)  # LOCK
                 func(*args, **kwargs)
-                self.unlock()
+                os.remove(self._lock_file)  # UNLOCK
             except FileExistsError:
                 time.sleep(wait_time_s)
                 failsafe += wait_time_s
@@ -244,6 +245,7 @@ class State:
         :rtype: list
         :return: list of 1's and 0's based on the string representation `str_`
         """
+
         # Opposite of check_val
         other_val = 1 if check_val == 0 else 0
 
@@ -257,9 +259,9 @@ class State:
             # Get `ntask` by finding the end of the range
             val = str_.split(",")[-1]
             if "-" in val:
-                ntasks = int(val.split("-")[-1])
+                ntasks = int(val.split("-")[-1]) + 1
             else:
-                ntasks = int(val)
+                ntasks = int(val) + 1
         else:
             # Special case for empty `str_` meaning all tasks are complete
             if str_ == "":
@@ -273,10 +275,7 @@ class State:
                 for i in range(int(start), int(end) + 1):
                     arr[i] = check_val 
             else:
-                try:
-                    arr[int(s)] = check_val
-                except IndexError:
-                    import pdb; pdb.set_trace()
+                arr[int(s)] = check_val
                 
         return arr
 

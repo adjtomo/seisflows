@@ -117,11 +117,13 @@ def test_state_read_write_single(tmpdir):
     """
     Test the state checkpointing system for reading and writing to disk
     """
-    state = State(path="/Users/chow/Work/scratch")
+    state = State(path=tmpdir)
     state("test_function", 10)
     state("test_function_2", 33)
     state("test_function_3", 1000)
-
+    assert(state("test_function") == "0-9")
+    assert(state("test_function_2") == "0-32")
+    assert(state("test_function_3") == "0-999")
 
 def test_state_done_single(tmpdir):
     """
