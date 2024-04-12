@@ -2,7 +2,8 @@
 A simple checkpointing system that is used for failure tolerance and seamless
 restarts during workflows. Keeps track of both function names and system task
 IDs so that functions which partially finish do not rerun already completed
-tasks when resuming
+tasks when resuming. Task IDs are tracked with special string notation that
+provides some level of compression for the state file.
 
 .. rubric::
 
@@ -247,25 +248,29 @@ class State:
         other_val = 1 if check_val == 0 else 0
 
         # Get default ntask by the max value, being careful that last val
-        # may be a run
+        # may be a run, and dealing with empty `str_` meaning all tasks complete
         if ntasks is None:
+            # Special case for empty `str_` meaning all tasks are complete, but
+            # since we don't know the number of tasks, we return an empty list
             if str_ == "":
                 return []
-            
+            # Get `ntask` by finding the end of the range
             val = str_.split(",")[-1]
             if "-" in val:
                 ntasks = int(val.split("-")[-1])
             else:
                 ntasks = int(val)
         else:
+            # Special case for empty `str_` meaning all tasks are complete
             if str_ == "":
-                return [other_val] * (ntasks + 1)
+                return [other_val] * ntasks 
 
+        # Loop through string representation to generate array
         arr = [other_val] * (ntasks)
         for s in str_.split(","):
             if "-" in s:
                 start, end = s.split("-")
-                for i in range(int(start), int(end)):
+                for i in range(int(start), int(end) + 1):
                     arr[i] = check_val 
             else:
                 try:
