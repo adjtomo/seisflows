@@ -8,7 +8,6 @@ of the scaffolding defined by the Forward class.
 import os
 import sys
 from glob import glob
-from time import asctime
 
 from seisflows import logger
 from seisflows.tools import msg, unix
