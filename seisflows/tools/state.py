@@ -5,6 +5,12 @@ IDs so that functions which partially finish do not rerun already completed
 tasks when resuming. Task IDs are tracked with special string notation that
 provides some level of compression for the state file.
 
+.. note::
+
+    This checkpointing system is not meant to be used for large scales, it has
+    been tested for up to 500 tasks but larger number of tasks may result in
+    file I/O issues
+
 .. rubric::
 
     state = State()
@@ -19,20 +25,21 @@ class State:
     """
     Simple checkpointing system for completed tasks and sub-tasks
     """
-    def __init__(self, path="./", fid="sfstate.json", 
-                 lock_file="sflock"):
+    def __init__(self, fid="sfstate.json", lock_file=".sflock"):
         """
-        :type path: str
-        :param path: path to save the checkpoint file and the lock file used
-            to make sure multiple processes do not write to the same file
         :type fid: str
-        :param fid: file identifier for checkpoint file. filename only
-        :type ftype: str
-        :param ftype: file type for checkpoint file, either 'npz' for NumPy
-            npz file, or 'txt' for text file
+        :param fid: full path and filename used to save the checkpoint file.
+            File should have the file extension .json. The path to this file 
+            will be used to save the lock file
+        :type lock_file: str
+        :param lock_file: filename used to create a lock file to ensure that
+            only one process can write to the state file at a time. This file
+            will be created in the same directory as `fid`
         """
-        self.fid = os.path.join(path, fid)
-        self._lock_file = os.path.join(path, lock_file)
+        self.fid = os.path.abspath(fid)
+        _path = os.path.dirname(self.fid)
+
+        self._lock_file = os.path.join(_path, lock_file)
         # Written a the top of the state file and ignored by rest of class
         self._header = {
             "_header0": "=====================================================",
@@ -45,33 +52,7 @@ class State:
         self.checkpoint = {}
         if os.path.exists(self.fid):
             self.load()
-
-    def __call__(self, name, ntasks):
-        """
-        Main function that contains all of the logic of the State class so that
-        Workflow's only need to run a single function to either checkpoint,
-        or retrieve checkpoint data
-        """
-        # Ensure we are using the most up to date checkpoint
-        if os.path.exists(self.fid):
-            self.load()
-
-        # If tasks is complete, then return True
-        if self.check_complete(name):
-            status = [1] * ntasks
-        # Else, either set up the task or return tasks that need to be rerun
-        else:
-            # Return array representation of tasks status
-            if name in self.checkpoint:
-                status = self.checkpoint[name]
-            else:
-                # Set a task which h
-                status = [0] * ntasks
-                self.checkpoint[name] = status
-                self.save()
-                
-        return self._arr_to_str(status)
-    
+        
     def __str__(self):
         """Return the string representation of the checkpoint"""
         _str_out = ""
@@ -82,25 +63,57 @@ class State:
                 _str_out += \
                     f"{i:>2} {key:<{_max_key}}: {self._arr_to_str(val)}\n"
         return _str_out
-                      
-    def reset(self):
-        """Reset the state file, usually for the next iteration"""
-        self.checkpoint = {}
+    
+    def stage(self, name, ntasks):
+        """
+        Stage a state by inputting its name and the number of tasks that that
+        state needs to complete. If the state already exists, then nothing
+        will happen. In order to overwrite states, use the `reset` method
+        """
+        # Ensure we are using the most up to date checkpoint
+        if os.path.exists(self.fid):
+            self.load()
+
+        if name not in self.checkpoint:
+            self.checkpoint[name] = [0] * ntasks  # All tasks incomplete
+            self.save()
+                    
+    def complete(self, name, taskid=None):
+        """
+        Update the status of a task to complete. The thought is that only 
+        complete jobs need to signify status change, else the status stays 0.
+        This must be run with lock because the chance is high that multiple 
+        sub tasks finish at the same time, so we need to ensure they are
+        updating one at a time and not all at once, otherwise only the fastest
+        task gets to write
+        """
+        if taskid is None:
+            self.checkpoint[name] = 1
+        else:
+            def _complete_task():
+                """Procedure for an individual task to set its status to 
+                complete"""
+                self.load()
+                self.checkpoint[name][taskid] = 1
+
+            self._run_with_lock(_complete_task)
         self.save()
         
-    def check_complete(self, name, taskid=None):
+    def check_complete(self, name):
         """
         Check if a task or specific task_id is complete. Return True if task
         is complete, False in all other cases
         """
         is_complete = False
         if name in self.checkpoint:
-            if taskid:
-                is_complete = self.checkpoint[name][taskid] == 1
-            else:
-                is_complete = all(i == 1 for i in self.checkpoint[name])
+            is_complete = all(i == 1 for i in self.checkpoint[name])
 
         return is_complete
+    
+    def reset(self):
+        """Reset the state file, usually for the next iteration"""
+        self.checkpoint = {}
+        self.save()
 
     def save(self):
         """
@@ -134,23 +147,6 @@ class State:
                 continue
             self.checkpoint[key] = self._str_to_arr(val)
 
-    def done(self, name, taskid):
-        """
-        Update the status of a task to complete. The thought is that only 
-        complete jobs need to signify status change, else the status stays 0.
-        This must be run with lock because the chance is high that multiple 
-        sub tasks finish at the same time, so we need to ensure they are
-        updating one at a time and not all at once, otherwise only the fastest
-        task gets to write
-        """
-        def _complete_task():
-            """Procedure for an individual task to set its status to complete"""
-            self.load()
-            self.checkpoint[name][taskid] = 1
-            self.save()
-
-        self._run_with_lock(_complete_task)
-
     def _run_with_lock(self, func, wait_time_s=0.01, failsafe_s=10, *args, 
                         **kwargs):
         """
@@ -180,9 +176,10 @@ class State:
         except FileExistsError:
             time.sleep(wait_time_s)
             failsafe += wait_time_s
-            self._run_with_lock(func, wait_time_s, failsafe_s, *args, **kwargs)
             if failsafe > failsafe_s:
                 raise Exception("run with lock exceeded failsafe time")
+            self._run_with_lock(func, wait_time_s, failsafe_s, *args, **kwargs)
+
 
     @staticmethod
     def _arr_to_str(arr, check_val=0):

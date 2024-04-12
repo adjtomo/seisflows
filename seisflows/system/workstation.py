@@ -15,6 +15,8 @@ from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.config import Dict, import_seisflows
 from seisflows.tools.config import copy_file, set_task_id
+from seisflows.tools.state import State
+
 
 
 class Workstation:
@@ -84,7 +86,7 @@ class Workstation:
                  array=None, rerun=0, log_level="DEBUG", verbose=False, 
                  workdir=os.getcwd(), path_output=None, path_system=None, 
                  path_par_file=None, path_output_log=None, path_log_files=None, 
-                 **kwargs):
+                 path_state_file=None, **kwargs):
         """
         Workstation System Class Parameters
 
@@ -100,6 +102,10 @@ class Workstation:
             Results and exported scratch files are saved here.
         :type path_system: str
         :param path_system: scratch path to save any system related files
+        :type path_state_file: str
+        :param path_state_file: path to a text file used to track the current
+            status of a workflow (i.e., what functions have already been completed),
+            used for checkpointing and resuming workflows
         """
         self.ntask = ntask
         self.nproc = nproc
@@ -115,11 +121,15 @@ class Workstation:
             workdir=workdir or os.getcwd(),
             scratch=path_system or os.path.join(workdir, "scratch", "system"),
             par_file=path_par_file or os.path.join(workdir, "parameters.yaml"),
+            state_file=path_state_file or os.path.join(workdir, "sfstate.json"),
             output=path_output or os.path.join(workdir, "output"),
             log_files=path_log_files or os.path.join(workdir, "logs"),
             output_log=path_output_log or os.path.join(workdir, "sflog.txt"),
         )
-        self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
+        self._acceptable_log_levels = ["CRITICAL", "WARNING", "INFO", "DEBUG"]        
+
+        # Generate a State file that is used to keep track of progress
+        self._state = State(fid=self.path.state_file)
 
     def check(self):
         """

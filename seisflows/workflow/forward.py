@@ -13,6 +13,7 @@ from time import asctime
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
+from seisflows.tools.state import State
 
 
 class Forward:
@@ -107,21 +108,15 @@ class Forward:
             model_init=path_model_init,
             model_true=path_model_true,
             state_file=path_state_file or
-                       os.path.join(workdir, "sfstate.txt"),
+                       os.path.join(workdir, "sfstate.json"),
             data=path_data or os.path.join(workdir, "waveforms"),
         )
 
         self._required_modules = ["system", "solver"]
         self._optional_modules = ["preprocess"]
 
-        # Read in any existing state file which keeps track of workflow tasks
-        self._states = {task.__name__: 0 for task in self.task_list}
-        if os.path.exists(self.path.state_file):
-            for line in open(self.path.state_file, "r").readlines():
-                if line.startswith("#"):
-                    continue
-                key, val = line.strip().split(":")
-                self._states[key] = int(val.strip())
+        # Generate a State file that is used to keep track of progress
+        self._state = State(fid=self.path.state_file)
 
     @property
     def task_list(self):
@@ -226,39 +221,11 @@ class Forward:
                 )
                 self._modules[opt_mod].setup()
 
-        # Generate the state file to keep track of task completion
-        if not os.path.exists(self.path.state_file):
-            with open(self.path.state_file, "w") as f:
-                f.write(f"# SeisFlows State File\n")
-                f.write(f"# {asctime()}\n")
-                f.write(f"#'1: complete', '0: pending', '-1: failed'\n")
-                f.write(f"# ========================================\n")
-
         # Distribute modules to the class namespace. We don't do this at init
         # incase _modules was set as NoneType
         self.solver = self._modules.solver  # NOQA
         self.system = self._modules.system  # NOQA
         self.preprocess = self._modules.preprocess  # NOQA
-
-    def checkpoint(self):
-        """
-        Saves active SeisFlows working state to disk as a text files such that
-        the workflow can be resumed following a crash, pause or termination of
-        workflow.
-        """
-        logger.debug("checkpointing workflow to seisflows state file")
-
-        # Grab State file header values
-        with open(self.path.state_file, "r") as f:
-            lines = f.readlines()
-
-        with open(self.path.state_file, "w") as f:
-            # Rewrite header values
-            for line in lines:
-                if line.startswith("#"):
-                    f.write(line)
-            for key, val in self._states.items():
-                f.write(f"{key}: {val}\n")
 
     def run(self):
         """
@@ -266,37 +233,37 @@ class Forward:
         to keep track of completed tasks and avoids re-running tasks that have
         previously been completed (e.g., if you are restarting your workflow)
         """
-        n = 0  # To keep track of number of tasks completed
         for func in self.task_list:
+            funcname = func.__name__
+
             # Skip over functions which have already been completed
-            if (func.__name__ in self._states.keys()) and (
-                    self._states[func.__name__] == 1):  # completed
-                logger.info(f"'{func.__name__}' has already been run, skipping")
+            if self._state.check_complete(funcname):
+                logger.info(f"'{funcname}' has already been run, skipping")
                 continue
-            # Otherwise attempt to run functions that have failed or are
-            # encountered for the first time
+            # Run main workflow functions
             else:
                 try:
                     # Print called func name, e.g., test_func -> TEST FUNC
-                    _log_name = func.__name__.replace("_", " ").upper()
+                    _log_name = funcname.replace("_", " ").upper()
                     logger.info(msg.mnr(_log_name))
+
+                    # Input the function into the State file to keep track of it
+                    self._state.stage(name=funcname, ntasks=1)
+
+                    # Run the main workflow function
                     func()
-                    n += 1
-                    self._states[func.__name__] = 1  # completed
-                    self.checkpoint()
+
+                    # Complete the task in the state file
+                    self._states.complete(name=funcname)
+                # Any error in the function will trigger an exception
                 except Exception as e:
-                    self._states[func.__name__] = -1  # failed
-                    self.checkpoint()
                     raise
             # Allow user to prematurely stop a workflow after a given task
-            if self.stop_after and func.__name__ == self.stop_after:
+            if self.stop_after and funcname == self.stop_after:
                 logger.info(
                     msg.mjr(f"STOP WORKFLOW (`stop_after`={self.stop_after})")
                     )
                 break
-
-        self.checkpoint()
-        logger.info(f"completed {n} tasks from task list")
 
     def generate_synthetic_data(self, **kwargs):
         """
