@@ -127,13 +127,28 @@ def test_state_read_write_single(tmpdir):
 
 def test_state_done_single(tmpdir):
     """
-    Test the Done feature of completing tasks
+    Test the Done feature of completing tasks one by one
     """
     state = State(path=tmpdir)
     state("test_function", 10)
-    import pdb;pdb.set_trace()
 
-    for val in [1]:
+    for val in [1, 3, 6, 7, 9]:
         state.done("test_function", val)
+    assert(state("test_function") == "0,2,4-5,8")
 
+def test_state_done_parallel(tmpdir):
+    """
+    Test the lock file capabilities by completing tasks in parallel with
+    concurrent futures to mimic a parallel environment
+    """
+    from concurrent.futures import ProcessPoolExecutor, wait
+
+    state = State(path=tmpdir)
+    state("test_function", 1000)
+
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(state.done, "test_function", i) 
+                   for i in range(0, 1000)]
+    wait(futures)
     
+    assert(state("test_function", 1000) == "")

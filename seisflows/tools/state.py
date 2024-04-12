@@ -14,6 +14,7 @@ import os
 import json
 import time
 
+
 class State:
     """
     Simple checkpointing system for completed tasks and sub-tasks
@@ -45,7 +46,7 @@ class State:
         if os.path.exists(self.fid):
             self.load()
 
-    def __call__(self, name, ntasks=None):
+    def __call__(self, name, ntasks):
         """
         Main function that contains all of the logic of the State class so that
         Workflow's only need to run a single function to either checkpoint,
@@ -150,7 +151,7 @@ class State:
 
         self._run_with_lock(_complete_task)
 
-    def _run_with_lock(self, func, wait_time_s=1, failsafe_s=60, *args, 
+    def _run_with_lock(self, func, wait_time_s=0.01, failsafe_s=10, *args, 
                         **kwargs):
         """
         Only attempt to do a task when access to a specific lock file is 
@@ -172,16 +173,16 @@ class State:
             if the lock file cannot be accessed
         """
         failsafe = 0
-        while True:
-            try:    
-                os.open(self._lock_file, os.O_CREAT | os.O_EXCL)  # LOCK
-                func(*args, **kwargs)
-                os.remove(self._lock_file)  # UNLOCK
-            except FileExistsError:
-                time.sleep(wait_time_s)
-                failsafe += wait_time_s
-                if failsafe > failsafe_s:
-                    raise Exception("run with lock exceeded failsafe time")
+        try:    
+            os.open(self._lock_file, os.O_CREAT | os.O_EXCL)  # LOCK
+            func(*args, **kwargs)
+            os.remove(self._lock_file)  # UNLOCK
+        except FileExistsError:
+            time.sleep(wait_time_s)
+            failsafe += wait_time_s
+            self._run_with_lock(func, wait_time_s, failsafe_s, *args, **kwargs)
+            if failsafe > failsafe_s:
+                raise Exception("run with lock exceeded failsafe time")
 
     @staticmethod
     def _arr_to_str(arr, check_val=0):
@@ -245,7 +246,6 @@ class State:
         :rtype: list
         :return: list of 1's and 0's based on the string representation `str_`
         """
-
         # Opposite of check_val
         other_val = 1 if check_val == 0 else 0
 
