@@ -46,7 +46,7 @@ class State:
             "_header1": "               SEISFLOWS STATE FILE",
             "_header2": "Empty strings signify COMPLETED tasks",
             "_header3": "Numerical values signify INCOMPLETE tasks by TASK ID",
-            "_header4": "======================================================"
+            "_header4": "====================================================="
             }
 
         self.checkpoint = {}
@@ -58,10 +58,12 @@ class State:
         _str_out = ""
         if self.checkpoint:
             _max_key = max([len(key) for key in self.checkpoint.keys()])
+            _str_out += f"idx {'state':^{_max_key}}  tasks\n"
+            _str_out += f"{'=' * len(_str_out)}\n"
             for i, (key, val) in enumerate(self.checkpoint.items()):
                 # e.g., " 1 test_function: 1-2,4-7,9,11-14\n"
                 _str_out += \
-                    f"{i:>2} {key:<{_max_key}}: {self._arr_to_str(val)}\n"
+                    f"{i:<3} {key:<{_max_key}}  {self._arr_to_str(val)}\n"
         return _str_out
     
     def stage(self, name, ntasks):
@@ -77,6 +79,17 @@ class State:
         if name not in self.checkpoint:
             self.checkpoint[name] = [0] * ntasks  # All tasks incomplete
             self.save()
+
+    def get(self, name):
+        """
+        Get the status of a specific state by name. If the state does not exist,
+        return None
+        """
+        self.load()
+        if name in self.checkpoint:
+            return self._arr_to_str(self.checkpoint[name])
+        else:
+            return None
                     
     def complete(self, name, taskid=None):
         """
@@ -87,17 +100,24 @@ class State:
         updating one at a time and not all at once, otherwise only the fastest
         task gets to write
         """
+        # If no task id is given, complete ALL tasks for the given state
         if taskid is None:
-            self.checkpoint[name] = 1
+            self.checkpoint[name] = [1] * len(self.checkpoint[name])
+            self.save()
+        # If a single taskid is given, complete just that task id. Run with
+        # lock file because this may be called by multiple processes at once
         else:
             def _complete_task():
                 """Procedure for an individual task to set its status to 
                 complete"""
                 self.load()
-                self.checkpoint[name][taskid] = 1
+                try:
+                    self.checkpoint[name][taskid] = 1
+                except IndexError:
+                    import pdb;pdb.set_trace()
+                self.save()
 
             self._run_with_lock(_complete_task)
-        self.save()
         
     def check_complete(self, name):
         """
@@ -147,6 +167,15 @@ class State:
                 continue
             self.checkpoint[key] = self._str_to_arr(val)
 
+    def lock(self):
+        """Create a lock file to prevent multiple processes from writing to
+        the state file at the same time"""
+        os.open(self._lock_file, os.O_CREAT | os.O_EXCL)  # LOCK
+    
+    def unlock(self):
+        """Remove the lock file to allow other processes to write"""
+        os.remove(self._lock_file)
+
     def _run_with_lock(self, func, wait_time_s=0.01, failsafe_s=10, *args, 
                         **kwargs):
         """
@@ -170,9 +199,9 @@ class State:
         """
         failsafe = 0
         try:    
-            os.open(self._lock_file, os.O_CREAT | os.O_EXCL)  # LOCK
+            self.lock()
             func(*args, **kwargs)
-            os.remove(self._lock_file)  # UNLOCK
+            self.unlock()
         except FileExistsError:
             time.sleep(wait_time_s)
             failsafe += wait_time_s

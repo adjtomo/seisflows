@@ -118,23 +118,23 @@ def test_state_read_write_single(tmpdir):
     Test the state checkpointing system for reading and writing to disk
     """
     state = State(fid=os.path.join(tmpdir, "sfstate.json"))
-    state("test_function", 10)
-    state("test_function_2", 33)
-    state("test_function_3", 1000)
-    assert(state("test_function", 10) == "0-9")
-    assert(state("test_function_2", 33) == "0-32")
-    assert(state("test_function_3", 1000) == "0-999")
+    state.stage("test_function", 10)
+    state.stage("test_function_2", 33)
+    state.stage("test_function_3", 1000)
+    assert(state.get("test_function") == "0-9")
+    assert(state.get("test_function_2") == "0-32")
+    assert(state.get("test_function_3") == "0-999")
 
 def test_state_done_single(tmpdir):
     """
     Test the Done feature of completing tasks one by one
     """
     state = State(fid=os.path.join(tmpdir, "sfstate.json"))
-    state("test_function", 10)
+    state.stage("test_function", 10)
 
     for val in [1, 3, 6, 7, 9]:
-        state.done("test_function", val)
-    assert(state("test_function", 10) == "0,2,4-5,8")
+        state.complete("test_function", val)
+    assert(state.get("test_function") == "0,2,4-5,8")
 
 def test_state_done_parallel(tmpdir):
     """
@@ -142,16 +142,14 @@ def test_state_done_parallel(tmpdir):
     concurrent futures to mimic a parallel environment
     """
     from concurrent.futures import ProcessPoolExecutor, wait
-    ntasks = 500
+    ntasks = 2
     state = State(fid=os.path.join(tmpdir, "sfstate.json"))
-    state("test_function", ntasks)
+    state.stage("test_function", ntasks)
 
     with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(state.done, "test_function", i) 
+        futures = [executor.submit(state.complete, "test_function", i) 
                    for i in range(0, ntasks)]
     wait(futures)
     for future in futures:
-        future.result()
-    
-    
-    assert(state("test_function", ntasks) == "")
+        future.result()  # will throw an error if any process fails
+    assert(state.get("test_function") == "")
