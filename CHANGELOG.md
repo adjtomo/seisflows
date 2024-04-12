@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v3.1.0 (#208)
+Bugfix NoiseInversion Workflow 
+- Solver executables for each version of SPECFEM (2D/3D/3D_GLOBE) are now defined as internal variables in `__init__` rather than at the top of each corresponding function, making it clearer and easier to overwrite 
+- Solver now defines filename wildcards for requisite forward array files that are used for adjoint simulations. These are used to save forward arrays during noise inversion workflow
+- Solver.forward_simulation() now has new parameter `save_forward_arrays` that User can use to specify location to save arrays relative to the solver working directory. Should not be required for other workflows
+- Solver.adjoint_simulation() now has the ability to `load_forward_arrays` by specifying path which should correspond to the forward simulation save_forward_arrays parameter. 
+- Solver.adjoint_simulation() has the ability to `del_loaded_forward_arrays` to free up memory after adjoint simulation completes successfully
+- API Change: default `data` directory changed to `waveforms` to avoid confusion with SPECFEM DATA/ directory and SeisFlows DATA/ directory. This is where pre-existing waveform data are to be saved, or where target model synthetics are saved
+- Workflow.NoiseInversion class new check for correct SPECFEM parameter for using force solution
+- Work In Progress: Started writing machinery for generating combined adjoint kernel but this is incomplete and will throw a NotImplementedError
+- Modified some of the log messages for brevity or to stand out more in the main log file
+- Preprocess modules now log a 'completed' statement to make it clear that the process has finished successfully
+
 ## v3.0.2 (#204)
 System Wisteria GPU Upgrades
 
