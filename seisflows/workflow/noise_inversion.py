@@ -114,7 +114,8 @@ class NoiseInversion(Inversion):
 
         Example inputs would be 'ZZ' or 'ZZ,TT' or 'ZZ,TT,RR'. Case insensitive
     :type separate_rt_kernels: bool
-    :param separate_rt_kernels: if True, generate separate kernels for RR and TT
+    :param separate_rt_kernels: >>> WORK IN PROGRESS, MUST BE SET TRUE <<<
+        if True, generate separate kernels for RR and TT
         which requires 4 adjoint simulations (ER, ET, NR, NT). If False, mix 
         RR and TT kernel generation for computional efficiency, requiring only 
         2 adjoint simulations (ER+NR, ET+NT), but losing the ability to look at 
