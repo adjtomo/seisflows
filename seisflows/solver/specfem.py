@@ -640,7 +640,7 @@ class Specfem:
 
     def adjoint_simulation(self, save_kernels=False, export_kernels=False,
                            load_forward_arrays=False, 
-                           del_loaded_forward_arrays=False):
+                           del_loaded_forward_arrays=False, **kwargs):
         """
         Wrapper for SPECFEM binary 'xspecfem?D'
 

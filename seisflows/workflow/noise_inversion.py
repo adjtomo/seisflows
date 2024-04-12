@@ -114,7 +114,8 @@ class NoiseInversion(Inversion):
 
         Example inputs would be 'ZZ' or 'ZZ,TT' or 'ZZ,TT,RR'. Case insensitive
     :type separate_rt_kernels: bool
-    :param separate_rt_kernels: if True, generate separate kernels for RR and TT
+    :param separate_rt_kernels: >>> WORK IN PROGRESS, MUST BE SET TRUE <<<
+        if True, generate separate kernels for RR and TT
         which requires 4 adjoint simulations (ER, ET, NR, NT). If False, mix 
         RR and TT kernel generation for computional efficiency, requiring only 
         2 adjoint simulations (ER+NR, ET+NT), but losing the ability to look at 
@@ -128,7 +129,7 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
-    def __init__(self, kernels="ZZ", separate_rt_kernels=False,
+    def __init__(self, kernels="ZZ", separate_rt_kernels=True,
                  **kwargs):
         """
         Initialization of the Noise Inversion Workflow module
@@ -397,7 +398,7 @@ class NoiseInversion(Inversion):
     def _run_rt_adjoint_simulations_combined(self):
         """
         Run adjoint solver for each kernel RR and TT (if requested) by running
-        two adjoint simulations (E and N) per kernel with the appropriate
+        one adjoint simulations (E and N) per kernel with the appropriate
         saved E and N forward arrays.
         """
         raise NotImplementedError
@@ -1066,7 +1067,7 @@ class NoiseInversion(Inversion):
         # task usually fails due to timeout when `tasktime` is set for an 
         # adjoint simulation (tasktime=self.system.tasktime * 2)
         self.system.run([generate_event_kernels], single=True, 
-                        tasktime=self.system.tasktime)
+                        tasktime=self.system.tasktime * 1)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
@@ -1088,6 +1089,10 @@ class NoiseInversion(Inversion):
         """
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
+
+        logger.info(f"`m_try` model parameters for line search evaluation:")
+        self.solver.check_model_values(path=os.path.join(self.path.eval_func,
+                                                         "model"))
 
         # Determine which forward simulations we will need to run
         cfg = {}
