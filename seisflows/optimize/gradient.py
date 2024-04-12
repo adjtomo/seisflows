@@ -292,7 +292,7 @@ class Gradient:
             self._line_search.step_len_max = float(dict_in["step_len_max"])
             self._line_search.iteridx = list(dict_in["iteridx"])
         else:
-            logger.info("no optimization checkpoint found, assuming first run")
+            logger.info("no optimization checkpoint file, assume 1st iteration")
             self.checkpoint()
 
     def _precondition(self, q):

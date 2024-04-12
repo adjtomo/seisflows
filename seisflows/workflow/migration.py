@@ -125,6 +125,11 @@ class Migration(Forward):
             Must be run by system.run() so that solvers are assigned
             individual task ids/working directories.
 
+        .. note:: 
+
+            see solver.specfem.adjoint_simulation() for full 
+            detailed list of input parameters
+
         :type save_kernels: str
         :param save_kernels: path to a directory where kernels created by the 
             adjoint simulation are moved to for further use in the workflow
@@ -153,7 +158,8 @@ class Migration(Forward):
         # Run adjoint simulations on system. Make kernels discoverable in
         # path `eval_grad`. Optionally export those kernels
         self.solver.adjoint_simulation(save_kernels=save_kernels,
-                                       export_kernels=export_kernels)
+                                       export_kernels=export_kernels,
+                                       **kwargs)
 
     def postprocess_event_kernels(self):
         """

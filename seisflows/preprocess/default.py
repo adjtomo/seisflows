@@ -447,6 +447,8 @@ class Default:
                 unix.mkdir(export_residuals)
                 unix.cp(src=save_residuals, dst=export_residuals)
 
+        logger.info(f"FINISH QUANTIFY MISFIT: {source_name}")
+
     def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
                                components=None):
         """

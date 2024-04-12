@@ -408,6 +408,8 @@ class Pyaflowa:
         # Collect all temp log files into a single log file
         self._finalize_logging(config, total_windows, total_misfit)
 
+        logger.info(f"FINISH QUANTIFY MISFIT: {source_name}")
+
     def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
                                components=None):
         """

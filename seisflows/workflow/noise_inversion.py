@@ -73,7 +73,7 @@ from obspy import Stream
 from seisflows import logger
 from seisflows.tools import unix, msg
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
-from seisflows.tools.specfem import (rename_as_adjoint_source, 
+from seisflows.tools.specfem import (rename_as_adjoint_source, getpar,
                                      get_src_rcv_lookup_table)
 from seisflows.preprocess.default import read, write
 from seisflows.workflow.inversion import Inversion
@@ -113,6 +113,14 @@ class NoiseInversion(Inversion):
         steps laid out in Wang et al. (2019) and outlined below:
 
         Example inputs would be 'ZZ' or 'ZZ,TT' or 'ZZ,TT,RR'. Case insensitive
+    :type separate_rt_kernels: bool
+    :param separate_rt_kernels: >>> WORK IN PROGRESS, MUST BE SET TRUE <<<
+        if True, generate separate kernels for RR and TT
+        which requires 4 adjoint simulations (ER, ET, NR, NT). If False, mix 
+        RR and TT kernel generation for computional efficiency, requiring only 
+        2 adjoint simulations (ER+NR, ET+NT), but losing the ability to look at 
+        RR and TT kernels separately. Default is False with the assumption that 
+        the User only cares about the sum and not the individual kernels. 
 
     Paths
     -----
@@ -121,13 +129,15 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
-    def __init__(self, kernels="ZZ", **kwargs):
+    def __init__(self, kernels="ZZ", separate_rt_kernels=True,
+                 **kwargs):
         """
         Initialization of the Noise Inversion Workflow module
         """
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
+        self.separate_rt_kernels = separate_rt_kernels
 
         # Internal variables control behavior of spawned jobs. These should not
         # be set by the User, they are set by main processing functions here.
@@ -164,11 +174,14 @@ class NoiseInversion(Inversion):
         assert(set(self.kernels.split(",")).issubset(acceptable_kernels)), \
             f"`kernels` must be a subset of {acceptable_kernels}"
 
-        # TODO: Check whether data exists for all sources/master stations
-
-        # TODO: Check that solver parameter ROTATE_SEISMOGRAMS_RTZ == False (?)
-
-        # TODO: Check that Par_file 'USE_FORCE_POINT_SOURCE' = .true.
+        # FORCESOLUTIONS required
+        use_force_point_source = getpar(
+            key="USE_FORCE_POINT_SOURCE", 
+            file=os.path.join(self._modules.solver.path.specfem_data, 
+                              "Par_file")
+            )[1]   
+        assert(use_force_point_source == ".true."), \
+            "SPECFEM Par_file parameter `USE_FORCE_POINT_SOURCE` must be True"
 
     def setup(self):
         """Set up some required attributes for Noise Inversion"""
@@ -308,50 +321,87 @@ class NoiseInversion(Inversion):
 
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
-            logger.info(f"running misfit evaluation for: '{self._force}'")
+            logger.info(msg.sub(f"MISFIT EVALUATION FORCE '{self._force}'"))
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             save_residuals = os.path.join(
                 self.path.eval_grad, "residuals",
                 f"residuals_{{src}}_{self.evaluation}_RT.txt"
                 )
-            self.evaluate_initial_misfit(save_residuals=save_residuals,
-                                         sum_residuals=False, **kwargs
-                                         )
+            # saves to `scratch/solver/{source_name}/E_FWD_ARR` or `N_FWD_ARR`
+            # ! Make sure this matches naming convention in adjoint simulations
+            save_forward_arrays = f"{self._force}_FWD_ARR"
+            self.evaluate_initial_misfit(
+                save_residuals=save_residuals, sum_residuals=False, 
+                save_forward_arrays=save_forward_arrays, **kwargs
+                )
         self._rename_preprocess_files(tag="RT")
 
     def run_rt_adjoint_simulations(self):
         """
-        Run adjoint solver for each kernel RR and TT (if requested) by running
-        two adjoint simulations (E and N) per kernel with the appropriate
-        saved E and N forward arrays.
+        Run adjoint solver to generate horizontal kernels. Choice between
+        separating kernels (ER, NR, ET, NT) requiring four adjoint simulations,
+        or mixing kernels (ER + NR, ET + NT) requiring two adjoint simulations.
+        See parameter `separate_rt_kernels` for choice.
         """
         # Skip if not valid
         if ("RR" not in self.kernels) and ("TT" not in self.kernels):
             logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
             return 
         
-        # Two adjoint simulations required per kernel T or R
-        for pair in ["ET", "NT", "ER", "NR"]:
-            self._force, self._cmpnt = pair
-
-            # Don't run a simulation if we don't need the kernels
-            if self._cmpnt not in self.kernels:
-                continue
-
-            # Intermediate state check to avoid rerunning all after failure
-            _state_check = f"run_rt_adjoint_simulations_{pair}"
-            if _state_check in self._states and bool(self._states[_state_check]):
-                continue
-
-            logger.info(f"running {self._force}{self._cmpnt} adjoint "
-                        f"simulation")
-            self.run_adjoint_simulations()
-            self._states[_state_check] = 1
-            self.checkpoint()
+        if self.separate_rt_kernels:
+            self._run_rt_adjoint_simulations_separate()
+        else:
+            self._run_rt_adjoint_simulations_combined()
 
         # Unset internal tracking variables for safety
         self._force = None
         self._cmpnt = None
+
+    def _run_rt_adjoint_simulations_separate(self):
+        """
+        Run adjoint solver for each kernel RR and TT (if requested) by running
+        two adjoint simulations (E and N) per kernel with the appropriate
+        saved E and N forward arrays.
+        """
+        # Four possible adjoint simulations: ER, NR, ET, NT
+        for force in ["E", "N"]:
+            # e.g., E_FWD_ARR (for E component force)
+            load_forward_arrays = f"{force}_FWD_ARR"
+            for cmpnt in ["R", "T"]:
+                # Don't run a simulation if we don't need the kernels
+                if cmpnt not in self.kernels:
+                    continue
+
+                # Intermediate state check to avoid rerunning all after failure
+                _state_check = f"run_rt_adjoint_simulations_{force}{cmpnt}"
+                if _state_check in self._states and \
+                                        bool(self._states[_state_check]):
+                    continue
+
+                logger.info(
+                    msg.sub(f"ADJOINT SIMULATION {force}{cmpnt}")
+                    )
+
+                # Assign internal variables used for bookkeeping
+                self._force = force
+                self._cmpnt = cmpnt
+
+                # Fwd arrays will not be deleted until all simulations for a 
+                # given FORCE are finished, that is, when we run the T adj sims
+                self.run_adjoint_simulations(
+                    load_forward_arrays=load_forward_arrays,
+                    del_loaded_forward_arrays=bool(cmpnt == "T")  # last index
+                )
+                self._states[_state_check] = 1
+                self.checkpoint()
+
+    def _run_rt_adjoint_simulations_combined(self):
+        """
+        Run adjoint solver for each kernel RR and TT (if requested) by running
+        one adjoint simulations (E and N) per kernel with the appropriate
+        saved E and N forward arrays.
+        """
+        raise NotImplementedError
 
     def _rename_preprocess_files(self, tag):
         """
@@ -476,9 +526,7 @@ class NoiseInversion(Inversion):
             # IMPORTANT: The order of simulations matters here! E must be first
             # ==================================================================
             if self._force == "E":
-                logger.info("waiting for additional 'N' component forward "
-                            "simulation before proceeding with R/T "
-                            "preprocessing")
+                logger.info("waiting for 'N' forward simulation for processing")
                 return
 
             # This will generate RR and TT synthetics in `traces/syn` with
@@ -725,8 +773,9 @@ class NoiseInversion(Inversion):
                       data_format=self.preprocess.syn_data_format
                       )
 
-    def run_forward_simulations(self, path_model, save_traces=None,
-                                export_traces=None, save_forward=None, **kwargs):
+    def run_forward_simulations(self, path_model, save_traces=False,
+                                export_traces=False,
+                                **kwargs):
         """
         Function Override of `workflow.forward.run_forward_simulation` 
 
@@ -805,7 +854,7 @@ class NoiseInversion(Inversion):
 
         super().run_forward_simulations(path_model, save_traces=save_traces,
                                         export_traces=export_traces, 
-                                        save_forward=save_forward, **kwargs
+                                        **kwargs
                                         )
 
     def _run_adjoint_simulation_single(self, save_kernels=None, 
@@ -821,8 +870,22 @@ class NoiseInversion(Inversion):
 
         .. note::
 
-            Must be run by system.run() soj, that solvers are assigned
+            Must be run by system.run() so that solvers are assigned
             individual task ids/working directories.
+
+        .. note:: 
+
+            see solver.specfem.adjoint_simulation() for full 
+            detailed list of input parameters
+
+        :type save_kernels: str
+        :param save_kernels: path to a directory where kernels created by the 
+            adjoint simulation are moved to for further use in the workflow
+            Defaults to saving kernels in `scratch/eval_grad/kernels/<source>`
+        :type export kernels: str
+        :param export_kernels: path to a directory where kernels are copied for
+            more permanent storage, where they will not be wiped by `clean` or
+            `restart`. User parameter `export_kernels` must be set `True`.
         """
         # Internal variable check
         assert(self._force is not None), (
@@ -850,7 +913,8 @@ class NoiseInversion(Inversion):
         if self._force == "Z":
             self._generate_empty_adjsrcs(components=["E", "N"])
             
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels)
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                   **kwargs)
         elif self._force in ["E", "N"]:
             # Remove any existing adjoint sources from directory 
             unix.rm(self.trace_path(tag="adj"))
@@ -867,7 +931,8 @@ class NoiseInversion(Inversion):
             for src in glob(os.path.join(adj_dir, "*")):
                 unix.ln(src, self.trace_path("adj"))
 
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels)
+            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                   **kwargs)
 
     def _generate_empty_adjsrcs(self, components):
         """
@@ -1002,7 +1067,7 @@ class NoiseInversion(Inversion):
         # task usually fails due to timeout when `tasktime` is set for an 
         # adjoint simulation (tasktime=self.system.tasktime * 2)
         self.system.run([generate_event_kernels], single=True, 
-                        tasktime=self.system.tasktime)
+                        tasktime=self.system.tasktime * 1)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
@@ -1025,6 +1090,10 @@ class NoiseInversion(Inversion):
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
 
+        logger.info(f"`m_try` model parameters for line search evaluation:")
+        self.solver.check_model_values(path=os.path.join(self.path.eval_func,
+                                                         "model"))
+
         # Determine which forward simulations we will need to run
         cfg = {}
         if "ZZ" in self.kernels:
@@ -1046,7 +1115,7 @@ class NoiseInversion(Inversion):
                 bool(self._states[_state_check]):
                 continue
 
-            logger.info(f"running misfit evaluation for: '{self._force}'")
+            logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             self.system.run(
                 [self.prepare_data_for_solver,
                  self.run_forward_simulations,

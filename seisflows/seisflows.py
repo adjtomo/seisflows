@@ -788,6 +788,7 @@ class SeisFlows:
 
         parameters = load_yaml(self._args.parameter_file)
         system = custom_import("system", parameters.system)(**parameters)
+
         if self._args.direct is True:
             try:
                 system.submit(workdir=self._args.workdir,

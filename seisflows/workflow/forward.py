@@ -108,7 +108,7 @@ class Forward:
             model_true=path_model_true,
             state_file=path_state_file or
                        os.path.join(workdir, "sfstate.txt"),
-            data=path_data or os.path.join(workdir, "data"),
+            data=path_data or os.path.join(workdir, "waveforms"),
         )
 
         self._required_modules = ["system", "solver"]
@@ -202,7 +202,8 @@ class Forward:
         Makes required path structure for the workflow, runs setup functions
         for all the required modules of this workflow.
         """
-        logger.info(f"running setup for '{self.__class__.__name__}' workflow")
+        logger.info("running setup for all modules")
+        logger.debug(f"workflow.{self.__class__.__name__}")
 
         # Create the desired directory structure
         for path in self.path.values():
@@ -213,8 +214,7 @@ class Forward:
         # Run setup() for each of the required modules
         for req_mod in self._required_modules:
             logger.debug(
-                f"running setup for module "
-                f"'{req_mod}.{self._modules[req_mod].__class__.__name__}'"
+                f"{req_mod}.{self._modules[req_mod].__class__.__name__}"
             )
             self._modules[req_mod].setup()
 
@@ -222,8 +222,7 @@ class Forward:
         for opt_mod in self._optional_modules:
             if self._modules[opt_mod] and opt_mod not in self._required_modules:
                 logger.debug(
-                    f"running setup for module "
-                    f"'{opt_mod}.{self._modules[opt_mod].__class__.__name__}'"
+                    f"{opt_mod}.{self._modules[opt_mod].__class__.__name__}"
                 )
                 self._modules[opt_mod].setup()
 
@@ -292,12 +291,12 @@ class Forward:
             # Allow user to prematurely stop a workflow after a given task
             if self.stop_after and func.__name__ == self.stop_after:
                 logger.info(
-                    msg.mjr(f"stop workflow at `stop_after`: {self.stop_after}")
+                    msg.mjr(f"STOP WORKFLOW (`stop_after`={self.stop_after})")
                     )
                 break
 
         self.checkpoint()
-        logger.info(f"completed {n} tasks in requested task list successfully")
+        logger.info(f"completed {n} tasks from task list")
 
     def generate_synthetic_data(self, **kwargs):
         """
@@ -356,8 +355,9 @@ class Forward:
         for src_ in glob(src):
             _copy_function(src_, dst)
 
-    def evaluate_initial_misfit(self, path_model=None, save_residuals=None,
-                                _preproc_only=False, **kwargs):
+    def evaluate_initial_misfit(self, path_model=None, save_residuals=False,
+                                save_forward_arrays=False, _preproc_only=False, 
+                                **kwargs):
         """
         Evaluate the initial model misfit. This requires setting up 'data'
         before generating synthetics, which is either copied from user-supplied
@@ -380,6 +380,13 @@ class Forward:
             each source. Remainder of string is some combination of the
             iteration, step count etc. Allows inheriting workflows to
             override this path if more specific file naming is required.
+        :type save_forward_arrays: str
+        :param save_forward_arrays: relative path (relative to 
+            /scratch/solver/<source_name>/<model_database>) to move the forward 
+            arrays which are used for adjoint simulations. Mainly used for 
+            ambient noise adjoint tomography which requires multiple forward 
+            simulations prior to adjoint simulations, putting forward arrays 
+            at the risk of overwrite. Normal Users can leave this default.
         :type _preproc_only: bool
         :param _preproc_only: a debug tool to ONLY run the preprocessing 
             contained in `evaluate_objective_function`, skipping over the 
@@ -425,8 +432,9 @@ class Forward:
         else:
             run_list = [self.run_forward_simulations]
 
-        self.system.run(run_list, path_model=path_model,
-                        save_residuals=save_residuals,
+        self.system.run(run_list, path_model=path_model, 
+                        save_residuals=save_residuals, 
+                        save_forward_arrays=save_forward_arrays,
                         **kwargs
                         )
 
@@ -491,8 +499,8 @@ class Forward:
             _copy_function(src_, dst)
 
     def run_forward_simulations(self, path_model, save_traces=None,
-                                export_traces=None, save_forward=None, 
-                                **kwargs):
+                                export_traces=None,  save_forward_arrays=False, 
+                                flag_save_forward=None, **kwargs):
         """
         Performs forward simulation through model saved in `path_model` for a
         single event. Upon successful completion of forward simulation,
@@ -525,10 +533,17 @@ class Forward:
             waveform data. Set parameter `export_traces` True in the parameter
             file to access this option. Overriding classes may re-direct
             synthetics by setting this variable.
-        :type save_forward: bool
-        :param save_forward: whether to turn on the flag for saving the forward
-            arrays which are used for adjoint simulations. Not required if only
-            running forward simulations
+        :type save_forward_arrays: str
+        :param save_forward_arrays: relative path (relative to solver.cwd) to 
+            move the forward arrays which are used for adjoint simulations. 
+            Mainly used for  ambient noise adjoint tomography which requires 
+            multiple forward  simulations prior to adjoint simulations, putting 
+            forward arrays  at the risk of overwrite. Normal Users can leave 
+            this default.
+        :type flag_save_forward: bool
+        :param flag_save_forward: whether to turn on the flag for saving the 
+            forward arrays which are used for adjoint simulations. Not required 
+            if only running forward simulations
         """
         logger.info(f"evaluating objective function for source "
                     f"{self.solver.source_name}")
@@ -556,16 +571,18 @@ class Forward:
 
         # Forward workflows do not require saving the large forward arrays
         # because the assumption is that we will not be running adj simulations
-        if save_forward is None:
+        if flag_save_forward is None:
             if self.__class__.__name__ == "Forward":
-                save_forward = False
+                flag_save_forward = False
+                save_forward_arrays = False
                 logger.info("'Forward' workflow, will not save forward array")
             else:
-                save_forward = True
+                flag_save_forward = True
 
         self.solver.forward_simulation(save_traces=save_traces,
                                        export_traces=export_traces, 
-                                       save_forward=save_forward
+                                       save_forward_arrays=save_forward_arrays,
+                                       flag_save_forward=flag_save_forward
                                        )
 
     def evaluate_objective_function(self, save_residuals=False, components=None,
