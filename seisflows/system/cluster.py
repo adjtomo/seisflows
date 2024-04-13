@@ -14,6 +14,7 @@ import os
 import sys
 import subprocess
 import time
+import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
 from seisflows import logger, ROOT_DIR
 from seisflows.tools import msg
@@ -116,7 +117,6 @@ class Cluster(Workstation):
         """
         return ""
 
-
     def submit(self, workdir=None, parameter_file="parameters.yaml", 
                direct=False):
         """
@@ -178,6 +178,12 @@ class Cluster(Workstation):
             arguments. Probably this won't be the case because these variable
             names are generally reserved for logging purposes.
 
+        .. note::
+
+            Concurrent futures note: 
+                https://stackoverflow.com/questions/33448329/\
+                    how-to-detect-exceptions-in-concurrent-futures-in-python3
+
         :type funcs: list of methods
         :param funcs: a list of functions that should be run in order. All
             kwargs passed to run() will be passed into the functions.
@@ -232,9 +238,7 @@ class Cluster(Workstation):
             wait(futures, timeout=tasktime, return_when="FIRST_EXCEPTION")
 
             # Iterate through the Futures' results because if one of them
-            # raised an exception, it will break the main process here
-            # https://stackoverflow.com/questions/33448329/
-            #   how-to-detect-exceptions-in-concurrent-futures-in-python3
+            # raised an exception, it will break the main process here. See note
             failed_jobs = []
             for future in futures:
                 job_id, return_code = future.result()

@@ -277,6 +277,8 @@ class Workstation:
         tasks [0:ntask). See class docstring of parameter `array` for how to
         manually set task_ids to use for run call.
 
+        Also uses the State file to determine which tasks have already been
+
         :type single: bool
         :param single: If we only want to run a single process, this is will 
             default to TaskID == 0
