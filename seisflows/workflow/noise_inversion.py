@@ -148,6 +148,9 @@ class NoiseInversion(Inversion):
         # used for waveform rotation. To be filled by setup()
         self._srcrcv_stats = None
 
+        # Filenaming convention for saved forward arrays
+        self._fwd_arr_dir = "{force}_FWD_ARR"
+
     def check(self):
         """
         Additional checks for the Noise Inversion Workflow to ensure the
@@ -252,6 +255,16 @@ class NoiseInversion(Inversion):
         if comp is not None:
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
+    
+    @property
+    def fwd_arr_path(self):
+        """
+        Forward arrays must be saved and loaded between subsequent fwd and
+        adjoint simulations. This property removes ambiguity of file naming
+        between multiple functions. Modified by the internal 'force' variable
+        which is set by calling functions.
+        """
+        return f"{self._force}_FWD_ARR"
 
     def evaluate_zz_misfit(self, **kwargs):
         """
@@ -282,7 +295,9 @@ class NoiseInversion(Inversion):
             f"residuals_{{src}}_{self.evaluation}_ZZ.txt"
             )
         super().evaluate_initial_misfit(save_residuals=save_residuals,
-                                        sum_residuals=False, **kwargs
+                                        sum_residuals=False,
+                                        save_forward_arrays=self.fwd_arr_path,
+                                        **kwargs
                                         )
         self._rename_preprocess_files(tag="ZZ")
 
@@ -300,7 +315,8 @@ class NoiseInversion(Inversion):
         # Internal tracking parameters used to name sub-directories, save files
         self._force = "Z"
         self._cmpnt = "Z"
-        super().run_adjoint_simulations()
+        super().run_adjoint_simulations(load_forward_arrays=self.fwd_arr_path,
+                                        del_loaded_forward_arrays=True)
 
     def evaluate_rt_misfit(self, **kwargs):
         """
@@ -328,11 +344,9 @@ class NoiseInversion(Inversion):
                 f"residuals_{{src}}_{self.evaluation}_RT.txt"
                 )
             # saves to `scratch/solver/{source_name}/E_FWD_ARR` or `N_FWD_ARR`
-            # ! Make sure this matches naming convention in adjoint simulations
-            save_forward_arrays = f"{self._force}_FWD_ARR"
-            self.evaluate_initial_misfit(
+            super().evaluate_initial_misfit(
                 save_residuals=save_residuals, sum_residuals=False, 
-                save_forward_arrays=save_forward_arrays, **kwargs
+                save_forward_arrays=self.fwd_arr_path, **kwargs
                 )
         self._rename_preprocess_files(tag="RT")
 
@@ -388,8 +402,8 @@ class NoiseInversion(Inversion):
 
                 # Fwd arrays will not be deleted until all simulations for a 
                 # given FORCE are finished, that is, when we run the T adj sims
-                self.run_adjoint_simulations(
-                    load_forward_arrays=load_forward_arrays,
+                super().run_adjoint_simulations(
+                    load_forward_arrays=self.fwd_arr_path,
                     del_loaded_forward_arrays=bool(cmpnt == "T")  # last index
                 )
                 self._states[_state_check] = 1
