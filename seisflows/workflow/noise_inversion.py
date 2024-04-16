@@ -1122,12 +1122,15 @@ class NoiseInversion(Inversion):
             tag = attrs["tag"]
             components = attrs["components"]
             _state_check = f"evaluate_line_search_misfit_{force}"
-            self._force = force
 
             # Intermediate state check to see if we already ran this force
             if _state_check in self._states and \
                 bool(self._states[_state_check]):
                 continue
+
+            # Set up for the current forward simulation
+            self._force = force
+
 
             logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             self.system.run(

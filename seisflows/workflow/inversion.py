@@ -90,8 +90,8 @@ class Inversion(Migration):
 
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
-        self._thrifty_status = False
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
+        self._was_thrifty = False  # keeps track of previous thrifty status
 
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
@@ -138,6 +138,48 @@ class Inversion(Migration):
                 self.update_line_search,
                 self.finalize_iteration
                 ]
+
+    @property
+    def is_thrifty(self):
+        """
+        Thrifty inversions are a special case of inversion where the forward
+        simulations and misfit quantification from the previous iteration's
+        line search can be re-used as the forward simulation of the current iter
+
+        This status check determines whether a thrifty iteration can be 
+        performed, which is dependent on where we are in the inversion, and
+        whether the optimization module has been restarted.
+
+        .. warning::
+
+            Thrifty status from previous iteration is NOT saved, so if your 
+            workflow fails at `evaluate_initial_misfit`, the boolean check
+            will fail and the workflow will re-evaluate the initial misfit.
+
+        :rtype: bool
+        :return: thrifty status, True if we can re-use previous forward sims
+            False if we must go the normal inversion route
+        """
+        if self.thrifty is False:
+            _thrifty_status = False
+        elif self.iteration == self.start:
+            logger.info("thrifty inversion encountering first iteration, "
+                        "defaulting to standard inversion workflow")
+            _thrifty_status = False
+        elif self.optimize._restarted:  # NOQA
+            logger.info("optimization has been restarted, defaulting to "
+                        "standard inversion workflow")
+            _thrifty_status = False
+        elif self.iteration == self.end:
+            logger.info("thrifty inversion encountering final iteration, "
+                        "defaulting to inversion workflow")
+            _thrifty_status = False
+        else:
+            logger.info("acceptable conditions for thrifty inverison, "
+                        "continuing with thrifty inversion")
+            _thrifty_status = True
+
+        return _thrifty_status
 
     def check(self):
         """
@@ -378,7 +420,7 @@ class Inversion(Migration):
             # model from previous line search. This can only happen mid-workflow
             # because we are assuming no solver/preprocess parameters have
             # changed. If they have, then we need to rerun the fwd solver
-            if self.thrifty and self._thrifty_status:
+            if self._was_thrifty:
                 logger.info(msg.mnr("THRIFTY INVERSION; SKIP MISFIT EVAL"))
                 return
             # Non-Thrifty, run forward simulation with previous model.
@@ -646,13 +688,21 @@ class Inversion(Migration):
         self.optimize.checkpoint()
 
         # Thrifty Inversion keeps last function evaluation for next iteration
-        self._thrifty_status = self._update_thrifty_status()
-        if self._thrifty_status:
+        # and use it as the current gradient evaluation
+        if self.is_thrifty:
             unix.rm(self.path.eval_grad)
+
             # Eval func model now defines the current model 'm_new'
             unix.mv(self.path.eval_func, self.path.eval_grad)
+            logger.debug("thrifty finalize moving `eval_func` -> `eval_grad`")
             unix.mkdir(self.path.eval_func)
             unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
+
+            # Flag to tell `evaluate_initial_misfit` in next iteration to
+            # skip the initial misfit evaluation and use the previous line 
+            # search results
+            self._was_thrifty = True
+
         # Std. Inversion bombs out both eval dirs., next iter will start fresh
         else:
             logger.info("cleaning out scratch directory for next iteration")
@@ -665,34 +715,3 @@ class Inversion(Migration):
             unix.mkdir(os.path.join(self.path.eval_grad, "residuals"))
             unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
 
-    def _update_thrifty_status(self):
-        """
-        Determine if line search forward simulation can be carried over to the
-        next iteration. Checks criteria related to the current iteration and
-        its position relative to the start and end of the workflow.
-
-        .. note::
-
-            Resumed, failed workflows will not re-load `_thrifty_status` so
-            initial misfit will always be evaluated in that case.
-        """
-        if self.thrifty is False:
-            _thrifty_status = False
-        elif self.iteration == self.start:
-            logger.info("thrifty inversion encountering first iteration, "
-                        "defaulting to standard inversion workflow")
-            _thrifty_status = False
-        elif self.optimize._restarted:  # NOQA
-            logger.info("optimization has been restarted, defaulting to "
-                        "standard inversion workflow")
-            _thrifty_status = False
-        elif self.iteration == self.end:
-            logger.info("thrifty inversion encountering final iteration, "
-                        "defaulting to inversion workflow")
-            _thrifty_status = False
-        else:
-            logger.info("acceptable conditions for thrifty inverison, "
-                        "continuing with thrifty inversion")
-            _thrifty_status = True
-
-        return _thrifty_status
