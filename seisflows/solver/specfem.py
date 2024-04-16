@@ -620,10 +620,15 @@ class Specfem:
         # forward simulations are required prior to the adjoint simulation,
         # which would overwrite existing forward arrays
         if save_forward_arrays:
+            # NOTE: Relative path naming convention used, not absolute
             # scratch/solver/<source_name>/<save_forward_arrays>
             save_forward_arrays = os.path.join(self.cwd, save_forward_arrays)
-            if not os.path.exists(save_forward_arrays):
-                unix.mkdir(save_forward_arrays)
+
+            # Overwrites any existing forward arrays, for the case when we 
+            # run a thrifty line search and run multiple fwd sims consecutively 
+            unix.rm(save_forward_arrays)
+            unix.mkdir(save_forward_arrays)
+
             for glob_key in [self._forward_array_wildcard, 
                              self._absorb_wildcard]:                                   
                 unix.mv(src=glob(os.path.join(self.model_databases, glob_key)),

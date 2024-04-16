@@ -1130,7 +1130,12 @@ class NoiseInversion(Inversion):
 
             # Set up for the current forward simulation
             self._force = force
-
+            # If we are running a thrifty inversion we need to save the fwd
+            # arrays so that the next iterations adjoint simulations can use 'em
+            if self.is_thrifty:
+                save_forward_arrays = self.fwd_arr_path
+            else:
+                save_forward_arrays = False
 
             logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             self.system.run(
@@ -1142,6 +1147,7 @@ class NoiseInversion(Inversion):
                 save_residuals=os.path.join(
                     self.path.eval_func, "residuals",
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"),
+                save_forward_arrays=save_forward_arrays,
                 components=components
             )
             self._rename_preprocess_files(tag)
