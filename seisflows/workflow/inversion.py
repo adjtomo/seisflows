@@ -672,17 +672,16 @@ class Inversion(Migration):
         its position relative to the start and end of the workflow.
 
         .. note::
+
             Resumed, failed workflows will not re-load `_thrifty_status` so
             initial misfit will always be evaluated in that case.
         """
-        # !!! Forcing first iteration to be thrifty because i'm not going to
-        # !!! change the parameters
-        if self.iteration == self.start:
-            _thrifty_status = True
-        # if self.iteration == self.start:
-        #     logger.info("thrifty inversion encountering first iteration, "
-        #                 "defaulting to standard inversion workflow")
-        #     _thrifty_status = False
+        if self.thrifty is False:
+            _thrifty_status = False
+        elif self.iteration == self.start:
+            logger.info("thrifty inversion encountering first iteration, "
+                        "defaulting to standard inversion workflow")
+            _thrifty_status = False
         elif self.optimize._restarted:  # NOQA
             logger.info("optimization has been restarted, defaulting to "
                         "standard inversion workflow")
