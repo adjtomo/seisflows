@@ -165,7 +165,7 @@ class Specfem:
         self._ext = ""  # for database file extensions
 
         # Define available choices for check parameters
-        self._available_model_types = ["gll"]
+        self._available_model_types = ["gll", "custom_gll"]
         self._available_materials = [
             "ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
             "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
