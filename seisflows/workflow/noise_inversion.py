@@ -834,17 +834,16 @@ class NoiseInversion(Inversion):
         kernel_vals = None
         if self._force == "Z":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # format: [E, N, Z]
-            # ZZ SGFs are just saved straight to the 'syn' directory
-            save_traces = save_traces or self.trace_path(tag="syn")
         else:
             if self._force == "E":
                 kernel_vals = ["1.d0", "0.d0", "0.d0"]  # format: [E, N, Z]
             elif self._force == "N":
                 kernel_vals = ["0.d0", "1.d0", "0.d0"]  # format: [E, N, Z]
 
-            # e.g., solver/{source_name}/traces/syn_e
-            save_traces = save_traces or \
-                    self.trace_path(tag="syn", comp=self._force)
+        # Synthetics saved to a separate sub-directory so that they do not 
+        # get overwritten e.g., solver/{source_name}/traces/syn_e
+        save_traces = save_traces or \
+                self.trace_path(tag="syn", comp=self._force)
 
         # Clear out synthetics from previous evaluations to avoid file conflict
         unix.rm(os.path.join(save_traces, "*"))
