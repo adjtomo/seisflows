@@ -340,6 +340,7 @@ class NoiseInversion(Inversion):
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
             logger.info(msg.sub(f"MISFIT EVALUATION FORCE '{self._force}'"))
+
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             save_residuals = os.path.join(
                 self.path.eval_grad, "residuals",
@@ -534,8 +535,15 @@ class NoiseInversion(Inversion):
         # Z component force behaves like a normal workflow, except that we only
         # create adjoint sources for the Z component (E, N will be 0's)
         if self._force == "Z":
-            super().evaluate_objective_function(save_residuals=save_residuals,
-                                                components=["Z"])
+            # e.g., scratch/solver/001/traces/adj_zz/*.adj
+            save_adjsrcs = os.path.join(
+                self.solver.cwd, "traces", 
+                f"adj_{self._force.lower()}{self._cmpnt.lower()}"
+                )
+            super().evaluate_objective_function(save_residuals=save_residuals, 
+                                                components=["Z"], 
+                                                save_adjsrcs=save_adjsrcs)
+            
         # Run E and N misfit quantification
         else:
             # ==================================================================
@@ -790,8 +798,7 @@ class NoiseInversion(Inversion):
                       )
 
     def run_forward_simulations(self, path_model, save_traces=False,
-                                export_traces=False,
-                                **kwargs):
+                                export_traces=False, **kwargs):
         """
         Function Override of `workflow.forward.run_forward_simulation` 
 
@@ -924,30 +931,28 @@ class NoiseInversion(Inversion):
         else:
             export_kernels = False
 
-        # Run adjoint simulations for each kernel
+        # Prepare the adjoint sources which need to be loaded in from the
+        # corresponding subdirectory
+        unix.rm(self.trace_path(tag="adj"))
+        unix.mkdir(self.trace_path(tag="adj"))
+
+        # Symlink the correct set of adjoint sources to the 'adj' directory
+        # `adj_dir` is something like 'adj_nt' or 'adj_zz'
+        adj_dir = self.trace_path(
+            tag="adj", comp=f"{self._force.lower()}{self._cmpnt.lower()}"
+        )
+        for src in glob(os.path.join(adj_dir, "*")):
+            unix.ln(src, self.trace_path("adj"))
+
+        # Generate empty adjoint sources for other non-required components
+        # to satisfy SPECFEM requirement
         if self._force == "Z":
             self._generate_empty_adjsrcs(components=["E", "N"])
-            
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
-                                                   **kwargs)
         elif self._force in ["E", "N"]:
-            # Remove any existing adjoint sources from directory 
-            unix.rm(self.trace_path(tag="adj"))
-            unix.mkdir(self.trace_path(tag="adj"))
-
-            # Generate empty Z components because we only have E and N component
             self._generate_empty_adjsrcs(components=["Z"])
 
-            # Symlink the correct set of adjoint sources to the 'adj' directory
-            # `adj_dir` is something like 'adj_nt'
-            adj_dir = self.trace_path(
-                tag="adj", comp=f"{self._force.lower()}{self._cmpnt.lower()}"
-            )
-            for src in glob(os.path.join(adj_dir, "*")):
-                unix.ln(src, self.trace_path("adj"))
-
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
-                                                   **kwargs)
+        super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                **kwargs)
 
     def _generate_empty_adjsrcs(self, components):
         """
