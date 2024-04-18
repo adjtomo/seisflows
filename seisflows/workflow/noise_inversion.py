@@ -137,7 +137,9 @@ class NoiseInversion(Inversion):
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
-        self.separate_rt_kernels = separate_rt_kernels
+
+        # Commented until feature is developed/tested
+        # self.separate_rt_kernels = separate_rt_kernels
 
         # Internal variables control behavior of spawned jobs. These should not
         # be set by the User, they are set by main processing functions here.
