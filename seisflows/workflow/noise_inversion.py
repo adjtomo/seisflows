@@ -538,7 +538,7 @@ class NoiseInversion(Inversion):
             # We need to load in ZZ synthetics so that they are discoverable
             # by the misfit evaluation
             unix.rm(self.trace_path(tag="syn"))
-            unix.cp(src=self.trace_path(tag="syn", comp=self._force), 
+            unix.ln(src=self.trace_path(tag="syn", comp=self._force), 
                     dst=self.trace_path(tag="syn")
                     )
 
@@ -942,12 +942,11 @@ class NoiseInversion(Inversion):
         # Prepare the adjoint sources which need to be loaded in from the
         # corresponding subdirectory
         unix.rm(self.trace_path(tag="adj"))
+        unix.mkdir(self.trace_path(tag="adj"))
 
         # Symlink the correct set of adjoint sources to the 'adj' directory
         # `adj_dir` is something like 'adj_nt' or 'adj_zz'
-        adj_dir = self.trace_path(
-            tag="adj", comp=f"{self._force.lower()}{self._cmpnt.lower()}"
-        )
+        adj_dir = self.trace_path(tag="adj", comp=subdir.lower())
         unix.mkdir(adj_dir)
         for src in glob(os.path.join(adj_dir, "*")):
             unix.ln(src, self.trace_path("adj"))
