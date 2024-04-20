@@ -535,14 +535,22 @@ class NoiseInversion(Inversion):
         # Z component force behaves like a normal workflow, except that we only
         # create adjoint sources for the Z component (E, N will be 0's)
         if self._force == "Z":
+            # We need to load in ZZ synthetics so that they are discoverable
+            # by the misfit evaluation
+            unix.rm(self.trace_path(tag="syn"))
+            unix.cp(src=self.trace_path(tag="syn", force=self._force), 
+                    dst=self.trace_path(tag="syn")
+                    )
+
             # e.g., scratch/solver/001/traces/adj_zz/*.adj
             save_adjsrcs = os.path.join(
                 self.solver.cwd, "traces", 
                 f"adj_{self._force.lower()}{self._cmpnt.lower()}"
                 )
             super().evaluate_objective_function(save_residuals=save_residuals, 
-                                                components=["Z"], 
-                                                save_adjsrcs=save_adjsrcs)
+                                                save_adjsrcs=save_adjsrcs,
+                                                components=["Z"]
+                                                )
             
         # Run E and N misfit quantification
         else:
