@@ -434,6 +434,7 @@ class Pyaflowa:
         # Initialize empty adjoint sources for all synthetics that may or may
         # not be overwritten by the misfit quantification step
         if save_adjsrcs is not None:
+            unix.mkdir(save_adjsrcs)
             syn_filenames = glob(os.path.join(syn_path, "*"))
             initialize_adjoint_traces(data_filenames=syn_filenames,
                                       fmt=self.syn_data_format,

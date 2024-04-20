@@ -538,7 +538,7 @@ class NoiseInversion(Inversion):
             # We need to load in ZZ synthetics so that they are discoverable
             # by the misfit evaluation
             unix.rm(self.trace_path(tag="syn"))
-            unix.cp(src=self.trace_path(tag="syn", force=self._force), 
+            unix.cp(src=self.trace_path(tag="syn", comp=self._force), 
                     dst=self.trace_path(tag="syn")
                     )
 
