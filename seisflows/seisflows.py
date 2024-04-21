@@ -856,8 +856,9 @@ class SeisFlows:
         Does not allow stepping through of code (not a breakpoint).
         """
         from IPython import embed
-        workflow = import_seisflows(workdir=self._args.workdir,
-                            parameter_file=self._args.parameter_file)
+        workflow = import_seisflows(
+            workdir=self._args.workdir, parameter_file=self._args.parameter_file
+            )
         
         logger.info(msg.mjr("ENTERING DEBUG MODE"))
         print(msg.cli(
