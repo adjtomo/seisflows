@@ -91,7 +91,7 @@ class Inversion(Migration):
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
-        self._was_thrifty = False  # keeps track of previous thrifty status
+        self._was_thrifty = True #!!!  # keeps track of previous thrifty status
 
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:

@@ -1104,7 +1104,7 @@ class NoiseInversion(Inversion):
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
 
-    def evaluate_line_search_misfit(self, **kwargs):
+    def evaluate_line_search_misfit(self, _preproc_only=False):
         """
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
         Called inside `workflow.inversion.perform_line_search`.
@@ -1134,6 +1134,17 @@ class NoiseInversion(Inversion):
             cfg["E"] = {"tag": "RT", "components": ["T", "R"]}
             cfg["N"] = {"tag": "RT", "components": ["T", "R"]}
 
+
+        # Allow skipping forward simulation
+        run_list = [self.prepare_data_for_solver,
+                    self.run_forward_simulations, 
+                    self.evaluate_objective_function
+                    ]
+        if _preproc_only:
+            logger.warning("user request that NO forward simulation be run")
+            run_list = [self.prepare_data_for_solver, 
+                        self.evaluate_objective_function]
+
         # Run forward simulations and misfit calculation for each required force
         for force, attrs in cfg.items():
             tag = attrs["tag"]
@@ -1152,23 +1163,14 @@ class NoiseInversion(Inversion):
 
             # If we are running a thrifty inversion we need to save the fwd
             # arrays so that the next iterations adjoint simulations can use 'em
-            if self.is_thrifty:
-                save_forward_arrays = self.fwd_arr_path
-            else:
-                save_forward_arrays = False
-
             logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             self.system.run(
-                [self.prepare_data_for_solver,
-                 self.run_forward_simulations,
-                 self.evaluate_objective_function
-                 ],
-                path_model=os.path.join(self.path.eval_func, "model"),
+                run_list, path_model=os.path.join(self.path.eval_func, "model"),
                 save_residuals=os.path.join(
-                    self.path.eval_func, "residuals",
+                    self.path.eval_func, "residuals", 
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"),
-                save_forward_arrays=save_forward_arrays,
-                components=components, **kwargs
+                save_forward_arrays=self.fwd_arr_path,
+                components=components, 
             )
             self._rename_preprocess_files(tag)
             self._states[_state_check] = 1
