@@ -860,7 +860,7 @@ class SeisFlows:
             workdir=self._args.workdir, parameter_file=self._args.parameter_file
             )
         
-        logger.info(msg.mjr("ENTERING DEBUG MODE"))
+        logger.info(msg.mjr("SEISFLOWS DEBUG", char="%"))
         print(msg.cli(
             "SeisFlows' debug mode is an embedded IPython environment. All "
             "modules are loaded by default and can be accessed by name "
