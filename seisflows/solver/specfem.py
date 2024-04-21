@@ -1023,6 +1023,8 @@ class Specfem:
 
         if source_paths:
             logger.info(f"initializing {self.ntask} solver directories")
+        else:
+            return
 
         if max_workers > 1:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -1121,14 +1123,21 @@ class Specfem:
         # Export the initial and target models to the SeisFlows output directory
         for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
                                [self.path.model_init, self.path.model_true]):
+
             # Skip over if user has not provided model path (e.g., real data
             # inversion will not have `model_true`)
             if not model:
                 continue
+            
+            # e.g., output/MODEL_INIT/*
             dst = os.path.join(self.path.output, name, "")
+
             if not os.path.exists(dst):
                 unix.mkdir(dst)
             for par in parameters:
+                # Do not try to export over existing files
+                if glob(os.path.join(dst, f"*{par}{self._ext}")):
+                    continue
                 src = glob(os.path.join(model, f"*{par}{self._ext}"))
                 unix.cp(src, dst)
 
