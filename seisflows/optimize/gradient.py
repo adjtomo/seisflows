@@ -172,9 +172,15 @@ class Gradient:
         if self.step_len_max is not None:
             assert 0. < self.step_len_max, \
                 f"optimize.step_len_max must be >= 0."
+        if self.step_len_min is not None:
+            assert 0. < self.step_len_min, \
+                f"optimize.step_len_min must be >= 0."
         if self.step_len_max is not None and self.step_len_init is not None:
             assert self.step_len_init < self.step_len_max, \
                 f"optimize.step_len_init must be < optimize.step_len_max"
+        if self.step_len_min is not None and self.step_len_init is not None:
+            assert self.step_len_init > self.step_len_min, \
+                f"optimize.step_len_init must be > optimize.step_len_min"
     
         self._line_search.check()
 
@@ -268,7 +274,6 @@ class Gradient:
                         gtg=self._line_search.gtg,
                         gtp=self._line_search.gtp,
                         step_count=self._line_search.step_count,
-                        step_len_max=self._line_search.step_len_max,
                         iteridx=self._line_search.iteridx,
                        )
         np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
@@ -294,7 +299,6 @@ class Gradient:
             self._line_search.gtg = list(dict_in["gtg"])
             self._line_search.gtp = list(dict_in["gtp"])
             self._line_search.step_count = int(dict_in["step_count"])
-            self._line_search.step_len_max = float(dict_in["step_len_max"])
             self._line_search.iteridx = list(dict_in["iteridx"])
         else:
             logger.info("no optimization checkpoint file, assume 1st iteration")
@@ -441,16 +445,17 @@ class Gradient:
         else:
             alpha, status = self._line_search.calculate_step_length()
 
-        # OPTIONAL: Apply step length safeguard to prevent step length from 
+        # Apply step length safeguard to prevent step length from 
         # getting too small/large w.r.t model values
         if status == "TRY" and self.step_len_max:
-            logger.debug("checking safeguard: maximum allowable step length")
             m = m or self.load_vector("m_new")  # current model
             p = p or self.load_vector("p_new")  # current search direction
             norm_m = max(abs(m.vector))
             norm_p = max(abs(p.vector))
 
             # Determine maximum alpha as a fraction of the current model
+            logger.debug("checking safeguards min/max allowable step length "
+                         f"{self.step_len_max}")
             max_allowable_alpha = self.step_len_max * norm_m / norm_p
             if alpha > max_allowable_alpha:
                 logger.warning(f"safeguard: alpha has exceeded maximum step "
@@ -461,6 +466,43 @@ class Gradient:
                     alpha = 0.618034 * max_allowable_alpha
                 else:
                     alpha = max_allowable_alpha
+        # Apply optional step length safeguard to prevent step length from 
+        # getting too large w.r.t model values
+        if status == "TRY" and (self.step_len_max or self.step_len_min):
+            m = m or self.load_vector("m_new")  # current model
+            p = p or self.load_vector("p_new")  # current search direction
+            norm_m = max(abs(m.vector))
+            norm_p = max(abs(p.vector))
+
+            # Determine minimum alpha as a fraction of the current model
+            if self.step_len_min:
+                logger.debug("checking safeguard min allowable step length: "
+                            f"{self.step_len_min * 100}%")
+                min_allowable_alpha = self.step_len_min * norm_m / norm_p
+                if alpha < min_allowable_alpha:
+                    logger.warning(f"step length `alpha` is below minimum "
+                                   f"acceptable value {min_allowable_alpha} ")
+                    if first_step:
+                        logger.info("forcing step length to minimum value")
+                        alpha = min_allowable_alpha
+                    else:
+                        logger.critical(msg.sub("exiting workflow because "
+                                                "step length is too small"))
+                        sys.exit(-1)
+            # Determine maximum alpha as a fraction of the current model
+            if self.step_len_max:
+                logger.debug("checking safeguard max allowable step length: "
+                            f"{self.step_len_max * 100}%")
+                max_allowable_alpha = self.step_len_max * norm_m / norm_p
+                if alpha > max_allowable_alpha:
+                    logger.warning(f"`alpha` has exceeded maximum value "
+                                   f"{max_allowable_alpha}, capping")
+                    if first_step:
+                        # If this is the first step, pull back slightly so that 
+                        # line search can safely increase step length later
+                        alpha = 0.618034 * max_allowable_alpha
+                    else:
+                        alpha = max_allowable_alpha
 
         if alpha is not None:
             logger.info(f"step length `alpha` = {alpha:.3E}")
