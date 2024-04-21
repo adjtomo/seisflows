@@ -364,11 +364,14 @@ class NoiseInversion(Inversion):
         if ("RR" not in self.kernels) and ("TT" not in self.kernels):
             logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
             return 
-        
-        if self.separate_rt_kernels:
-            self._run_rt_adjoint_simulations_separate()
-        else:
-            self._run_rt_adjoint_simulations_combined()
+
+        self._run_rt_adjoint_simulations_separate()
+
+        # COMMENTED OUT UNTIL THIS FUNCTIONALITY IS WRITTEN
+        # if self.separate_rt_kernels:
+        #     self._run_rt_adjoint_simulations_separate()
+        # else:
+        #     self._run_rt_adjoint_simulations_combined()
 
         # Unset internal tracking variables for safety
         self._force = None
