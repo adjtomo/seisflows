@@ -28,16 +28,12 @@ class Bracket:
     :type step_count_max: int
     :param step_count_max: maximum number of step counts before changing
         line search behavior. set by PAR.STEP_COUNT_MAX
-    :type step_len_max: int
-    :param step_len_max: maximum length of the step, defaults to infinity,
-        that is unbounded step length. set by PAR.STEP_LEN_MAX
     """
-    def __init__(self, step_count_max, step_len_max, path=None):
+    def __init__(self, step_count_max, path=None):
         """
         Instantiate max criteria for line search
         """
         self.step_count_max = step_count_max
-        self.step_len_max = step_len_max
 
         if path is None:
             self.path = os.path.join(os.getcwd(), "line_search")

@@ -543,9 +543,8 @@ class NoiseInversion(Inversion):
                     )
 
             # e.g., scratch/solver/001/traces/adj_zz/*.adj
-            save_adjsrcs = os.path.join(
-                self.solver.cwd, "traces", 
-                f"adj_{self._force.lower()}{self._cmpnt.lower()}"
+            save_adjsrcs = self.trace_path(
+                tag="adj", comp=f"{self._force.lower()}{self._cmpnt.lower()}"
                 )
             super().evaluate_objective_function(save_residuals=save_residuals, 
                                                 save_adjsrcs=save_adjsrcs,
@@ -1143,6 +1142,9 @@ class NoiseInversion(Inversion):
 
             # Set up for the current forward simulation
             self._force = force
+            if force == "Z":
+                self._cmpnt = "Z"  # Somewhat kludgy, required for dir. naming
+
             # If we are running a thrifty inversion we need to save the fwd
             # arrays so that the next iterations adjoint simulations can use 'em
             if self.is_thrifty:

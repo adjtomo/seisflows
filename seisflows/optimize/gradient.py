@@ -65,7 +65,10 @@ class Gradient:
     :param step_len_init: initial line search step length guess, provided
         as a fraction of current model parameters.
     :type step_len_max: float
-    :param step_len_max: maximum allowable step length during the line
+    :param step_len_max: optional, maximum allowable step length during the line
+        search. Set as a fraction of the current model parameters
+    :type step_len_min: float
+    :param step_len_min: optional, minimum allowable step length during the line
         search. Set as a fraction of the current model parameters
 
     Paths
@@ -77,9 +80,10 @@ class Gradient:
     ***
     """
     def __init__(self, line_search_method="bracket",
-                 preconditioner=None, step_count_max=10, step_len_init=0.05,
-                 step_len_max=0.5, workdir=os.getcwd(), path_optimize=None,
-                 path_output=None, path_preconditioner=None, **kwargs):
+                 preconditioner=None, step_count_max=10, step_len_init=0.01,
+                 step_len_max=0.1, step_len_min=1E-3, workdir=os.getcwd(), 
+                 path_optimize=None, path_output=None, path_preconditioner=None, 
+                 **kwargs):
         """
         Gradient-descent input parameters.
 
@@ -100,6 +104,7 @@ class Gradient:
         self.step_count_max = step_count_max
         self.step_len_init = step_len_init
         self.step_len_max = step_len_max
+        self.step_len_min = step_len_min
 
         # Set required path structure
         self.path = Dict(
@@ -134,8 +139,8 @@ class Gradient:
         # .title() ensures we grab the class and not the module
         self._line_search = getattr(
             line_search_dir, line_search_method.title())(
-            step_count_max=step_count_max, step_len_max=step_len_max,
-        )
+                                        step_count_max=step_count_max
+                                        )
 
     def __str__(self):
         """Quickly access underlying line search search history, mostly for
@@ -437,7 +442,7 @@ class Gradient:
             alpha, status = self._line_search.calculate_step_length()
 
         # OPTIONAL: Apply step length safeguard to prevent step length from 
-        # getting too large w.r.t model values
+        # getting too small/large w.r.t model values
         if status == "TRY" and self.step_len_max:
             logger.debug("checking safeguard: maximum allowable step length")
             m = m or self.load_vector("m_new")  # current model
