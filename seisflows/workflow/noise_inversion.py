@@ -1102,7 +1102,7 @@ class NoiseInversion(Inversion):
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
 
-    def evaluate_line_search_misfit(self):
+    def evaluate_line_search_misfit(self, **kwargs):
         """
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
         Called inside `workflow.inversion.perform_line_search`.
@@ -1166,7 +1166,7 @@ class NoiseInversion(Inversion):
                     self.path.eval_func, "residuals",
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"),
                 save_forward_arrays=save_forward_arrays,
-                components=components
+                components=components, **kwargs
             )
             self._rename_preprocess_files(tag)
             self._states[_state_check] = 1
