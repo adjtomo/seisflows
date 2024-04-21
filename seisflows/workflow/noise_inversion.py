@@ -535,12 +535,14 @@ class NoiseInversion(Inversion):
             these components will be 0. E.g., ['Z', 'N']. If None, all available
             components will be considered.
         """
+        # Purge any existing synthetics to avoid any file mixups. Synthetics
+        # will be created or linked as required
+        unix.rm(self.trace_path(tag="syn"))
+
         # Z component force behaves like a normal workflow, except that we only
         # create adjoint sources for the Z component (E, N will be 0's)
         if self._force == "Z":
-            # We need to load in ZZ synthetics so that they are discoverable
-            # by the misfit evaluation
-            unix.rm(self.trace_path(tag="syn"))
+            # Load in ZZ synthetics so that they are discoverable by preprocess
             unix.ln(src=self.trace_path(tag="syn", comp=self._force), 
                     dst=self.trace_path(tag="syn")
                     )
@@ -563,8 +565,9 @@ class NoiseInversion(Inversion):
                 logger.info("waiting for 'N' forward simulation for processing")
                 return
 
-            # This will generate RR and TT synthetics in `traces/syn` with
-            # synthetics generated using `traces/syn_e` and `traces/syn_n`
+            # Create RR and TT synthetics in `traces/syn` with synthetics in 
+            # `traces/syn_e` and `traces/syn_n`
+            unix.mkdir(self.trace_path(tag="syn"))
             self.rotate_ne_traces_to_rt()
 
             # Run preprocessing with rotated synthetics for horizontal cmpnts,
@@ -680,18 +683,17 @@ class NoiseInversion(Inversion):
                                              )
 
         # Write TT/RR synthetics back to the main synthetic trace directory
-        # !!! Assuming SPECFEM adjoint source file name structure
         if "TT" in self.kernels:
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XT.sem?*
-            fid_t = os.path.join(self.solver.cwd, "traces", "syn",
-                                 f"{net}.{sta}.{cha[:2]}T.{ext}")
-            write(st=Stream(tr_tt), fid=fid_t,
+            fid_t = f"{net}.{sta}.{cha[:2]}T.{ext}"
+            write(st=Stream(tr_tt), 
+                  fid=os.path.join(self.trace_path(tag="syn"), fid_t),
                   data_format=self.solver.syn_data_format)
         if "RR" in self.kernels:
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XR.sem?*
-            fid_r = os.path.join(self.solver.cwd, "traces", "syn",
-                                 f"{net}.{sta}.{cha[:2]}R.{ext}")
-            write(st=Stream(tr_rr), fid=fid_r,
+            fid_r = f"{net}.{sta}.{cha[:2]}R.{ext}"
+            write(st=Stream(tr_rr), 
+                  fid=os.path.join(self.trace_path(tag="syn"), fid_r),
                   data_format=self.solver.syn_data_format)
 
     def rotate_rt_adjsrcs_to_ne(self, choice):
@@ -1182,5 +1184,3 @@ class NoiseInversion(Inversion):
         # Reset states incase we need to run again
         for force in cfg.keys():
             self._states[f"evaluate_line_search_misfit_{force}"] = 0
-
-
