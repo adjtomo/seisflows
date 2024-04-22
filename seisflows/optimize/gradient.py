@@ -445,27 +445,6 @@ class Gradient:
         else:
             alpha, status = self._line_search.calculate_step_length()
 
-        # Apply step length safeguard to prevent step length from 
-        # getting too small/large w.r.t model values
-        if status == "TRY" and self.step_len_max:
-            m = m or self.load_vector("m_new")  # current model
-            p = p or self.load_vector("p_new")  # current search direction
-            norm_m = max(abs(m.vector))
-            norm_p = max(abs(p.vector))
-
-            # Determine maximum alpha as a fraction of the current model
-            logger.debug("checking safeguards min/max allowable step length "
-                         f"{self.step_len_max}")
-            max_allowable_alpha = self.step_len_max * norm_m / norm_p
-            if alpha > max_allowable_alpha:
-                logger.warning(f"safeguard: alpha has exceeded maximum step "
-                               f"length {self.step_len_max}, capping value")
-                if first_step:
-                    # If this is the first step, pull back slightly so that line 
-                    # search can safely increase step length later
-                    alpha = 0.618034 * max_allowable_alpha
-                else:
-                    alpha = max_allowable_alpha
         # Apply optional step length safeguard to prevent step length from 
         # getting too large w.r.t model values
         if status == "TRY" and (self.step_len_max or self.step_len_min):
