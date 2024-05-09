@@ -72,6 +72,8 @@ def sfparser():
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml",
                         help=f"Parameters file, default: 'parameters.yaml'")
+    parser.add_argument("-v", "--version", action="store_true",
+                        help=f"Print out the current version of SeisFlows")
 
     # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(
@@ -444,6 +446,9 @@ class SeisFlows:
             # Print out the help statement if no command is given
             if len(sys.argv) == 1:
                 self._parser.print_help()
+                sys.exit(0)
+            if self._args.version:
+                print(f"v{__version__}")
                 sys.exit(0)
 
             # Call the given function based on the user-defined name.

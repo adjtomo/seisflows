@@ -3,7 +3,6 @@ channels:
     - conda-forge
 dependencies:
     - pip
-    - numpy<=1.24
     - obspy
     - cartopy
     - pyyaml
