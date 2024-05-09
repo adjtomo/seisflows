@@ -460,13 +460,12 @@ class Gradient:
                 min_allowable_alpha = self.step_len_min * norm_m / norm_p
                 if alpha < min_allowable_alpha:
                     logger.warning(f"step length `alpha` is below minimum "
-                                   f"acceptable value {min_allowable_alpha} ")
+                                   f"threshold value {min_allowable_alpha:.2f}")
                     if first_step:
                         logger.info("forcing step length to minimum value")
                         alpha = min_allowable_alpha
                     else:
-                        logger.critical(msg.sub("exiting workflow because "
-                                                "step length is too small"))
+                        logger.critical(msg.mjr("EXITING WORKFLOW"))
                         sys.exit(-1)
             # Determine maximum alpha as a fraction of the current model
             if self.step_len_max:
@@ -475,7 +474,7 @@ class Gradient:
                 max_allowable_alpha = self.step_len_max * norm_m / norm_p
                 if alpha > max_allowable_alpha:
                     logger.warning(f"`alpha` has exceeded maximum value "
-                                   f"{max_allowable_alpha}, capping")
+                                   f"{max_allowable_alpha:.2f}, capping")
                     if first_step:
                         # If this is the first step, pull back slightly so that 
                         # line search can safely increase step length later

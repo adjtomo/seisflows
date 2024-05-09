@@ -421,7 +421,8 @@ class Inversion(Migration):
             # because we are assuming no solver/preprocess parameters have
             # changed. If they have, then we need to rerun the fwd solver
             if self._was_thrifty:
-                logger.info(msg.mnr("THRIFTY INVERSION; SKIP MISFIT EVAL"))
+                logger.info("thrifty inversion detected, skipping initial "
+                            "misfit evaluation")
                 return
             # Non-Thrifty, run forward simulation with previous model.
             else:
@@ -664,15 +665,16 @@ class Inversion(Migration):
         carried out. Contains some logic to consider whether or not to continue
         with a thrifty inversion.
         """
-        super().finalize_iteration()
-
-        # Export scratch files to output if requested
+        # Export scratch files to output if requested. Do this before super()
+        # so that solver can find the new model for VTK generation
         if self.export_model:
             model = self.optimize.load_vector("m_new")
             m_fid = os.path.join(self.path.output, 
                                  f"MODEL_{self.iteration:0>2}")
             logger.info(f"writing model `m_new` to {m_fid}")
             model.write(path=m_fid)
+
+        super().finalize_iteration()
 
         # Organize log files to keep file count in the main log dir. low
         logger.debug(f"organizing log files in {self.system.path.log_files}")

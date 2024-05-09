@@ -578,6 +578,7 @@ class Pyaflowa:
         _waited = 0
         while True:
             try:
+                ds = None
                 with ASDFDataSet(os.path.join(self.path["_datasets"],
                                               f"{config.event_id}.h5"),
                                  mode="a") as ds:

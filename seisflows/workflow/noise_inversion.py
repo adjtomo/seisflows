@@ -385,8 +385,6 @@ class NoiseInversion(Inversion):
         """
         # Four possible adjoint simulations: ER, NR, ET, NT
         for force in ["E", "N"]:
-            # e.g., E_FWD_ARR (for E component force)
-            load_forward_arrays = f"{force}_FWD_ARR"
             for cmpnt in ["R", "T"]:
                 # Don't run a simulation if we don't need the kernels
                 if cmpnt not in self.kernels:
@@ -1186,3 +1184,5 @@ class NoiseInversion(Inversion):
         # Reset states incase we need to run again
         for force in cfg.keys():
             self._states[f"evaluate_line_search_misfit_{force}"] = 0
+        self.checkpoint()
+
