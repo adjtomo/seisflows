@@ -229,9 +229,14 @@ class Specfem:
             f"SPECFEM `source_prefix` must be in "
             f"{self._acceptable_source_prefixes}"
             )
-        assert(glob(os.path.join(self.path.specfem_data,
-                                 f"{self.source_prefix}*"))), (
-            f"No source files with prefix {self.source_prefix} found in DATA/")
+        _sources = glob(os.path.join(self.path.specfem_data, 
+                                     f"{self.source_prefix}_*"))
+        assert(_sources), (f"No source files with prefix {self.source_prefix} "
+                           f"found in DATA/")
+        assert(len(_sources) >= self.ntask), (
+            "Number of requested `ntasks` is larger than the number of "
+            "available source files"
+            )
 
         # Check that model type is set correctly in the Par_file
         model_type = getpar(key="MODEL",

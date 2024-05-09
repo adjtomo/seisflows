@@ -295,17 +295,6 @@ class Default:
         assert(self.unit_output.upper() in self._acceptable_unit_output), \
             f"unit output must be in {self._acceptable_unit_output}"
 
-        # Ensure STATIONS files exist as the locations are used for preproc,
-        assert(os.path.exists(
-            os.path.join(self.path.specfem_data, "STATIONS"))), (
-            f"DATA/STATIONS does not exist but is required by preprocessing"
-        )
-        # Ensure source files exist as their locations are used for preproc.
-        assert(glob(os.path.join(self.path.specfem_data,
-                                 f"{self.source_prefix}_*"))), (
-            f"DATA/{self.source_prefix}_* does not exist but is required"
-        )
-
     def setup(self):
         """
         Sets up data preprocessing machinery

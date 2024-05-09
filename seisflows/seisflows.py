@@ -760,6 +760,10 @@ class SeisFlows:
                                     parameter_file=self._args.parameter_file)
         try:
             workflow.check()
+            print(msg.cli("All module checks passed nominally, "
+                          "use 'seisflows submit' to submit workflow", 
+                          border="-")
+                          )
         except AssertionError as e:
             print(msg.cli(str(e), border="=", header="parameter errror"))
 
