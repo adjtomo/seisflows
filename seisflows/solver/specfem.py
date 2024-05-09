@@ -153,7 +153,7 @@ class Specfem:
             model_init=path_model_init,
             model_true=path_model_true,
         )
-        self.path["mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
+        self.path["_mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
         self.path["_solver_output"] = os.path.join(self.path.output, "solver")
 
         # Private internal parameters for keeping track of solver requirements
@@ -521,7 +521,7 @@ class Specfem:
         """
         _model_files = []
         for par in self._parameters:
-            _model_files += glob(os.path.join(self.path.mainsolver,
+            _model_files += glob(os.path.join(self.path._mainsolver,
                                               self.model_databases,
                                               self.model_wildcard(par=par))
                                               )
@@ -1106,9 +1106,9 @@ class Specfem:
 
         # Symlink TaskID==0 as mainsolver in solver directory for convenience
         if self.source_names.index(source_name) == 0:
-            if not os.path.exists(self.path.mainsolver):
+            if not os.path.exists(self.path._mainsolver):
                 logger.debug(f"linking source '{source_name}' as 'mainsolver'")
-                unix.ln(cwd, self.path.mainsolver)
+                unix.ln(cwd, self.path._mainsolver)
 
     def _export_starting_models(self, parameters=None):
         """
