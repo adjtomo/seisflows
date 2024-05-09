@@ -398,7 +398,7 @@ class Forward:
         """
         # Forward workflow may not have access to optimization module, so we 
         # only tag residuals files with the source name
-        if save_residuals is None:
+        if not save_residuals:
             save_residuals = os.path.join(self.path.eval_grad, "residuals",
                                           "residuals_{src}.txt")
         else:
@@ -411,7 +411,7 @@ class Forward:
 
         # Check if we can read in the models to disk prior to submitting jobs
         # this may exit the workflow if we get a read error
-        if path_model is None:
+        if not path_model:
             logger.info("evaluating misfit for model in `path_model_init`")
             path_model = self.path.model_init
 
