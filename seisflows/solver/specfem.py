@@ -139,6 +139,7 @@ class Specfem:
         self.smooth_v = smooth_v
         self.components = components
         self.source_prefix = source_prefix or "SOURCE"
+        self.prune_scratch = None  # SPECFEM3D/GLOBE only
 
         # Define internally used directory structure
         self.path = Dict(
