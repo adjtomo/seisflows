@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v3.1.1 (#212)
+Small PR for some inconsistencies causing the examples to not work. 
+
+- Missing solver parameter `prune_scratch` causing SPECFEM2D to fail
+- Incorrect boolean check causing forward workflow to fail
+- Bump Devel version number 3.1.0 -> 3.1.1
+
 ## v3.1.0 (#208)
 Bugfix NoiseInversion Workflow 
 
