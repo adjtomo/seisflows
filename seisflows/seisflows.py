@@ -72,6 +72,8 @@ def sfparser():
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml",
                         help=f"Parameters file, default: 'parameters.yaml'")
+    parser.add_argument("-v", "--version", action="store_true",
+                        help=f"Print out the current version of SeisFlows")
 
     # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(
@@ -445,6 +447,9 @@ class SeisFlows:
             if len(sys.argv) == 1:
                 self._parser.print_help()
                 sys.exit(0)
+            if self._args.version:
+                print(f"v{__version__}")
+                sys.exit(0)
 
             # Call the given function based on the user-defined name.
             # Throw in all arguments as kwargs and let the function sort it out
@@ -755,6 +760,10 @@ class SeisFlows:
                                     parameter_file=self._args.parameter_file)
         try:
             workflow.check()
+            print(msg.cli("All module checks passed nominally, "
+                          "use 'seisflows submit' to submit workflow", 
+                          border="-")
+                          )
         except AssertionError as e:
             print(msg.cli(str(e), border="=", header="parameter errror"))
 
@@ -856,10 +865,11 @@ class SeisFlows:
         Does not allow stepping through of code (not a breakpoint).
         """
         from IPython import embed
-        workflow = import_seisflows(workdir=self._args.workdir,
-                            parameter_file=self._args.parameter_file)
+        workflow = import_seisflows(
+            workdir=self._args.workdir, parameter_file=self._args.parameter_file
+            )
         
-        logger.info(msg.mjr("ENTERING DEBUG MODE"))
+        logger.info(msg.mjr("SEISFLOWS DEBUG", char="%"))
         print(msg.cli(
             "SeisFlows' debug mode is an embedded IPython environment. All "
             "modules are loaded by default and can be accessed by name "
@@ -1225,7 +1235,7 @@ class SeisFlows:
 
         TODO re-write '_reset_line_search'
         """
-        acceptable_args = {"line_search": self._reset_line_search,}
+        acceptable_args = {"line_search": self._restart_line_search,}
 
         # Ensure that help message is thrown for empty commands
         if choice not in acceptable_args.keys():
@@ -1234,6 +1244,21 @@ class SeisFlows:
 
         acceptable_args[choice](*self._args.args, **kwargs)
 
+    def _restart_line_search(self, **kwargs):
+        """
+        Reset the line search back to the initial step so that the line search
+        can be rerun with different parameter choices
+        """
+        print(msg.cli("Resetting line search to initial step", border="="))
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        workflow.setup()
+        workflow.optimize._line_search._restart_line_search()
+        workflow.optimize.checkpoint()
+        print(msg.cli("Successful, resume workflow from "
+                      "'initialize_line_search`", border="="))
+
+        
     def _inspect_class_that_defined_method(self, name, func, **kwargs):
         """
         Given a function name and generalized module (e.g. solver), inspect

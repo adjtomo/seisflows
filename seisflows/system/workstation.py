@@ -199,6 +199,8 @@ class Workstation:
         :param parameter_file: parameter file name used to instantiate the
             SeisFlows package
         """
+        logger.info(msg.mjr("SEISFLOWS SUBMIT"))
+        
         # Copy log files if present to avoid overwriting
         for src in [self.path.output_log, self.path.par_file]:
             if os.path.exists(src) and os.path.exists(self.path.log_files):

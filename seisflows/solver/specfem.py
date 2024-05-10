@@ -153,7 +153,7 @@ class Specfem:
             model_init=path_model_init,
             model_true=path_model_true,
         )
-        self.path["mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
+        self.path["_mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
         self.path["_solver_output"] = os.path.join(self.path.output, "solver")
 
         # Private internal parameters for keeping track of solver requirements
@@ -166,7 +166,7 @@ class Specfem:
         self._ext = ""  # for database file extensions
 
         # Define available choices for check parameters
-        self._available_model_types = ["gll"]
+        self._available_model_types = ["gll", "custom_gll"]
         self._available_materials = [
             "ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
             "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
@@ -229,9 +229,14 @@ class Specfem:
             f"SPECFEM `source_prefix` must be in "
             f"{self._acceptable_source_prefixes}"
             )
-        assert(glob(os.path.join(self.path.specfem_data,
-                                 f"{self.source_prefix}*"))), (
-            f"No source files with prefix {self.source_prefix} found in DATA/")
+        _sources = glob(os.path.join(self.path.specfem_data, 
+                                     f"{self.source_prefix}_*"))
+        assert(_sources), (f"No source files with prefix {self.source_prefix} "
+                           f"found in DATA/")
+        assert(len(_sources) >= self.ntask), (
+            "Number of requested `ntasks` is larger than the number of "
+            "available source files"
+            )
 
         # Check that model type is set correctly in the Par_file
         model_type = getpar(key="MODEL",
@@ -521,7 +526,7 @@ class Specfem:
         """
         _model_files = []
         for par in self._parameters:
-            _model_files += glob(os.path.join(self.path.mainsolver,
+            _model_files += glob(os.path.join(self.path._mainsolver,
                                               self.model_databases,
                                               self.model_wildcard(par=par))
                                               )
@@ -621,10 +626,15 @@ class Specfem:
         # forward simulations are required prior to the adjoint simulation,
         # which would overwrite existing forward arrays
         if save_forward_arrays:
+            # NOTE: Relative path naming convention used, not absolute
             # scratch/solver/<source_name>/<save_forward_arrays>
             save_forward_arrays = os.path.join(self.cwd, save_forward_arrays)
-            if not os.path.exists(save_forward_arrays):
-                unix.mkdir(save_forward_arrays)
+
+            # Overwrites any existing forward arrays, for the case when we 
+            # run a thrifty line search and run multiple fwd sims consecutively 
+            unix.rm(save_forward_arrays)
+            unix.mkdir(save_forward_arrays)
+
             for glob_key in [self._forward_array_wildcard, 
                              self._absorb_wildcard]:                                   
                 unix.mv(src=glob(os.path.join(self.model_databases, glob_key)),
@@ -1019,6 +1029,8 @@ class Specfem:
 
         if source_paths:
             logger.info(f"initializing {self.ntask} solver directories")
+        else:
+            return
 
         if max_workers > 1:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -1099,9 +1111,9 @@ class Specfem:
 
         # Symlink TaskID==0 as mainsolver in solver directory for convenience
         if self.source_names.index(source_name) == 0:
-            if not os.path.exists(self.path.mainsolver):
+            if not os.path.exists(self.path._mainsolver):
                 logger.debug(f"linking source '{source_name}' as 'mainsolver'")
-                unix.ln(cwd, self.path.mainsolver)
+                unix.ln(cwd, self.path._mainsolver)
 
     def _export_starting_models(self, parameters=None):
         """
@@ -1117,14 +1129,21 @@ class Specfem:
         # Export the initial and target models to the SeisFlows output directory
         for name, model in zip(["MODEL_INIT", "MODEL_TRUE"],
                                [self.path.model_init, self.path.model_true]):
+
             # Skip over if user has not provided model path (e.g., real data
             # inversion will not have `model_true`)
             if not model:
                 continue
+            
+            # e.g., output/MODEL_INIT/*
             dst = os.path.join(self.path.output, name, "")
+
             if not os.path.exists(dst):
                 unix.mkdir(dst)
             for par in parameters:
+                # Do not try to export over existing files
+                if glob(os.path.join(dst, f"*{par}{self._ext}")):
+                    continue
                 src = glob(os.path.join(model, f"*{par}{self._ext}"))
                 unix.cp(src, dst)
 

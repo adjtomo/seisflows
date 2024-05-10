@@ -111,8 +111,8 @@ class Pyaflowa:
                  preprocess_log_level="DEBUG",
                  export_datasets=True, export_figures=True,
                  export_log_files=True, workdir=os.getcwd(),
-                 path_preprocess=None, path_solver=None, path_specfem_data=None,
-                 path_data=None, path_output=None, obs_data_format="SAC",
+                 path_preprocess=None, path_solver=None, path_data=None,
+                 path_output=None, obs_data_format="SAC",
                  syn_data_format="ASCII", data_case="data", components=None,
                  start=None, ntask=1, nproc=1, source_prefix=None, **kwargs):
         """
@@ -182,7 +182,6 @@ class Pyaflowa:
                                                     "preprocess"),
             solver=path_solver or os.path.join(workdir, "scratch", "solver"),
             output=path_output or os.path.join(workdir, "output"),
-            specfem_data=path_specfem_data,
             data=path_data,
         )
 
@@ -229,16 +228,6 @@ class Pyaflowa:
         assert(self.syn_data_format.upper() == "ASCII"), \
             "Pyatoa preprocess requires `syn_data_format`=='ASCII'"
 
-        assert(self.path.specfem_data is not None and
-               os.path.exists(self.path.specfem_data)), (
-            f"Pyatoa requires `path_specfem_data` to exist"
-        )
-
-        assert(os.path.exists(os.path.join(self.path.specfem_data,
-                                           "STATIONS"))), \
-            f"Pyatoa preprocessing requires that the `STATIONS` file exists " \
-            f"within `path_specfem_data`"
-
         assert(self._source_prefix in self._acceptable_source_prefixes), (
             f"Pyatoa can only accept `source_prefix` in " 
             f"{self._acceptable_source_prefixes}, not '{self._source_prefix}'"
@@ -270,15 +259,6 @@ class Pyaflowa:
             pyflex_parameters=self.pyflex_parameters,
             pyadjoint_parameters=self.pyadjoint_parameters
         )
-
-        # Get station metadata from the STATIONS file to be used for processing
-        try:
-            self._inv = read_stations(
-                os.path.join(self.path.specfem_data, "STATIONS")
-            )
-        except Exception as e:
-            logger.warning(f"cannot read STATIONS file, Pyaflowa will not "
-                           f"be able to plot maps: '{e}' ")
 
     @staticmethod
     def ftag(config):
@@ -434,6 +414,7 @@ class Pyaflowa:
         # Initialize empty adjoint sources for all synthetics that may or may
         # not be overwritten by the misfit quantification step
         if save_adjsrcs is not None:
+            unix.mkdir(save_adjsrcs)
             syn_filenames = glob(os.path.join(syn_path, "*"))
             initialize_adjoint_traces(data_filenames=syn_filenames,
                                       fmt=self.syn_data_format,
@@ -445,6 +426,16 @@ class Pyaflowa:
             syn_fmt=self.syn_data_format, components=components
         )
 
+        # Get station metadata from the STATIONS file to be used for processing
+        # We are assuming the directory structure of SPECFEM here
+        try:
+            self._inv = read_stations(
+                os.path.join(self.path.solver, source_name, "DATA", "STATIONS")
+            )
+        except Exception as e:
+            logger.warning(f"cannot read STATIONS file, Pyaflowa will not "
+                           f"be able to plot maps: '{e}' ")
+
         return observed, synthetic
 
     def _instantiate_manager(self, obs_fid, syn_fid, config):
@@ -454,16 +445,12 @@ class Pyaflowa:
         primarily for debuggin purposes as it allows the User to quickly
         retrieve an object ready for processing
         """
-        # READ DATA
         # Event metadata from SPECFEM DATA/ (CMTSOLUTION, FORCESOLUTION etc.)
-        # TEMPORARY suppress warnings to avoid PySEP warning about some sources
-        # not having an origin time. This should be removed after a PySEP update
-        # to not throw this warning
-        cat = read_events_plus(
-            fid=os.path.join(self.path.specfem_data,
-                            f"{self._source_prefix}_{config.event_id}"),
-            format=self._source_prefix
-        )
+        # e.g., scratch/solver/<SOURCE_NAME>/DATA/CMTSOLUTION
+        source_fid = os.path.join(self.path.solver, config.event_id, 
+                                  "DATA", self._source_prefix)
+        cat = read_events_plus(fid=source_fid, format=self._source_prefix)
+
         # Waveform input; `origintime` will only be applied if format=='ASCII'
         obs = read(fid=obs_fid, data_format=self.obs_data_format,
                    origintime=cat[0].preferred_origin().time)
@@ -591,6 +578,7 @@ class Pyaflowa:
         _waited = 0
         while True:
             try:
+                ds = None
                 with ASDFDataSet(os.path.join(self.path["_datasets"],
                                               f"{config.event_id}.h5"),
                                  mode="a") as ds:

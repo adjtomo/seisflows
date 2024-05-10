@@ -124,7 +124,6 @@ class Default:
                  late_const=None, short_dist=None, long_dist=None,
                  plot_waveforms=False, source_prefix=None,
                  workdir=os.getcwd(), path_preprocess=None, path_solver=None,
-                 path_specfem_data=None,
                  **kwargs):
         """
         Preprocessing module parameters
@@ -145,10 +144,6 @@ class Default:
         results. Defaults to current working directory
         :type path_solver: str
         :param path_solver: scratch path for solver used to access trace files
-        :type path_specfem_data: str
-        :param path_specfem_data: path to SPECFEM DATA/ directory which must
-            contain the CMTSOLUTION, STATIONS and Par_file files used for
-            running SPECFEM
         """
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
@@ -193,7 +188,6 @@ class Default:
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
             solver=path_solver or os.path.join(workdir, "scratch", "solver"),
-            specfem_data=path_specfem_data or None
         )
 
         # The list <_obs_acceptable_data_formats> always includes
@@ -300,25 +294,6 @@ class Default:
 
         assert(self.unit_output.upper() in self._acceptable_unit_output), \
             f"unit output must be in {self._acceptable_unit_output}"
-
-        # This is a redundant check on the DATA/STATIONS file (solver also
-        # runs this check). This is required by noise workflows to determine
-        # station rotation
-        assert (self.path.specfem_data is not None and
-                os.path.exists(self.path.specfem_data)), (
-            f"`path_specfem_data` must exist and must point to directory "
-            f"containing SPECFEM input files"
-        )
-        # Ensure STATIONS files exist as the locations are used for preproc,
-        assert(os.path.exists(
-            os.path.join(self.path.specfem_data, "STATIONS"))), (
-            f"DATA/STATIONS does not exist but is required by preprocessing"
-        )
-        # Ensure source files exist as their locations are used for preproc.
-        assert(glob(os.path.join(self.path.specfem_data,
-                                 f"{self.source_prefix}_*"))), (
-            f"DATA/{self.source_prefix}_* does not exist but is required"
-        )
 
     def setup(self):
         """

@@ -135,6 +135,8 @@ class Cluster(Workstation):
             be discouraged by sys admins as some  array processing will take 
             place on the shared login node. 
         """
+        logger.info(msg.mjr("SEISFLOWS SUBMIT", char="%"))
+
         # Copy log files if present to avoid overwriting
         for src in [self.path.output_log, self.path.par_file]:
             if os.path.exists(src) and os.path.exists(self.path.log_files):

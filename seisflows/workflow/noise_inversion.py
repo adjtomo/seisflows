@@ -137,7 +137,9 @@ class NoiseInversion(Inversion):
         super().__init__(**kwargs)
 
         self.kernels = kernels.upper()
-        self.separate_rt_kernels = separate_rt_kernels
+
+        # Commented until feature is developed/tested
+        # self.separate_rt_kernels = separate_rt_kernels
 
         # Internal variables control behavior of spawned jobs. These should not
         # be set by the User, they are set by main processing functions here.
@@ -147,6 +149,9 @@ class NoiseInversion(Inversion):
         # Internal lookup table for theta and theta_prime values which are 
         # used for waveform rotation. To be filled by setup()
         self._srcrcv_stats = None
+
+        # Filenaming convention for saved forward arrays
+        self._fwd_arr_dir = "{force}_FWD_ARR"
 
     def check(self):
         """
@@ -252,6 +257,16 @@ class NoiseInversion(Inversion):
         if comp is not None:
             tag = f"{tag}_{comp}".lower()
         return os.path.join(self.solver.cwd, "traces", tag)
+    
+    @property
+    def fwd_arr_path(self):
+        """
+        Forward arrays must be saved and loaded between subsequent fwd and
+        adjoint simulations. This property removes ambiguity of file naming
+        between multiple functions. Modified by the internal 'force' variable
+        which is set by calling functions.
+        """
+        return f"{self._force}_FWD_ARR"
 
     def evaluate_zz_misfit(self, **kwargs):
         """
@@ -282,7 +297,9 @@ class NoiseInversion(Inversion):
             f"residuals_{{src}}_{self.evaluation}_ZZ.txt"
             )
         super().evaluate_initial_misfit(save_residuals=save_residuals,
-                                        sum_residuals=False, **kwargs
+                                        sum_residuals=False,
+                                        save_forward_arrays=self.fwd_arr_path,
+                                        **kwargs
                                         )
         self._rename_preprocess_files(tag="ZZ")
 
@@ -300,7 +317,8 @@ class NoiseInversion(Inversion):
         # Internal tracking parameters used to name sub-directories, save files
         self._force = "Z"
         self._cmpnt = "Z"
-        super().run_adjoint_simulations()
+        super().run_adjoint_simulations(load_forward_arrays=self.fwd_arr_path,
+                                        del_loaded_forward_arrays=True)
 
     def evaluate_rt_misfit(self, **kwargs):
         """
@@ -322,17 +340,16 @@ class NoiseInversion(Inversion):
         for force in ["E", "N"]:  # <- E before N required!
             self._force = force
             logger.info(msg.sub(f"MISFIT EVALUATION FORCE '{self._force}'"))
+
             # Residuals file e.g., 'residuals_{src}_i01s00_RT.txt'
             save_residuals = os.path.join(
                 self.path.eval_grad, "residuals",
                 f"residuals_{{src}}_{self.evaluation}_RT.txt"
                 )
             # saves to `scratch/solver/{source_name}/E_FWD_ARR` or `N_FWD_ARR`
-            # ! Make sure this matches naming convention in adjoint simulations
-            save_forward_arrays = f"{self._force}_FWD_ARR"
-            self.evaluate_initial_misfit(
+            super().evaluate_initial_misfit(
                 save_residuals=save_residuals, sum_residuals=False, 
-                save_forward_arrays=save_forward_arrays, **kwargs
+                save_forward_arrays=self.fwd_arr_path, **kwargs
                 )
         self._rename_preprocess_files(tag="RT")
 
@@ -347,11 +364,14 @@ class NoiseInversion(Inversion):
         if ("RR" not in self.kernels) and ("TT" not in self.kernels):
             logger.info("RR, TT not specified in parameter 'kernels'. Skipping")
             return 
-        
-        if self.separate_rt_kernels:
-            self._run_rt_adjoint_simulations_separate()
-        else:
-            self._run_rt_adjoint_simulations_combined()
+
+        self._run_rt_adjoint_simulations_separate()
+
+        # COMMENTED OUT UNTIL THIS FUNCTIONALITY IS WRITTEN
+        # if self.separate_rt_kernels:
+        #     self._run_rt_adjoint_simulations_separate()
+        # else:
+        #     self._run_rt_adjoint_simulations_combined()
 
         # Unset internal tracking variables for safety
         self._force = None
@@ -365,8 +385,6 @@ class NoiseInversion(Inversion):
         """
         # Four possible adjoint simulations: ER, NR, ET, NT
         for force in ["E", "N"]:
-            # e.g., E_FWD_ARR (for E component force)
-            load_forward_arrays = f"{force}_FWD_ARR"
             for cmpnt in ["R", "T"]:
                 # Don't run a simulation if we don't need the kernels
                 if cmpnt not in self.kernels:
@@ -388,8 +406,8 @@ class NoiseInversion(Inversion):
 
                 # Fwd arrays will not be deleted until all simulations for a 
                 # given FORCE are finished, that is, when we run the T adj sims
-                self.run_adjoint_simulations(
-                    load_forward_arrays=load_forward_arrays,
+                super().run_adjoint_simulations(
+                    load_forward_arrays=self.fwd_arr_path,
                     del_loaded_forward_arrays=bool(cmpnt == "T")  # last index
                 )
                 self._states[_state_check] = 1
@@ -432,7 +450,7 @@ class NoiseInversion(Inversion):
         """
         # If we are the middle of a thrifty inversion, simply load the misfit
         # of the last accepted line search evaluation
-        if self.thrifty and self._thrifty_status:
+        if self.is_thrifty:
             total_misfit = self.optimize.load_vector(name="f_new")
             logger.info(f"total misfit `f_new` ({self.evaluation}) = "
                         f"{total_misfit:.2E}")
@@ -515,11 +533,27 @@ class NoiseInversion(Inversion):
             these components will be 0. E.g., ['Z', 'N']. If None, all available
             components will be considered.
         """
+        # Purge any existing synthetics to avoid any file mixups. Synthetics
+        # will be created or linked as required
+        unix.rm(self.trace_path(tag="syn"))
+
         # Z component force behaves like a normal workflow, except that we only
         # create adjoint sources for the Z component (E, N will be 0's)
         if self._force == "Z":
-            super().evaluate_objective_function(save_residuals=save_residuals,
-                                                components=["Z"])
+            # Load in ZZ synthetics so that they are discoverable by preprocess
+            unix.ln(src=self.trace_path(tag="syn", comp=self._force), 
+                    dst=self.trace_path(tag="syn")
+                    )
+
+            # e.g., scratch/solver/001/traces/adj_zz/*.adj
+            save_adjsrcs = self.trace_path(
+                tag="adj", comp=f"{self._force.lower()}{self._cmpnt.lower()}"
+                )
+            super().evaluate_objective_function(save_residuals=save_residuals, 
+                                                save_adjsrcs=save_adjsrcs,
+                                                components=["Z"]
+                                                )
+            
         # Run E and N misfit quantification
         else:
             # ==================================================================
@@ -529,8 +563,9 @@ class NoiseInversion(Inversion):
                 logger.info("waiting for 'N' forward simulation for processing")
                 return
 
-            # This will generate RR and TT synthetics in `traces/syn` with
-            # synthetics generated using `traces/syn_e` and `traces/syn_n`
+            # Create RR and TT synthetics in `traces/syn` with synthetics in 
+            # `traces/syn_e` and `traces/syn_n`
+            unix.mkdir(self.trace_path(tag="syn"))
             self.rotate_ne_traces_to_rt()
 
             # Run preprocessing with rotated synthetics for horizontal cmpnts,
@@ -646,18 +681,17 @@ class NoiseInversion(Inversion):
                                              )
 
         # Write TT/RR synthetics back to the main synthetic trace directory
-        # !!! Assuming SPECFEM adjoint source file name structure
         if "TT" in self.kernels:
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XT.sem?*
-            fid_t = os.path.join(self.solver.cwd, "traces", "syn",
-                                 f"{net}.{sta}.{cha[:2]}T.{ext}")
-            write(st=Stream(tr_tt), fid=fid_t,
+            fid_t = f"{net}.{sta}.{cha[:2]}T.{ext}"
+            write(st=Stream(tr_tt), 
+                  fid=os.path.join(self.trace_path(tag="syn"), fid_t),
                   data_format=self.solver.syn_data_format)
         if "RR" in self.kernels:
             # scratch/solver/{source_name}/traces/syn/NN.SSS.?XR.sem?*
-            fid_r = os.path.join(self.solver.cwd, "traces", "syn",
-                                 f"{net}.{sta}.{cha[:2]}R.{ext}")
-            write(st=Stream(tr_rr), fid=fid_r,
+            fid_r = f"{net}.{sta}.{cha[:2]}R.{ext}"
+            write(st=Stream(tr_rr), 
+                  fid=os.path.join(self.trace_path(tag="syn"), fid_r),
                   data_format=self.solver.syn_data_format)
 
     def rotate_rt_adjsrcs_to_ne(self, choice):
@@ -774,8 +808,7 @@ class NoiseInversion(Inversion):
                       )
 
     def run_forward_simulations(self, path_model, save_traces=False,
-                                export_traces=False,
-                                **kwargs):
+                                export_traces=False, **kwargs):
         """
         Function Override of `workflow.forward.run_forward_simulation` 
 
@@ -818,17 +851,16 @@ class NoiseInversion(Inversion):
         kernel_vals = None
         if self._force == "Z":
             kernel_vals = ["0.d0", "0.d0", "1.d0"]  # format: [E, N, Z]
-            # ZZ SGFs are just saved straight to the 'syn' directory
-            save_traces = save_traces or self.trace_path(tag="syn")
         else:
             if self._force == "E":
                 kernel_vals = ["1.d0", "0.d0", "0.d0"]  # format: [E, N, Z]
             elif self._force == "N":
                 kernel_vals = ["0.d0", "1.d0", "0.d0"]  # format: [E, N, Z]
 
-            # e.g., solver/{source_name}/traces/syn_e
-            save_traces = save_traces or \
-                    self.trace_path(tag="syn", comp=self._force)
+        # Synthetics saved to a separate sub-directory so that they do not 
+        # get overwritten e.g., solver/{source_name}/traces/syn_e
+        save_traces = save_traces or \
+                self.trace_path(tag="syn", comp=self._force)
 
         # Clear out synthetics from previous evaluations to avoid file conflict
         unix.rm(os.path.join(save_traces, "*"))
@@ -909,30 +941,27 @@ class NoiseInversion(Inversion):
         else:
             export_kernels = False
 
-        # Run adjoint simulations for each kernel
+        # Prepare the adjoint sources which need to be loaded in from the
+        # corresponding subdirectory
+        unix.rm(self.trace_path(tag="adj"))
+        unix.mkdir(self.trace_path(tag="adj"))
+
+        # Symlink the correct set of adjoint sources to the 'adj' directory
+        # `adj_dir` is something like 'adj_nt' or 'adj_zz'
+        adj_dir = self.trace_path(tag="adj", comp=subdir.lower())
+        unix.mkdir(adj_dir)
+        for src in glob(os.path.join(adj_dir, "*")):
+            unix.ln(src, self.trace_path("adj"))
+
+        # Generate empty adjoint sources for other non-required components
+        # to satisfy SPECFEM requirement
         if self._force == "Z":
             self._generate_empty_adjsrcs(components=["E", "N"])
-            
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
-                                                   **kwargs)
         elif self._force in ["E", "N"]:
-            # Remove any existing adjoint sources from directory 
-            unix.rm(self.trace_path(tag="adj"))
-            unix.mkdir(self.trace_path(tag="adj"))
-
-            # Generate empty Z components because we only have E and N component
             self._generate_empty_adjsrcs(components=["Z"])
 
-            # Symlink the correct set of adjoint sources to the 'adj' directory
-            # `adj_dir` is something like 'adj_nt'
-            adj_dir = self.trace_path(
-                tag="adj", comp=f"{self._force.lower()}{self._cmpnt.lower()}"
-            )
-            for src in glob(os.path.join(adj_dir, "*")):
-                unix.ln(src, self.trace_path("adj"))
-
-            super()._run_adjoint_simulation_single(save_kernels, export_kernels,
-                                                   **kwargs)
+        super()._run_adjoint_simulation_single(save_kernels, export_kernels,
+                                                **kwargs)
 
     def _generate_empty_adjsrcs(self, components):
         """
@@ -1067,13 +1096,13 @@ class NoiseInversion(Inversion):
         # task usually fails due to timeout when `tasktime` is set for an 
         # adjoint simulation (tasktime=self.system.tasktime * 2)
         self.system.run([generate_event_kernels], single=True, 
-                        tasktime=self.system.tasktime * 1)
+                        tasktime=self.system.tasktime * 4)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
         super().postprocess_event_kernels()
 
-    def evaluate_line_search_misfit(self):
+    def evaluate_line_search_misfit(self, _preproc_only=False):
         """
         Function Overwrite of `workflow.inversion._evaluate_line_search_misfit`
         Called inside `workflow.inversion.perform_line_search`.
@@ -1103,29 +1132,43 @@ class NoiseInversion(Inversion):
             cfg["E"] = {"tag": "RT", "components": ["T", "R"]}
             cfg["N"] = {"tag": "RT", "components": ["T", "R"]}
 
+
+        # Allow skipping forward simulation
+        run_list = [self.prepare_data_for_solver,
+                    self.run_forward_simulations, 
+                    self.evaluate_objective_function
+                    ]
+        if _preproc_only:
+            logger.warning("user request that NO forward simulation be run")
+            run_list = [self.prepare_data_for_solver, 
+                        self.evaluate_objective_function]
+
         # Run forward simulations and misfit calculation for each required force
         for force, attrs in cfg.items():
             tag = attrs["tag"]
             components = attrs["components"]
             _state_check = f"evaluate_line_search_misfit_{force}"
-            self._force = force
 
             # Intermediate state check to see if we already ran this force
             if _state_check in self._states and \
                 bool(self._states[_state_check]):
                 continue
 
+            # Set up for the current forward simulation
+            self._force = force
+            if force == "Z":
+                self._cmpnt = "Z"  # Somewhat kludgy, required for dir. naming
+
+            # If we are running a thrifty inversion we need to save the fwd
+            # arrays so that the next iterations adjoint simulations can use 'em
             logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
             self.system.run(
-                [self.prepare_data_for_solver,
-                 self.run_forward_simulations,
-                 self.evaluate_objective_function
-                 ],
-                path_model=os.path.join(self.path.eval_func, "model"),
+                run_list, path_model=os.path.join(self.path.eval_func, "model"),
                 save_residuals=os.path.join(
-                    self.path.eval_func, "residuals",
+                    self.path.eval_func, "residuals", 
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"),
-                components=components
+                save_forward_arrays=self.fwd_arr_path,
+                components=components, 
             )
             self._rename_preprocess_files(tag)
             self._states[_state_check] = 1
@@ -1141,5 +1184,5 @@ class NoiseInversion(Inversion):
         # Reset states incase we need to run again
         for force in cfg.keys():
             self._states[f"evaluate_line_search_misfit_{force}"] = 0
-
+        self.checkpoint()
 
