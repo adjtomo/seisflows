@@ -139,6 +139,7 @@ class SFExample2D:
             "start": 1,  # first iteration
             "end": self.niter,  # final iteration -- we will run 2
             "step_count_max": 5,  # will cause iteration 2 to fail
+            "step_len_init": 0.05,  # as a percentage of initial model
             "components": "Y",  # only Y component seismograms avail.
             "attenuation": False,
             "plot_waveforms": True,  
@@ -218,6 +219,7 @@ class SFExample2D:
         """
         if specfem2d_repo is None or not os.path.exists(specfem2d_repo):
             specfem2d_repo = os.path.join(cwd, "specfem2d")
+        specfem2d_repo = os.path.abspath(specfem2d_repo)  
 
         # This defines required structures from the SPECFEM2D repository
         sem2d = {
@@ -305,7 +307,7 @@ class SFExample2D:
         final models using one of the SPECFEM2D examples
         """
         assert(os.path.exists(self.sem2d_paths["example"])), (
-            f"SPECFEM2D/EXAMPLE directory: '{self.sem2d['example']}' "
+            f"SPECFEM2D/EXAMPLE directory: '{self.sem2d_paths['example']}' "
             f"does not exist, please check this path and try again."
         )
 

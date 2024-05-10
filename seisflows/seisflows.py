@@ -1235,7 +1235,7 @@ class SeisFlows:
 
         TODO re-write '_reset_line_search'
         """
-        acceptable_args = {"line_search": self._reset_line_search,}
+        acceptable_args = {"line_search": self._restart_line_search,}
 
         # Ensure that help message is thrown for empty commands
         if choice not in acceptable_args.keys():
@@ -1244,6 +1244,21 @@ class SeisFlows:
 
         acceptable_args[choice](*self._args.args, **kwargs)
 
+    def _restart_line_search(self, **kwargs):
+        """
+        Reset the line search back to the initial step so that the line search
+        can be rerun with different parameter choices
+        """
+        print(msg.cli("Resetting line search to initial step", border="="))
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        workflow.setup()
+        workflow.optimize._line_search._restart_line_search()
+        workflow.optimize.checkpoint()
+        print(msg.cli("Successful, resume workflow from "
+                      "'initialize_line_search`", border="="))
+
+        
     def _inspect_class_that_defined_method(self, name, func, **kwargs):
         """
         Given a function name and generalized module (e.g. solver), inspect
