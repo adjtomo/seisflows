@@ -405,7 +405,7 @@ class Model:
                  f"`material` which controls the expected parameters"
                  )
             # Make sure none of the values are NaNs
-            assert(not np.isnan(val).any()), (
+            assert(not np.isnan(np.hstack(val).astype(float)).any()), (
                  f"SPECFEM_{self.flavor} model '{key}' contains NaN values and "
                  f"should not, please check your model construction"
                  )
@@ -530,7 +530,7 @@ class Model:
         model = Dict()
         coords = Dict()
         ngll = []
-        data = np.load(file=file)
+        data = np.load(file=file, allow_pickle=True)
         for i, key in enumerate(data.files):
             if key == "fmt":
                 continue
@@ -736,7 +736,7 @@ class Model:
         # !!! Causes a visible deprecation warning from NumPy but setting
         # !!! array type as 'object' causes problems with pickling and
         # !!! merging arrays
-        array = np.array(array)
+        array = np.array(array, dtype="object")
 
         return array
 

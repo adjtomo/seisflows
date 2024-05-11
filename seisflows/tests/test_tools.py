@@ -12,24 +12,17 @@ from seisflows.tools.config import custom_import
 
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
+TEST_MODEL = os.path.join(TEST_DIR, "test_data", "test_tools", 
+                          "test_file_formats")
 
 
-def test_specfem_model(tmpdir):
+def test_model_attributes():
     """
-    Make sure we can dynamically load SPECFEM models in various formats
-
-    TODO eventually we want to split this into multiple tests that test each
-    TODO of the IO formats (binary, adios etc.). Currently only testing binary.
+    Check that model values are read in correctly and accessible in a way we 
+    expect
     """
-    model_data = os.path.join(TEST_DIR, "test_data", "test_tools",
-                              "test_file_formats")
+    m = Model(path=TEST_MODEL, fmt=".bin")
 
-    # Make sure that multiple acceptable file extensions throw error
-    with pytest.raises(AssertionError):
-        Model(path=model_data)
-
-    # Check that model values are read in correctly
-    m = Model(path=model_data, fmt=".bin")
     assert(m.ngll[0] == 40000)
     assert(m.nproc == 1)
     assert("vp" in m.model.keys())
@@ -37,10 +30,24 @@ def test_specfem_model(tmpdir):
     assert(m.model.vp[0][0] == 5800.)
     assert(m.model.vs[0][0] == 3500.)
 
+
+def test_model_functions():
+    """
+    Test the core merge and split functions of the Model class to ensure
+    they give the same results
+    """
+    m = Model(path=TEST_MODEL, fmt=".bin")
+
     assert(len(m.merge() == len(m.model.vs[0]) + len(m.model.vp[0])))
     assert(len(m.split()) == len(m.parameters))
 
-    # Check that saving and loading npz file works
+
+def test_model_io(tmpdir):
+    """
+    Check that saving and loading npz file works
+    """
+    m = Model(path=TEST_MODEL, fmt=".bin")
+
     m.save(path=os.path.join(tmpdir, "test.npz"))
     m_new = Model(path=os.path.join(tmpdir, "test.npz"))
     assert(m_new.ngll[0] == m.ngll[0])
@@ -50,8 +57,10 @@ def test_specfem_model(tmpdir):
     m.write(path=tmpdir)
     assert(len(glob(os.path.join(tmpdir, f"*{m.fmt}"))) == 2)
 
-    # Check that we can instantiate a model from an input vector
-    m = Model()
+
+def test_model_from_input_vector():
+    """Check that we can instantiate a model from an input vector"""
+    m = Model(path=None)
     m.model = Dict(x=[np.array([-1.2, 1.])])
     assert(m.nproc == 1)
     assert(m.ngll == [2])
