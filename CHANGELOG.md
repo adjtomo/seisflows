@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## v3.2.1 (#214)
+- Model class now saves internal model representation as 'object' arrays to deal with chunks of differing lengths
+- Model .npz files are now saved as pickle files
+- Update and improve tests to cover Model class
+
+## v3.2.0 (#213)
+
+### Major
+- **New parameter**: `optimize.step_len_min` allows the User to set a minimum step length (alpha) as a percentage of the model values. This prevents line searches from trying to minimize misfit with very small model changes, which is a waste of computational resources. 
+- **Changed Behavior**: Saved Forward arrays are now overwritten by new forward simulations, for the case when Thrifty line searches need access to forward arrays in subsequent adjoint simulations
+- **QoL Improvement**: Initial and True model file export (tied to parameter `export_model`) now checks whether files exist and will not overwrite (previously they always overwrote), meaning Solver.setup() is now a lot faster
+- **Bugfix**: Preprocess.Pyaflowa was missing a `mkdir` for adjoint source directory which was leading to FileNotFoundError
+- **Examples**: Changed starting step length in Ex1 to achieve successful line search. Ex2 does NOT finish iteration, will need to fix this
+
+### Minor
+- Workflow Thrifty checks are now inside a property that can be checked, rather than as a function call
+- Preprocess reads STATION metadata (locations) from it's Event's own 'DATA' directory (e.g., scratch/solver/001/DATA/STATIONS), rather than from the master station file (e.g., path_specfem_data/STATIONS), allowing for different STATION definitions for different events. Untested, might need a little more tooling to make that work.
+- New internal Workflow.Inversion attribute `_was_thrifty` keeps track of whether a previous iteration's finalization was done in a Thrifty manner, allowing the current iteration to skip forward simulations. **WARNING** This parameter is NOT saved to disk, so if the workflow breaks between finalization of iteration I and forward simulations of I+1, then forward simulations will be run like a normal inversion.
+- Cleaned up the aesthetic look of Submit and Debug commands
+- Removed `step_len_max` from Line Search instantiation because it was not used by the module
+- Refactored some optimization checks for `step_len_min` and `step_len_max` with better log messages and less redundant code
+- Removed `path_specfem_data` from Preprocess init because it is not used in the module
+- Removed some redundant checks from Preprocess (Default and Pyaflowa)
+- Removed STATION file reading from default preprocessing as the Inventory was not used
+
 ## v3.1.1 (#212)
 Small PR for some inconsistencies causing the examples to not work. 
 
