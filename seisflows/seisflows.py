@@ -1168,16 +1168,16 @@ class SeisFlows:
             NoneType, will not save the figure
         """
         from obspy import Stream
-        from seisflows.preprocess.default import Default
+        from seisflows.preprocess.default import Default, read
 
         # Take advantage of the Default Preprocessing module's read() function
-        plotter = Default()
-        assert(data_format.upper() in plotter._obs_acceptable_data_formats), \
-            f"data format must be in {plotter._obs_acceptable_data_formats}"  # NOQA
+        default = Default()
+        assert(data_format.upper() in default._obs_acceptable_data_formats), \
+            f"data format must be in {default._obs_acceptable_data_formats}"  # NOQA
 
         st = Stream()
         for fid in fids:
-            st += plotter.read(fid, data_format=data_format)
+            st += read(fid, data_format=data_format)
 
         st.plot(outfile=savefig, **kwargs)
 
