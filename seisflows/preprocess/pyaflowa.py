@@ -525,8 +525,7 @@ class Pyaflowa:
             st_syn_raw = mgmt.st_syn.copy()
 
             # Filter waveforms
-            # !!! HARDCODE NORMALIZATION FOR ANAT, REMOVE THIS !!!
-            mgmt.preprocess(remove_response=False, normalize_to="syn")
+            mgmt.preprocess(remove_response=False)
             if fix_windows:
                 # Determine components from waveforms on the fly so that we can
                 # use that information to only select windows we need
