@@ -24,7 +24,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ipython", "ipdb"]
+dev = [
+	"pytest", 
+    "pyatoa @ git+https://github.com/adjtomo/pyatoa.git@devel",
+    "pysep-adjtomo @ git+https://github.com/adjtomo/pysep.git@devel"
+]
 
 [project.urls]
 homepage = "https://github.com/adjtomo/"
