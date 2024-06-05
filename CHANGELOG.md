@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v3.2.3 (#218)
+- Bugfix Fujitsu/Wisteria environ variable was being updated internally, causing an accumulating error
+- Removed Pyaflowa preprocess normalization step as this was hardcoded for some research tasks, not meant to be in code
+- Added a tasktime multiplier to Inversion kernel postprocessing tasks, eventually this should be accessible via the State system or parameter file but for now making it part of the source code
+- Removes main install instruction pointing to Pyatoa GitHub, points to PyPi now by default
+- Updates [dev] install instructions to point towards GitHub rather than PyPi versions. Dev install instructions are now:
+  ```bash
+  pip install -e .[dev]  # to install dev branches 
+  ```
+
+## v3.2.2 
+- Hotfix: update cli tool 'plotst' to reflect import structure changes 
+
 ## v3.2.1 (#214)
 - Model class now saves internal model representation as 'object' arrays to deal with chunks of differing lengths
 - Model .npz files are now saved as pickle files

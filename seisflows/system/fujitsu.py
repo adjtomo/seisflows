@@ -252,7 +252,9 @@ class Fujitsu(Cluster):
 
         # If no environs, ensure there is not trailing comma
         if self.environs:
-            self.environs = f",{self.environs}"
+            environs = f",{self.environs}"
+        else:
+            environs = ""
 
         # Default Fujitsu command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
@@ -265,7 +267,7 @@ class Fujitsu(Cluster):
                 # Ensure that these are comma-separated, not space-separated
                 f"-x SEISFLOWS_FUNCS={funcs_fid},"  
                 f"SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid}{self.environs},"
+                f"SEISFLOWS_TASKID={taskid}{environs},"
                 f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
                 f"{self.run_functions}",
             ])
