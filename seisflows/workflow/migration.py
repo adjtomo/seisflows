@@ -273,8 +273,12 @@ class Migration(Forward):
             if os.path.exists(scratch_path):
                 shutil.rmtree(scratch_path)
 
+        # NOTE: May need to increase the tasktime by a factor of n because the
+        # smoothing operation is computational expensive; add the following:
+        # tasktime=self.system.tasktime * 2  # increase 2 if you need more time
         self.system.run([mask_source_event_kernels, combine_event_kernels, 
-                         smooth_misfit_kernel], single=True)
+                         smooth_misfit_kernel], single=True,
+                         tasktime=self.system.tasktime * 2)
 
     def evaluate_gradient_from_kernels(self):
         """
