@@ -148,7 +148,7 @@ class Cluster(Workstation):
         # Determine where submit call will be sent (login or compute node)
         if direct:
             header = ""
-            print("submitting master job directly to login node")
+            print("submit 'SeisFlows Main Job' directly to cluster login node")
         else:
             header = self.submit_call_header
 

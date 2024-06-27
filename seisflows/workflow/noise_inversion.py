@@ -279,10 +279,15 @@ class NoiseInversion(Inversion):
         each of our `ntask` sources. This only needs to be run once during a 
         workflow.
         """
+        # We only want to generate synthetic data one time
+        if self.iteration > 1:
+            logger.debug("inversion iteration > 1, skipping synthetic data gen")
+            return
+        
         forces = []
         if "ZZ" in self.kernels:
             forces.append("Z")
-        elif "RR" in self.kernels or "TT" in self.kernels:
+        if "RR" in self.kernels or "TT" in self.kernels:
             forces.append("E")  # E must come first
             forces.append("N")
 
@@ -292,6 +297,7 @@ class NoiseInversion(Inversion):
 
         for force in forces:
             self._force = force
+            logger.info(f"running forward simulations for force: {self._force}")
             self.system.run([self._generate_synthetic_data_single], **kwargs)
 
     def _generate_synthetic_data_single(self, path_model=None, **kwargs):
@@ -328,28 +334,38 @@ class NoiseInversion(Inversion):
             # saved directly in the `traces/obs` directory
             self.rotate_ne_traces_to_rt(tag="obs")
             src = os.path.join(self.trace_path(tag="obs"), "*")
+            # Create output directory, e.g., `path_data`/{source_name}/RR 
+            for kernel in ["RR", "TT"]:
+                if kernel in self.kernels:
+                    unix.mkdir(os.path.join(
+                        self.path.data, self.solver.source_name, kernel)
+                        )
             # Sort of hacky but we need to know what component the waveforms
             # are in so we check the filename so we can save it in the correct
             # place
             for src_ in glob(src):
                 # NN.SSS.?XR.sem?*
-                net, sta, cha, *_ = os.path.basename(src_).split(".")
+                _, _, cha, *_ = os.path.basename(src_).split(".")
                 comp = cha[-1]  # should be 'R' or 'T'
                 dst = os.path.join(
                     self.path.data, self.solver.source_name, f"{comp}{comp}"
                     )
+                unix.mkdir(dst)
                 unix.mv(src_, dst)
             # Remove directories that contain pre-rotated traces
             unix.rm(self.trace_path(tag="obs", comp="E"))
             unix.rm(self.trace_path(tag="obs", comp="N"))
         elif self._force == "Z":
-            src = os.path.join(save_traces, "*")
+            # !!! Assuming file naming here to get after 'Z' component only
+            # !!! filenaming should be something like: NN.SSSS.?XZ.sem.ascii
+            src = os.path.join(save_traces, "??.*.??Z.*")
             dst = os.path.join(self.path.data, self.solver.source_name, "ZZ")
+            unix.mkdir(dst)
             for src_ in glob(src):
                 # Move the data directly, it will be symlinked back during
                 # `prepare_data_for_solver`
                 unix.mv(src_, dst)
-            # Delete the now empty directory to keep things clean for later
+            # Delete the directory and unused waveforms to keep things clean
             unix.rm(save_traces)
 
     def evaluate_zz_misfit(self, **kwargs):
