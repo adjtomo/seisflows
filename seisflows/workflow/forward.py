@@ -345,7 +345,8 @@ class Forward:
         # Run forward simulation with solver
         self.run_forward_simulations(
             path_model=path_model, export_traces=None,  
-            save_traces=save_traces, save_forward=False
+            save_traces=save_traces, save_forward_arrays=False,
+            flag_save_forward=False
             )
         
         # Symlink data into solver directories so it can be found by preprocess
