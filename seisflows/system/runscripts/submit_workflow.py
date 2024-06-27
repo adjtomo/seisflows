@@ -17,6 +17,8 @@ a script using subprocess, allowing it to be submitted to e.g., a job scheduler
 """
 import os
 import argparse
+from seisflows import logger
+from seisflows.tools import msg
 from seisflows.tools.config import import_seisflows
 
 
@@ -36,12 +38,14 @@ def parse_args():
 
 if __name__ == '__main__':
     """
-    Submit workflow.main() as a MASTER JOB on the compute system
+    Submit workflow.main() as a MASTER JOB on the compute system.
     """
     args = parse_args()
     workflow = import_seisflows(workdir=args.workdir,
                                 parameter_file=args.parameter_file,
                                 stream_handler=False)
+
+    logger.info(msg.mjr("SEISFLOWS SUBMIT", char="%"))
     workflow.check()
     workflow.setup()
     workflow.run()

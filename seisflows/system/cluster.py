@@ -123,6 +123,11 @@ class Cluster(Workstation):
         Submits the main workflow job as a separate job submitted directly to
         the system that is running the master job
 
+        .. note::
+
+            print statements are used rather than log statements because the
+            logger will not yet have been instantiated
+
         :type workdir: str
         :param workdir: path to the current working directory
         :type parameter_file: str
@@ -135,8 +140,6 @@ class Cluster(Workstation):
             be discouraged by sys admins as some  array processing will take 
             place on the shared login node. 
         """
-        logger.info(msg.mjr("SEISFLOWS SUBMIT", char="%"))
-
         # Copy log files if present to avoid overwriting
         for src in [self.path.output_log, self.path.par_file]:
             if os.path.exists(src) and os.path.exists(self.path.log_files):
@@ -145,7 +148,7 @@ class Cluster(Workstation):
         # Determine where submit call will be sent (login or compute node)
         if direct:
             header = ""
-            logger.info("submitting master job directly to login node")
+            print("submitting master job directly to login node")
         else:
             header = self.submit_call_header
 
@@ -161,7 +164,7 @@ class Cluster(Workstation):
         try:
             subprocess.run(submit_call, shell=True)
         except subprocess.CalledProcessError as e:
-            logger.critical(f"SeisFlows master job has failed with: {e}")
+            print(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
 
     def run(self, funcs, single=False, tasktime=None, _retry=0, **kwargs):
