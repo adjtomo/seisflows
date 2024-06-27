@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v3.2.4 (#221)
+- Fixes synthetic inversion data generation for noise inversion workflow
+- Fixes some flag misnaming in Forward workflow synthetic inversion data generation
+- Adjusts main log message aesthetics to provide a visual marker for new job submissions
+
 ## v3.2.3 (#218)
 - Bugfix Fujitsu/Wisteria environ variable was being updated internally, causing an accumulating error
 - Removed Pyaflowa preprocess normalization step as this was hardcoded for some research tasks, not meant to be in code
