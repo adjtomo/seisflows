@@ -218,7 +218,8 @@ class NoiseInversion(Inversion):
         :rtype: list
         :return: list of methods to call in order during a workflow
         """
-        return [self.evaluate_zz_misfit,
+        return [self.generate_synthetic_data,
+                self.evaluate_zz_misfit,
                 self.run_zz_adjoint_simulations,
                 self.evaluate_rt_misfit,
                 self.run_rt_adjoint_simulations,
@@ -267,6 +268,105 @@ class NoiseInversion(Inversion):
         which is set by calling functions.
         """
         return f"{self._force}_FWD_ARR"
+    
+    def generate_synthetic_data(self, **kwargs):
+        """
+        Function Overwrite of `workflow.forward.generate_synthetic_data()` 
+        To allow generation of both vertical and horizontal component SGF data
+
+        For synthetic inversion cases, we can use the workflow machinery to
+        generate 'data' by running simulations through a target/true model for 
+        each of our `ntask` sources. This only needs to be run once during a 
+        workflow.
+        """
+        # We only want to generate synthetic data one time
+        if self.iteration > 1:
+            logger.debug("inversion iteration > 1, skipping synthetic data gen")
+            return
+        
+        forces = []
+        if "ZZ" in self.kernels:
+            forces.append("Z")
+        if "RR" in self.kernels or "TT" in self.kernels:
+            forces.append("E")  # E must come first
+            forces.append("N")
+
+        # Check the target model that will be used to generate data
+        logger.info("checking true/target model parameters:")
+        self.solver.check_model_values(path=self.path.model_true)
+
+        for force in forces:
+            self._force = force
+            logger.info(msg.sub(f"FORWARD SIMULATION FORCE '{self._force}'"))
+            self.system.run([self._generate_synthetic_data_single], **kwargs)
+
+    def _generate_synthetic_data_single(self, path_model=None, **kwargs):
+        """
+        Function Overwrite of `workflow.forward.generate_synthetic_data()` 
+        To account for specific naming schema of the synthetic data and trace
+        rotation of the horizontal components. Runs forward simulations for
+        Z, N and E components and generates ZZ, RR and TT synthetic data 
+        (dependent on values for parameter `kernels`). Data are stored in
+        `path_data/{source_name}/{kernel}/*` so that they are discoverable
+        by the preprocessing module at a later stage.
+        """
+        # Set default argument. Allow User to generate synthetics through
+        # a model other than true, but default to true model
+        path_model = path_model or self.path.model_true
+
+        # Saves to scratch/solver/traces/obs_{force}/*
+        save_traces = self.trace_path(tag="obs", comp=self._force)
+
+        # Run forward simulation with solver
+        self.run_forward_simulations(
+            path_model=path_model, export_traces=None,  
+            save_traces=save_traces, save_forward_arrays=False,
+            flag_save_forward=False
+            )
+        
+        # Move generated data into the `path_data` directory with the correct 
+        # sub-directory naming, same as we do in forward simulations
+        if self._force == "E":
+            logger.info("waiting for 'N' forward sim. for data generation")
+            return
+        elif self._force == "N":
+            # Rotate ER, ET, NR, NT to RR and TT waveforms. Rotated data are
+            # saved directly in the `traces/obs` directory
+            self.rotate_ne_traces_to_rt(tag="obs")
+            src = os.path.join(self.trace_path(tag="obs"), "*")
+            # Create output directory, e.g., `path_data`/{source_name}/RR 
+            for kernel in ["RR", "TT"]:
+                if kernel in self.kernels:
+                    unix.mkdir(os.path.join(
+                        self.path.data, self.solver.source_name, kernel)
+                        )
+            # Sort of hacky but we need to know what component the waveforms
+            # are in so we check the filename so we can save it in the correct
+            # place
+            for src_ in glob(src):
+                # NN.SSS.?XR.sem?*
+                _, _, cha, *_ = os.path.basename(src_).split(".")
+                comp = cha[-1]  # should be 'R' or 'T'
+                dst = os.path.join(
+                    self.path.data, self.solver.source_name, f"{comp}{comp}"
+                    )
+                unix.mkdir(dst)
+                unix.mv(src_, dst)
+            # Remove directories that contain pre-rotated traces
+            unix.rm(self.trace_path(tag="obs", comp="E"))
+            unix.rm(self.trace_path(tag="obs", comp="N"))
+        elif self._force == "Z":
+            # !!! Assuming file naming here to get after 'Z' component only
+            # !!! filenaming should be something like: NN.SSSS.?XZ.sem.ascii
+            src = os.path.join(save_traces, "??.*.??Z.*")
+            dst = os.path.join(self.path.data, self.solver.source_name, "ZZ")
+            unix.mkdir(dst)
+            for src_ in glob(src):
+                # Move the data directly, it will be symlinked back during
+                # `prepare_data_for_solver`
+                unix.mv(src_, dst)
+            # Delete the directory and unused waveforms to keep things clean
+            unix.rm(save_traces)
 
     def evaluate_zz_misfit(self, **kwargs):
         """
@@ -630,14 +730,14 @@ class NoiseInversion(Inversion):
         with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
             futures = [
                 executor.submit(self._rotate_ne_trace_to_rt_single,
-                                f_ee, f_ne, f_en, f_nn)
+                                f_ee, f_ne, f_en, f_nn, tag)
                 for f_ee, f_ne, f_en, f_nn in zip(fids_ee, fids_ne,
                                                   fids_en, fids_nn)
                 ]
         # Simply wait until this task is completed because its just file writing
         wait(futures)
 
-    def _rotate_ne_trace_to_rt_single(self, f_ee, f_ne, f_en, f_nn):
+    def _rotate_ne_trace_to_rt_single(self, f_ee, f_ne, f_en, f_nn, tag="syn"):
         """
         Parallalizable private function to rotate NE synthetics to RR and TT
 
@@ -654,6 +754,11 @@ class NoiseInversion(Inversion):
         :param f_en: path to the EN synthetic waveform (E force, N component)
         :type f_nn: str
         :param f_nn: path to the NN synthetic waveform (N force, N component)
+        :type tag: str
+        :param tag: where to look for waveform data within the scratch dir.
+            Example path is: scratch/solver/<source_name>/traces/<tag>_?/*
+            Tag by default is 'syn' but can also be 'obs' for generating
+            synthetic data
         """
         src_name = self.solver.source_name
 
@@ -682,16 +787,16 @@ class NoiseInversion(Inversion):
 
         # Write TT/RR synthetics back to the main synthetic trace directory
         if "TT" in self.kernels:
-            # scratch/solver/{source_name}/traces/syn/NN.SSS.?XT.sem?*
+            # scratch/solver/{source_name}/traces/{tag}/NN.SSS.?XT.sem?*
             fid_t = f"{net}.{sta}.{cha[:2]}T.{ext}"
             write(st=Stream(tr_tt), 
-                  fid=os.path.join(self.trace_path(tag="syn"), fid_t),
+                  fid=os.path.join(self.trace_path(tag=tag), fid_t),
                   data_format=self.solver.syn_data_format)
         if "RR" in self.kernels:
-            # scratch/solver/{source_name}/traces/syn/NN.SSS.?XR.sem?*
+            # scratch/solver/{source_name}/traces/{tag}/NN.SSS.?XR.sem?*
             fid_r = f"{net}.{sta}.{cha[:2]}R.{ext}"
             write(st=Stream(tr_rr), 
-                  fid=os.path.join(self.trace_path(tag="syn"), fid_r),
+                  fid=os.path.join(self.trace_path(tag=tag), fid_r),
                   data_format=self.solver.syn_data_format)
 
     def rotate_rt_adjsrcs_to_ne(self, choice):
