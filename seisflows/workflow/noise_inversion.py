@@ -297,7 +297,7 @@ class NoiseInversion(Inversion):
 
         for force in forces:
             self._force = force
-            logger.info(f"running forward simulations for force: {self._force}")
+            logger.info(msg.sub(f"FORWARD SIMULATION FORCE '{self._force}'"))
             self.system.run([self._generate_synthetic_data_single], **kwargs)
 
     def _generate_synthetic_data_single(self, path_model=None, **kwargs):
