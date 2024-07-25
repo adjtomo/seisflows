@@ -278,7 +278,7 @@ class Migration(Forward):
         # tasktime=self.system.tasktime * 2  # increase 2 if you need more time
         self.system.run([mask_source_event_kernels, combine_event_kernels, 
                          smooth_misfit_kernel], single=True,
-                         tasktime=self.system.tasktime * 2)
+                         tasktime=self.system.tasktime * 1)
 
     def evaluate_gradient_from_kernels(self):
         """
