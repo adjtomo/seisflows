@@ -647,6 +647,10 @@ class Pyaflowa:
             unix.mkdir(dst)
             unix.mv(src, dst)
 
+            # Bomb out the scratch directory since we exported
+            unix.rm(self.path._figures)
+            unix.mkdir(self.path._figures)
+
         # Save log files to output (if requested)
         if self.export_log_files:
             # Determine the available evaluation tags
@@ -672,14 +676,10 @@ class Pyaflowa:
             unix.mkdir(dst)
             unix.mv(src, dst)
 
-        # Bomb out the scratch directory regardless of export status
-        unix.rm(self.path._figures)
-        unix.mkdir(self.path._figures)
-
-        # Bomb out the log files regardless of export status
-        unix.rm(self.path._logs)
-        unix.mkdir(self.path._logs)
-        unix.mkdir(os.path.join(self.path._logs, "tmp"))
+            # Bomb out the log files scratch directory since we exported
+            unix.rm(self.path._logs)
+            unix.mkdir(self.path._logs)
+            unix.mkdir(os.path.join(self.path._logs, "tmp"))
 
     def _check_fixed_windows(self, iteration, step_count):
         """
