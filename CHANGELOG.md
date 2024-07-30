@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v3.2.5 (#222)
+- Fixes logs and figures getting deleted but not saved during Pyaflowa finalization
+- Changes finalization behavior to not delete logs/figures from scratch directory, if User requests no export
+- Removes hardcoded tasktime increase for postprocessing tasks which was accidentally left in from development
+
 ## v3.2.4 (#221)
 - Fixes synthetic inversion data generation for noise inversion workflow
 - Fixes some flag misnaming in Forward workflow synthetic inversion data generation
