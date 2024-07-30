@@ -625,9 +625,9 @@ class Pyaflowa:
         if self.plot_waveforms and self.export_figures:
             # Determine the available evaluation tags
             evaluations = []
-            # Expected fmt: <source_name>_<evaluation><tag>.pdf
+            # Expected fmt: <source_name>_<evaluation>_<tag>.pdf
             for fid in glob(os.path.join(self.path._figures, "*_i??s??*.pdf")):
-                for part in os.path.basename(fid).split("_"):
+                for part in os.path.basename(fid).split(".")[0].split("_"):
                     # Slightly hacky, expecting that eval is the only tag in the
                     # filename that matches the format i?????
                     if part.startswith("i") and len(part) == 6:  # i??s??
@@ -647,13 +647,17 @@ class Pyaflowa:
             unix.mkdir(dst)
             unix.mv(src, dst)
 
+            # Bomb out the scratch directory since we exported
+            unix.rm(self.path._figures)
+            unix.mkdir(self.path._figures)
+
         # Save log files to output (if requested)
         if self.export_log_files:
             # Determine the available evaluation tags
             evaluations = []
-            # Expected fmt: <source_name>_<evaluation><tag>.log
+            # Expected fmt: <source_name>_<evaluation>_<tag>.log
             for fid in glob(os.path.join(self.path._logs, "*_i??s??*.log")):
-                for part in os.path.basename(fid).split("_"):
+                for part in os.path.basename(fid).split(".")[0].split("_"):
                     # Slightly hacky, expecting that eval is the only tag in the
                     # filename that matches the format i?????
                     if part.startswith("i") and len(part) == 6:  # i??s??
@@ -672,14 +676,10 @@ class Pyaflowa:
             unix.mkdir(dst)
             unix.mv(src, dst)
 
-        # Bomb out the scratch directory regardless of export status
-        unix.rm(self.path._figures)
-        unix.mkdir(self.path._figures)
-
-        # Bomb out the log files regardless of export status
-        unix.rm(self.path._logs)
-        unix.mkdir(self.path._logs)
-        unix.mkdir(os.path.join(self.path._logs, "tmp"))
+            # Bomb out the log files scratch directory since we exported
+            unix.rm(self.path._logs)
+            unix.mkdir(self.path._logs)
+            unix.mkdir(os.path.join(self.path._logs, "tmp"))
 
     def _check_fixed_windows(self, iteration, step_count):
         """
