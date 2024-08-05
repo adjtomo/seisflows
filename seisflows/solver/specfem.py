@@ -983,7 +983,7 @@ class Specfem:
         :return: logfile name that matches executable name
         """
         convert_dict = {"specfem": "solver", "meshfem": "mesher",
-                        "generate_databases": "mesher", "smooth": "smooth",
+                        "generate_databases": "database", "smooth": "smooth",
                         "combine": "combine"}
         for key, val in convert_dict.items():
             if key in exc:
