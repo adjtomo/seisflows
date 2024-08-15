@@ -8,6 +8,7 @@ import os
 import sys
 import logging
 import time
+import traceback
 import random
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
