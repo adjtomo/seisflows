@@ -554,7 +554,10 @@ class Pyaflowa:
                 mgmt.window()
             mgmt.measure()
         except Exception as e:
-            station_logger.critical(f"FLOW FAILED: {e}")
+            station_logger.critical(f"FLOW FAILED:")
+            # Get the full traceback and push to logger
+            exc_str = traceback.format_exc()
+            station_logger.critical(exc_str)
             pass
 
         # Plot waveform + map figure. Map may fail if we don't have appropriate
