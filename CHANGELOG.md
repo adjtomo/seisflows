@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v3.2.6 (#223)
+- Adds better traceback information when Pyaflowa preprocessing tasks fail
+
 ## v3.2.5 (#222)
 - Fixes logs and figures getting deleted but not saved during Pyaflowa finalization
 - Changes finalization behavior to not delete logs/figures from scratch directory, if User requests no export
