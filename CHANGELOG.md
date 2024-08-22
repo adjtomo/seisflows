@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v3.2.6 (#223)
+## v3.2.6 (#224)
 - Adds better traceback information when Pyaflowa preprocessing tasks fail
 
 ## v3.2.5 (#222)
