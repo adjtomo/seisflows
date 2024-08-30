@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v3.2.7
+- Noise inversion thrifty bugfix not evaluating misfit properly due to incorrect bool check
+
 ## v3.2.6 (#224)
 - Adds better traceback information when Pyaflowa preprocessing tasks fail
 
