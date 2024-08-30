@@ -550,7 +550,7 @@ class NoiseInversion(Inversion):
         """
         # If we are the middle of a thrifty inversion, simply load the misfit
         # of the last accepted line search evaluation
-        if self.is_thrifty:
+        if self._was_thrifty:
             total_misfit = self.optimize.load_vector(name="f_new")
             logger.info(f"total misfit `f_new` ({self.evaluation}) = "
                         f"{total_misfit:.2E}")
