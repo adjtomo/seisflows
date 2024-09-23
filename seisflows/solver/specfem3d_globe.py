@@ -121,7 +121,7 @@ class Specfem3DGlobe(Specfem):
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
             self._parameters += ["vp"]
-        elif self.materials.upper() in ["ELASTIC"]:
+        elif self.materials.upper()  == "ELASTIC":
             self._parameters += ["vp", "vs"]
         elif self.materials.upper() == "TRANSVERSE_ISOTROPIC":
             self._parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
