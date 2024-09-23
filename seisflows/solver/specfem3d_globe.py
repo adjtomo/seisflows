@@ -121,10 +121,12 @@ class Specfem3DGlobe(Specfem):
         # Define parameters based on material type
         if self.materials.upper() == "ACOUSTIC":
             self._parameters += ["vp"]
-        elif self.materials.upper() in ["ELASTIC", "ISOTROPIC"]:
+        elif self.materials.upper()  == "ELASTIC":
             self._parameters += ["vp", "vs"]
-        elif self.materials.upper() == "ANISOTROPIC":
+        elif self.materials.upper() == "TRANSVERSE_ISOTROPIC":
             self._parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
+        else:
+            raise NotImplementedError(f"Invalid material: {self.materials}")
 
         # Append regions to to the parameters, e.g., 'reg1_vpv'
         overwrite_parameters = []

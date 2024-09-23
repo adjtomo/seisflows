@@ -69,6 +69,14 @@ class Specfem3D(Specfem):
             self._parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
             self._parameters += ["vp", "vs"]
+        elif self.materials.upper() == "ANISOTROPIC":
+            # General 21 parameter anisotropy: c11, c12... c66
+            for i in range(1, 7):
+                for j in range(1, 7):
+                    if j >= i:
+                        self._parameters.append(f"c{i}{j}")
+        else:
+            raise NotImplementedError(f"invalid material: {self.materials}")
 
         # Overwriting the base class parameters
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
@@ -88,6 +96,32 @@ class Specfem3D(Specfem):
         # Internally used parameters set by functions within class
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
+
+    def check(self):
+        """SPECFEM3D_Cartesian specific check tasks"""
+        super().check()
+
+        if self.materials.upper() == "ANISOTROPIC":
+            logger.warning("the 'ANISOTROPIC' material parameter is an "
+                           "experimental feature that requires "
+                           "a modified version of SPECFEM3D. Use at your own "
+                           "risk, not guaranteed to work")
+
+            anisotropic_kl = getpar(key="ANISOTROPIC_KL", 
+                                    file=os.path.join(self.path.specfem_data, 
+                                                      "Par_file"))[1]
+            assert(anisotropic_kl == ".true."), (
+                f"SPECFEM3D Par_file parameter 'ANISOTROPIC_KL' must be set "
+                f"'.true.' for ANISOTROPIC parameters"
+                )
+
+
+    def setup(self):
+        """
+        Generate .vtk files for the initial and target (if applicable) models,
+        which the User can use for external visualization
+        """
+        super().setup()
 
     def data_wildcard(self, comp="?"):
         """

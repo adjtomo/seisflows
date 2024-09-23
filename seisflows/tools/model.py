@@ -29,8 +29,21 @@ class Model:
     """
     # Dictate the parameters that Model can handle, which does not cover all
     # files created by SPECFEM, which includes things like 'ibool', 'info' etc.
-    acceptable_parameters = ["vp", "vs", "rho",
-                             "vpv", "vph", "vsv", "vsh", "eta"]
+    acceptable_parameters = [
+            # Isotropic wavespeeds (kernels alpha and beta are renamed vp, vs)
+            "vp", "vs",
+            # Transverse Isotropic Wavespeeds
+            "vpv", "vph", "vsv", "vsh", "eta",
+            # Density, attenuation
+            "rho", "rhop", "kappa", "mu",
+            # 21 Parameter general anisotropy c_ij
+            "c11", "c12", "c13", "c14", "c15", "c16", 
+            "c22", "c23", "c24", "c25", "c26", 
+            "c33", "c34", "c35", "c36", 
+            "c44", "c45", "c46", 
+            "c55", "c56", 
+            "c66", 
+            ]
     # Add kernel tag to all acceptable parameters for adjoint simulation results
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
     # Add source mask for SPECFEM3D_ source masking
@@ -49,6 +62,7 @@ class Model:
         formats
 
         .. note::
+
             The `vector` representation is based completely on the `model`
             attribute. In order to update the model based on vector manipulation
             you must use the update() function.

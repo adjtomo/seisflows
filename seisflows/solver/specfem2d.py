@@ -47,6 +47,8 @@ class Specfem2D(Specfem):
             self._parameters += ["vp"]
         elif self.materials.upper() == "ELASTIC":
             self._parameters += ["vp", "vs"]
+        else:
+            raise NotImplementedError(f"Invalid material {self.materials}")
 
     def setup(self):
         """
