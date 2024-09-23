@@ -1,6 +1,12 @@
 # CHANGELOG
 
-## v3.2.7
+## v3.2.8 (#225)
+- Changes `materials` input `ANISOTROPIC` to `TRANVERSE_ISOTROPIC` to differentiate from general anisotropy
+- `TRANSVERSE_ISOTROPIC` available for both SPECFEM3D and SPECFEM3D_GLOBE with expected parameters: vsh, vsv, vph, vpv, eta
+- Introduces new `materials` input `ANISOTROPIC` to use 21 component anisotropy C_ij, iff `solver`==`specfem3d`
+- Adds some solver checks and warnings around `materials`==`ANISOTROPIC`
+
+## v3.2.7 (6afdd56)
 - Noise inversion thrifty bugfix not evaluating misfit properly due to incorrect bool check
 
 ## v3.2.6 (#224)
