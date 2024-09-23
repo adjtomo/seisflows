@@ -32,14 +32,15 @@ class Lsf(Cluster):
     http://seisflows.readthedocs.org/en/latest/manual/
                                                 manual.html#system-configuration
     """
+    raise NotImplementedError("This System module is not fully "
+                              "implemented. Please open a GitHub issue if you "
+                              "would like to see this capability in SeisFlows, "
+                              "(github.com/adjtomo/seisflows/issues)")
     def __init__(self):
         """
         These parameters should not be set by the user.
         Attributes are initialized as NoneTypes for clarity and docstrings.
         """
-        raise NotImplementedError("This module is still a work in progress")
-        sys.exit(-1)
-
         super().__init__()
 
         self.logger.warning("system.LSF is underdeveloped and "
@@ -130,8 +131,8 @@ class Lsf(Cluster):
         # Do it AFTER `run_call` has been defined so that subclasses submitting
         # custom run calls can still benefit from this
         if single:
-            self.logger.info("replacing parts of sbatch run call for single "
-                             "process job")
+            self.logger.debug("replacing parts of sbatch run call for single "
+                              "process job")
             run_call = _modify_run_call_single_proc(run_call)
 
         # The standard response from SLURM when submitting jobs

@@ -1,12 +1,15 @@
 name: seisflows
 channels:
     - conda-forge
-    - defaults
 dependencies:
     - pip
     - obspy
     - cartopy
     - pyyaml
+    - pypdf
     - pip:
+      #- pyatoa>=0.4.0
+      - git+https://github.com/adjtomo/pyatoa.git@devel
+      - pysep-adjtomo
       - -e .
-       
+

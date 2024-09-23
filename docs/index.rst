@@ -64,7 +64,7 @@ SeisFlows and it's dependencies there, you can run the following:
     git clone --branch devel https://github.com/adjtomo/seisflows.git             
     cd seisflows 
     conda activate <your environment>
-    conda env update -f environment.yml
+    conda env update --name <your environment> --file environment.yml
 
 ---------------------------------
 
@@ -120,6 +120,13 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
 .. toctree::
    :maxdepth: 1
    :hidden:
+   :caption: Workflows
+
+   noise_inversion
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
    :caption: How To's
 
    tips_and_tricks
@@ -132,6 +139,6 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
    :caption: Development
 
    extending
-   changelog
+   CHANGELOG
    code_dev_plan
 

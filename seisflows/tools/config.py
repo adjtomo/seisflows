@@ -11,11 +11,19 @@ import re
 import yaml
 import numpy as np
 import traceback
-from pkgutil import find_loader
+
+# if python version is 3.12 or greater, use importlib.util.find_spec
+# because pkgutil.find_loader is deprecated.
+# otherwise use pkgutil.find_loader.
+if sys.version_info >= (3, 12):
+    from importlib.util import find_spec as find_loader
+else:
+    from pkgutil import find_loader
+
 from importlib import import_module
 
 from seisflows import logger, NAMES
-from seisflows.tools import msg
+from seisflows.tools import msg, unix
 
 ENV_VARIABLES = ["SEISFLOWS_TASKID", "SLURM_ARRAY_TASK_ID"]
 
@@ -83,7 +91,7 @@ def load_yaml(filename):
     """
     Define how the PyYaml yaml loading function behaves.
     Replaces None and inf strings with NoneType and numpy.inf respectively
-    Also expands all paths (parameters that start with 'path_') to be absolute 
+    Also expands all paths (parameters that start with 'path_') to be absolute
 
     :type filename: str
     :param filename: .yaml file to load in
@@ -159,12 +167,15 @@ def set_task_id(task_id):
 def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
                      **kwargs):
     """
-    Standard SeisFlows workflow setup block which runs a number of setup
-    tasks including: loading a user-defined parameter file, configuring the
-    package-wide logger based on user-input path to log file and desired
-    verbosity, and instantiating all modules in a generic fashion based on user
-    choice. Returns the 'workflow' module, which contains all other submodules
-    as attributes.
+    Critical SeisFlows workflow setup block which runs a number of setup
+    tasks prior to starting a workflow, tasks include:
+
+    - loading the user-defined parameter file
+    - configure the package-wide logger based on user-input path and verbosity
+    - instantiate user-selected modules with the appropriate parameters
+    - assign all non-workflow modules as attributes of the `workflow` module
+    - return `workflow` module which now has access to all parameters and all
+      modules and can be used to run SeisFlows
 
     :type workdir: str
     :param workdir: the current working directory in which to perform a
@@ -190,14 +201,17 @@ def import_seisflows(workdir=os.getcwd(), parameter_file="parameters.yaml",
     # provided in the input parameter file
     modules = Dict()
     for name in NAMES[:]:
-        # Workflow is instantiated differently
+        # Workflow will be instantiated at the end
         if name == "workflow":
             continue
+        # This provides a flexible approach to running something like:
+        # 'from seisflows.module.class import Class; Class()'
         modules[name] = custom_import(name, parameters[name])(**parameters)
 
     # Import workflow separately by providing all the instantiated modules to it
     workflow = \
-        custom_import("workflow", parameters["workflow"])(modules, **parameters)
+        custom_import("workflow", parameters["workflow"])(modules=modules,
+                                                          **parameters)
 
     return workflow
 
@@ -235,13 +249,13 @@ def config_logger(level="DEBUG", filename=None, filemode="a", verbose=True,
     if verbose:
         # More verbose logging statement for debugging
         fmt_str = (
-            "%(asctime)s | %(levelname)-5s | "
+            "%(asctime)s | %(levelname)-5s "
             "%(filename)s -> %(funcName)s():L%(lineno)s\n"
             "> %(message)s"
         )
     else:
         # Clean logging statement with only time and message
-        fmt_str = "%(asctime)s (%(levelname).1s) | %(message)s"
+        fmt_str = "%(asctime)s [%(levelname).4s] | %(message)s"
 
     # Instantiate logger during _register() as we now have user-defined pars
     logger.setLevel(level)
@@ -387,6 +401,31 @@ def pickle_function_list(functions, path=os.getcwd(), **kwargs):
         dill.dump(obj=kwargs, file=f)
 
     return fid_funcs_pickle, fid_kwargs_pickle
+
+def copy_file(fid, copy_to="./"):
+    """
+    Copy files to a location but do not overwrite if file already exists in
+    `copy_to`. If the file already exists, append a number before the file ext.
+
+    This is mainly used when resuming a workflow, where old log and parameter
+    files may be overwritten or changed.
+
+    :type fid: str
+    :param fid: full path to the file that should be copied. If `fid` does not
+        exist, nothing happens
+    :type copy_to: str
+    :param copy_to: location to copy the file to. file name will be the same.
+        defaults to current working directory
+    """
+    assert(os.path.exists(fid)), f"source file to copy does not exist: {fid}"
+    i = 1
+    src = os.path.basename(fid)
+    dst = os.path.join(copy_to, number_fid(src, i))
+    while os.path.exists(dst):
+        i += 1
+        dst = os.path.join(copy_to, number_fid(src, i))
+    logger.debug(f"copying file {src} to {copy_to} number {i}")
+    unix.cp(src=src, dst=dst)
 
 
 def number_fid(fid, i=0):

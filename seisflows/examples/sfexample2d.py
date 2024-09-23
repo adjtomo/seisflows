@@ -130,7 +130,8 @@ class SFExample2D:
         self._parameters = {
             "ntask": self.ntask,  # default 3 sources for this example
             "materials": "elastic",  # how velocity model parameterized
-            "density": False,  # update density or keep constant
+            "update_density": False,  # update density or keep constant
+            "generate_data": True,  # run simulations through model_tru
             "syn_data_format": "ascii",  # how to output synthetic seismograms
             "obs_data_format": "ascii",
             "unit_output": "disp",
@@ -138,9 +139,10 @@ class SFExample2D:
             "start": 1,  # first iteration
             "end": self.niter,  # final iteration -- we will run 2
             "step_count_max": 5,  # will cause iteration 2 to fail
-            "data_case": "synthetic",  # synthetic-synthetic inversion
+            "step_len_init": 0.05,  # as a percentage of initial model
             "components": "Y",  # only Y component seismograms avail.
             "attenuation": False,
+            "plot_waveforms": True,  
             "misfit": "traveltime",  # cross-correlation phase measure
             "adjoint": "traveltime",  # cross-correlation phase measure
             "path_specfem_bin": self.workdir_paths.bin,
@@ -217,6 +219,7 @@ class SFExample2D:
         """
         if specfem2d_repo is None or not os.path.exists(specfem2d_repo):
             specfem2d_repo = os.path.join(cwd, "specfem2d")
+        specfem2d_repo = os.path.abspath(specfem2d_repo)  
 
         # This defines required structures from the SPECFEM2D repository
         sem2d = {
@@ -304,7 +307,7 @@ class SFExample2D:
         final models using one of the SPECFEM2D examples
         """
         assert(os.path.exists(self.sem2d_paths["example"])), (
-            f"SPECFEM2D/EXAMPLE directory: '{self.sem2d['example']}' "
+            f"SPECFEM2D/EXAMPLE directory: '{self.sem2d_paths['example']}' "
             f"does not exist, please check this path and try again."
         )
 
@@ -418,7 +421,7 @@ class SFExample2D:
         """
         cd(self.cwd)
 
-        self.sf.setup(force=True)  # Force will delete existing parameter file
+        self.sf.init(force=True)  # Force will delete existing parameter file
         for key, val in self._modules.items():
             self.sf.par(key, val)
 
@@ -496,7 +499,7 @@ class SFExample2D:
         self.setup_specfem2d_for_model_init()
         self.run_xspecfem2d_binaries()
         self.cleanup_xspecfem2d_run(choice="INIT")
-        # Step 2b: Generate MODEL_INIT, rearrange consequent directory structure
+        # Step 2b: Generate MODEL_TRUE, rearrange consequent directory structure
         print(msg.cli("GENERATING TRUE/TARGET MODEL", border="="))
         self.setup_specfem2d_for_model_true()
         self.run_xspecfem2d_binaries()

@@ -4,6 +4,7 @@ Fujitsu brand clusters run their own Job Management System (Fujitsu Technical
 Computing Suite). 
 
 .. note::
+
     The nickname `PJM`, based on the batch job script directives, may be used 
     as a shorthand to refer to the Fujitsu job management system.
 
@@ -18,15 +19,10 @@ import time
 import subprocess
 
 from datetime import timedelta
-from seisflows import ROOT_DIR, logger
+from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
-from seisflows.tools.config import pickle_function_list
-
-
-# Define bad states defined by PJM which signifiy failed jobs
-# Acceptable job statuses are 'QUEUED', 'RUNNING', 'END'
-BAD_STATES = ["CANCEL", "HOLD", "ERROR"]
+from seisflows.tools.config import pickle_function_list, import_seisflows   
 
 
 class Fujitsu(Cluster):
@@ -73,6 +69,12 @@ class Fujitsu(Cluster):
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
         self._tasktime = str(timedelta(minutes=self.tasktime))
         self._walltime = str(timedelta(minutes=self.walltime))
+    
+        # Define PJM-dependent job states used for monitoring queue which
+        # can be found in the User manual
+        self._completed_states = ["END"]
+        self._failed_states = ["CANCEL", "HOLD", "ERROR"]
+        self._pending_states = ["QUEUED", "RUNNING"]
 
     def check(self):
         """
@@ -144,42 +146,51 @@ class Fujitsu(Cluster):
              f"-N {self.title}",  # job name
              f"-o {os.path.join(self.path.log_files, '%j')}", 
              f"-j",  # merge stderr with stdout
-             f"-L elapse={self._walltime}",  # [[hour:]minute:]second
+             f"-L elapse={self._tasktime}",  # [[hour:]minute:]second
              f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
         ])
         return _call
+    
+    def submit(self, workdir=None, parameter_file="parameters.yaml", 
+               direct=True):
+        """
+        Submit main workflow to the System. Two options are available,
+        submitting a Python job directly to the system, or submitting a 
+        subprocess.
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml"):            
-        """                                                                      
-        Submits the main workflow job as a separate job submitted directly to    
-        the system that is running the master job. 
-
-        .. note::
-                
-            Fujitsu scheduler doesn't allow command line arugments 
-            (e.g., --workdir), so these are assumed to be default values where
-            the workdir is ${pwd} and the parameter file is called 
-            'parameters.yaml'
-                                                                                 
         :type workdir: str                                                       
         :param workdir: path to the current working directory                    
         :type parameter_file: str                                                
         :param parameter_file: paramter file file name used to instantiate       
-            the SeisFlows package                                                
-        """                                                                      
-        # e.g., submit -w ./ -p parameters.yaml                                  
-        submit_call = " ".join([                                                 
-            f"{self.submit_call_header}",
-            f"{self.submit_workflow}",
-        ])
-                                                                                 
-        logger.debug(submit_call)                                                
-        try:                                                                     
-            subprocess.run(submit_call, shell=True)                              
-        except subprocess.CalledProcessError as e:                               
-            logger.critical(f"SeisFlows master job has failed with: {e}")        
-            sys.exit(-1)     
+            the SeisFlows package    
+        :type direct: bool
+        :param direct: (used for overriding system modules) submits the main 
+            workflow job directly to the login node as a Python process 
+            (default). If False, submits the main job as a separate subprocess.
+            Note that this is Fujitsu specific and main jobs should be run from
+            interactive jobs run on compute nodes to avoid running jobs on
+            shared login resources
+        """
+        if direct:
+            workflow = import_seisflows(workdir=workdir or self.path.workdir,        
+                                        parameter_file=parameter_file)               
+            workflow.check()                                                         
+            workflow.setup()                                                         
+            workflow.run()    
+        else:
+            # e.g., submit -w ./ -p parameters.yaml                                  
+            submit_call = " ".join([                                                 
+                f"{self.submit_call_header}",
+                f"{self.submit_workflow}",
+            ])
+                                                                                    
+            logger.debug(submit_call)                                                
+            try:                                                                     
+                subprocess.run(submit_call, shell=True)                              
+            except subprocess.CalledProcessError as e:                               
+                logger.critical(f"SeisFlows master job has failed with: {e}")        
+                sys.exit(-1)                                        
 
     @staticmethod                                                                
     def _stdout_to_job_id(stdout):                                               
@@ -213,11 +224,8 @@ class Fujitsu(Cluster):
         cluster. Executes the list of functions (`funcs`) NTASK times with each
         task occupying NPROC cores.
 
-        .. warning::
-            This has not been tested generally on Fujitsu systems, see system
-            Wisteria for a working application of the Fujitsu module
-
         .. note::
+        
             Completely overwrites the `Cluster.run()` command
 
         :type funcs: list of methods
@@ -242,15 +250,25 @@ class Fujitsu(Cluster):
                         f"system {self.ntask} times")
             _ntask = self.ntask
 
+        # If no environs, ensure there is not trailing comma
+        if self.environs:
+            environs = f",{self.environs}"
+        else:
+            environs = ""
+
         # Default Fujitsu command line input, can be overloaded by subclasses
         # Copy-paste this default run_call and adjust accordingly for subclass
         job_ids = []
         for taskid in range(_ntask):
             run_call = " ".join([
                 f"{self.run_call_header}",
-		f"--funcs {funcs_fid}",
-		f"--kwargs {kwargs_fid}",
-		f"--environment SEISFLOWS_TASKID={{task_id}},{self.environs}"
+                # -x in 'pjsub' sets environment variables which are distributed
+                # in the run script, see custom run scripts for example how
+                # Ensure that these are comma-separated, not space-separated
+                f"-x SEISFLOWS_FUNCS={funcs_fid},"  
+                f"SEISFLOWS_KWARGS={kwargs_fid},"
+                f"SEISFLOWS_TASKID={taskid}{environs},"
+                f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
                 f"{self.run_functions}",
             ])
 
@@ -264,7 +282,7 @@ class Fujitsu(Cluster):
 
         # Monitor the job queue until all jobs have completed, or any one fails
         try:
-            status = check_job_status_array(job_id)
+            status = self.monitor_job_status(job_ids)
         except FileNotFoundError:
             logger.critical(f"cannot access job information through 'pjstat', "
                             f"waited 50s with no return, please check job "
@@ -285,99 +303,71 @@ class Fujitsu(Cluster):
             # Moving on too quickly may result in required files not being avail
             time.sleep(5)
 
+    def query_job_states(self, job_id, timeout_s=300, wait_time_s=30, 
+                         _recheck=0):
+        """
+        Overwrites `system.cluster.Cluster.query_job_states`
 
-def check_job_status_list(job_ids):                                          
-    """                                                                          
-    Check the status of a list of currently running jobs. This is used for 
-    systems that cannot submit array jobs (e.g., Frontera) where we instead
-    submit jobs one by one and have to check the status of all those jobs
-    together.
+        Queries completion status of array job by running the PJM cmd `pjstat`
+        Because `pjstat` treats running and finished jobs separately, we need to
+        query both the current running processes, and the history
 
-    :type job_ids: list of str
-    :param job_id: job ID's to query with SACCT. Will be considered one group
-        of jobs, who all need to finish successfully otherwise the entire group
-        is considered failed
-    :rtype: int
-    :return: status of all running jobs. 1 for pass (all jobs COMPLETED). -1 for
-        fail (one or more jobs returned failing status)
-    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
-    """                                                                          
-    logger.info(f"monitoring job status for {len(job_ids)} submitted jobs")      
-                                                                                 
-    while True:                                                                  
-        time.sleep(10)                                                            
-        job_id_list, states = [], []
-        for job_id in job_ids:                                                   
-            _job_ids, _states = query_job_states(job_id)                         
-            job_id_list += _job_ids                                              
-            states += _states                                                    
-        # Sometimes query_job_state() does not return, so we wait again
-        if not states or not job_id_list:
-            continue
-        if all([state == "END" for state in states]):                      
-            return 1  # Pass                                                     
-        elif any([check in states for check in BAD_STATES]):  # Any bad states?  
-            logger.info("atleast 1 system job returned a failing exit code")     
-            for job_id, state in zip(job_ids, states):                           
-                if state in BAD_STATES:                                          
-                    logger.debug(f"{job_id}: {state}")                           
-            return -1  # Fail  
+        .. note::
+            The actual command line call wil look something like this
 
+            $ pjstat 
+            Wisteria/BDEC-01 scheduled stop time: 2023/03/31(Fri) 09:00:00 (Remain: 28days 21:34:40)
 
-def query_job_states(job_id, _recheck=0):
-    """
-    Queries completion status of an array job by running the PJM cmd `pjstat`
-    Because `pjstat` treats running and finished jobs separately, we need to
-    query both the current running processes, and the history
+            JOB_ID JOB_NAME STATUS PROJECT RSCGROUP START_DATE ELAPSE TOKEN NODEGPU
+            1334861 STDIN END gr58interactive-o_n1 03/02 11:16:33  00:02:14 - 1 -
 
-    .. note::
-        The actual command line call wil look something like this
+        .. note::
+            `pjstat` flag options are described as follows:
+            -H: get the history (non-running jobs)
 
-        $ pjstat 
-        Wisteria/BDEC-01 scheduled stop time: 2023/03/31(Fri) 09:00:00 (Remain: 28days 21:34:40)
+        :type job_id: str
+        :param job_id: main job id to query, returned from the subprocess.run 
+            that ran the jobs
+        :type timeout_s: float
+        :param timeout_s: length of time [s] to wait for system to respond 
+            nominally before rasing a TimeoutError. Sometimes it takes a while
+            for job monitoring to start working.
+        :type wait_time_s: float
+        :param wait_time_s: initial wait time to allow System to initialize 
+            jobs in the queue. I.e., how long do we  expect it to take before 
+            the job we submitted shows up in the queue.
+        :type _recheck: int
+        :param _recheck: Used for recursive calling of the function. It can take 
+            time for jobs to be initiated on a system, which may result in the 
+            stdout of the 'sacct' command to be empty. In this case we wait and 
+            call the function again. Rechecks are used to prevent endless loops 
+            by putting a stop criteria
+        :raises TimeoutError: if 'pjstat' does not return any output for ~1 min.
+        """
+        job_ids, job_states = [], []
 
-        JOB_ID JOB_NAME STATUS PROJECT RSCGROUP START_DATE ELAPSE TOKEN NODEGPU
-        1334861 STDIN END gr58interactive-o_n1 03/02 11:16:33  00:02:14 - 1 -
+        # Look at currently running jobs as well as completed jobs
+        cmd = f"pjstat {job_id}"
+        stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                text=True, shell=True).stdout
+        cmd = f"pjstat -H {job_id}"
+        stdout += subprocess.run(cmd, stdout=subprocess.PIPE,
+                                text=True, shell=True).stdout
 
-    .. note::
-        `pjstat` flag options are described as follows:
-        -H: get the history (non-running jobs)
+        # Parse through stdout to get the job ID status
+        for line in stdout.split("\n"):
+            if line.startswith(str(job_id)):
+                job_ids.append(line.split()[0])  # JOB_ID
+                job_states.append(line.split()[2])  # STATUS 
+        
+        # Recursively re-check job state incase the job has not been 
+        # instantiated in which cause 'stdout' is an empty string
+        if not job_ids:
+            _recheck += 1
+            if _recheck > (timeout_s // wait_time_s):
+                raise TimeoutError(f"cannot access job ID {job_id}")
+            time.sleep(wait_time_s)
+            self.query_job_states(job_id, _recheck=_recheck)
 
-    :type job_id: str
-    :param job_id: main job id to query, returned from the subprocess.run that
-        ran the jobs
-    :type rechecks: int
-    :param rechecks: Used for recursive calling of the function. It can take 
-        time for jobs to be initiated on a system, which may result in the 
-        stdout of the 'sacct' command to be empty. In this case we wait and call
-        the function again. Rechecks are used to prevent endless loops by 
-        putting a stop criteria
-    :raises FileNotFoundError: if 'sacct' does not return any output for ~1 min.
-    """
-    job_ids, job_states = [], []
-
-    # Look at currently running jobs as well as completed jobs
-    cmd = f"pjstat {job_id}"
-    stdout = subprocess.run(cmd, stdout=subprocess.PIPE,
-                            text=True, shell=True).stdout
-    cmd = f"pjstat -H {job_id}"
-    stdout += subprocess.run(cmd, stdout=subprocess.PIPE,
-                             text=True, shell=True).stdout
-
-    # Parse through stdout to get the job ID status
-    for line in stdout.split("\n"):
-        if line.startswith(str(job_id)):
-            job_ids.append(line.split()[0])  # JOB_ID
-            job_states.append(line.split()[2])  # STATUS 
-    
-    # Recursively re-check job state incase the job has not been instantiated 
-    # in which cause 'stdout' is an empty string
-    if not job_ids:
-        _recheck += 1
-        if _recheck > 10:
-            raise FileNotFoundError(f"Cannot access job ID {job_id}")
-        time.sleep(10)
-        query_job_states(job_id, _recheck)
-
-    return job_ids, job_states
+        return job_ids, job_states
 

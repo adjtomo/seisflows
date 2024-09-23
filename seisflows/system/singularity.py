@@ -60,7 +60,10 @@ class Singularity(Workstation):
         software package
     ***
     """
-    raise NotImplementedError("This system sub-module is not fully implemented")
+    raise NotImplementedError("This System module is not fully "
+                              "implemented. Please open a GitHub issue if you "
+                              "would like to see this capability in SeisFlows, "
+                              "(github.com/adjtomo/seisflows/issues)")
 
     __doc__ = Workstation.__doc__ + __doc__
 

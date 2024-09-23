@@ -1,7 +1,10 @@
 import os
 import logging
-
+from importlib.metadata import version 
 from pkgutil import extend_path
+
+
+__version__ = version("seisflows")
 
 # Extend the search path for the modules which comprise a package. 
 # This will add to the package’s __path__ all subdirectories of directories on 

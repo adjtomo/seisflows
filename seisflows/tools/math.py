@@ -152,7 +152,7 @@ def polynomial_fit(x, f):
     p = np.polyfit(x[i-1:i+2], f[i-1:i+2], 2)
 
     if p[0] <= 0:
-        logger.critical(msg.cli("Polynomial line fitting returned a negative "
+        logger.critical(msg.cli("polynomial line fitting returned a negative "
                                 "p[0] value which signifies a negative misfit "
                                 "and is not allowed."))
         sys.exit(-1)

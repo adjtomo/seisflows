@@ -42,7 +42,7 @@ def test_initialize_working_directory(tmpdir):
                      path_specfem_bin=specfem_bin,
                      source_prefix="SOURCE", workdir=tmpdir
                      )
-    assert(not os.path.exists(solver.path.mainsolver))
+    assert(not os.path.exists(solver.path._mainsolver))
 
     # Set the environment task id so that the logger doesn't throw warnings
     # about not finding the task id
@@ -54,7 +54,7 @@ def test_initialize_working_directory(tmpdir):
     )
 
     # Simple checks to make sure the directory structure was set up properly
-    assert(os.path.islink(solver.path.mainsolver))
+    assert(os.path.islink(solver.path._mainsolver))
     assert(os.path.exists(solver.cwd))
     assert(glob(os.path.join(solver.cwd, "*")))
     event_fid = os.path.join(solver.cwd, "DATA", "SOURCE")

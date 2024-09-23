@@ -3,6 +3,7 @@ SeisFlows messages tool. For providing a uniform look to SeisFlows print
 and log statements that end up in stdout or in log files.
 """
 from textwrap import wrap
+from seisflows import __version__
 
 # Unicode degree symbol for log statements etc.
 DEG = u"\N{DEGREE SIGN}"
@@ -149,32 +150,33 @@ def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
         output_str += "\n".join(items)
     # Add bottom border
     if border is not None:
-        output_str += f"\n{border * wraplen}"
+        output_str += f"\n{border * wraplen}\n"
     # Final newline to space from next cli
     # output_str += "\n"
     return output_str
 
 
 # Template parameter file used for 'seisflows setup' to initiate a workflow
-base_parameter_file = """
+base_parameter_file = f"""\
 # //////////////////////////////////////////////////////////////////////////////
 #
-#                        SeisFlows YAML Parameter File
+#{f'SeisFlows v{__version__}':^80}
 #
 # //////////////////////////////////////////////////////////////////////////////
 #
-# Modules correspond to the structure of the source code, and determine
-# SeisFlows' behavior at runtime. Each module requires its own sub-parameters.
+# SeisFlows YAML parameter file that determines code setup and runtime behavior.
+# The following commands may be useful for manipulating this file.
 #
-# .. rubric::
-#   - Determine available options for modules by running:
+#   * list out all available module choices:
 #       > seisflows print modules
-#   - Auto-fill with docstrings and default values (recommended) by running:
+#   * configure the parameter file by autofilling module parameters:
 #       > seisflows configure
-#   - Swap out module parameters for a configured parameter file by running:
-#       > seisflows swap {module} {name} (e.g., seisflows swap solver specfem3d)
-#   - To set values as NoneType, use: null
-#   - To set values as infinity, use: inf
+#   * swap parameter sets between by choosing new modules:
+#       > seisflows swap <module> <name> (e.g., seisflows swap solver specfem3d)
+# 
+# YAML syntax tips:
+#   - NoneType == null
+#   - infinity == inf
 #
 #                                    MODULES
 #                                    ///////

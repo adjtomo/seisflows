@@ -40,9 +40,10 @@ class Specfem3DGlobe(Specfem):
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
     :type export_vtk: bool
-    :param export_vtk: anytime a model, kernel or gradient is considered,
-        generate a VTK file and store it in the scratch/ directory for the User
-        to visualize at their leisure.
+    :param export_vtk: at the finalization step of each iteration, convert
+        all eligible model and gradient directories in the `path_output`
+        to .vtk files for visualization using ParaView (or similar programs). 
+        Files are exported to `path_output`/VTK
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -60,6 +61,26 @@ class Specfem3DGlobe(Specfem):
             intensive, but default and matches 2D and 3D_Cartesian smoothing
         - 'laplacian' (default): average points around vertex to smooth. 
             faster and preferred method for GLOBE code
+    :type mask_source: bool
+    :param mask_source: mask the source region of the gradient to avoid high
+        amplitude updates around source region. If True, uses the SPECFEM 
+        parameter 'SAVE_SOURCE_MASK' to output source mask files and applies
+        source mask to event kernel during gradient calculation.
+    :type scale_mask_source: float
+    :param scale_mask_region: only used if `mask_source` == True. the output
+        source mask from SPECFEM3D_GLOBE is an array of ones (1) with a 3D 
+        gaussian ceneterd on the source region which approaches 0 at the 
+        hypocenter. However, for kernels that have very small amplitudes (<1E-5)
+        the amplitudes of the mask may not be sufficient to suppress the high
+        amplitude source region kernel. This fudge factor allows the User to
+        scale the source mask to better suppress the source region. ONLY the
+        source mask region will be multiplied by this value. Defaults to False 
+        (no modification), if set to 0, entire source mask region will act as
+        a cutout. Trial and error will be required to determine a useful value
+        that is not 0 or 1. Note that this parameter is not actually used by
+        the solver, it is used by the Migration workflow, but it is kept here
+        for consistency.
+
 
     Paths
     -----
@@ -68,18 +89,32 @@ class Specfem3DGlobe(Specfem):
     __doc__ = Specfem.__doc__ + __doc__
 
     def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
-                 prune_scratch=True, regions="123", smooth_type="laplacian",
-                 **kwargs):
-        """Instantiate a Specfem3D_Globe solver interface"""
+                 prune_scratch=True,  regions="123", smooth_type="laplacian", 
+                 mask_source=False, scale_mask_region=False, **kwargs):
+        """
+        Instantiate a Specfem3D_Globe solver interface
+        
+        .. note:: Repeated variables
+
+            For variables that are expressed as both public and private (one
+            leading underscore), we have a public version so that the parameter
+            will show up in the parameter file, and a private one so that the 
+            other SPECFEM versions can use it for boolean logic without
+            necessarily needing to include it in their parameter file since it
+            is not accessed and therefore not necessary.
+        """
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.smooth_type = smooth_type
         self.prune_scratch = prune_scratch
-        self.export_vtk = export_vtk
+        self.mask_source = mask_source
+        self.scale_mask_region = scale_mask_region
 
-        # These two variables are the same but we have a public version so it 
-        # will show up in the parameter file (for 3D_GLOBE only), and a private
-        # one so that the other SPECFEM versions can set it as None and use it
+        # See note about repeated variables above
+        self.export_vtk = export_vtk
+        self._export_vtk = export_vtk
+
+        # See note about repeated variables above
         self.regions = str(regions)
         self._regions = sorted(self.regions) 
 
@@ -104,9 +139,17 @@ class Specfem3DGlobe(Specfem):
         self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]
-        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
-                                   "xsmooth_sem", "xsmooth_laplacian_sem",
-                                   "xcombine_vol_data_vtk"]
+        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem"]
+        if smooth_type == "laplacian":
+            self._required_binaries.append("xsmooth_laplacian_sem")
+        else:
+            self._required_binaries.append("xsmooth_sem")
+
+        # Overwriting constants that will be referenced during simulations 
+        self._fwd_simulation_executables = ["bin/xmeshfem3D", "bin/xspecfem3D"]
+        self._adj_simulation_executables = ["bin/xspecfem3D"]
+        self._absorb_wildcard = "proc??????_reg?_absorb_buffer*"
+        self._forward_array_wildcard = "proc??????_save_forward_arrays*"
 
         # Internally used parameters set by functions within class
         self._model_databases = None
@@ -128,6 +171,25 @@ class Specfem3DGlobe(Specfem):
                 f"`regions` must be some integer combination 1, 2 and/or 3"
                 )
 
+        # Check that the DATA/ sub-directory crust2.0 is available.
+        # SPECFEM3D_GLOBE quirk requires this as a base model for GLL updates
+        for fid in ["s362ani", "crust2.0", "topo_bathy"]:  # !!! CHECK THIS
+            if not os.path.exists(os.path.join(self.path.specfem_data, fid)):
+                logger.warning(f"`path_specfem_data`/{fid} is required for "
+                               f"SPECFEM3D_GLOBE to use GLL models"
+                               )
+                
+        # Set SPECFEM parameter 'SAVE_SOURCE_MASK' if requested by User
+        if self.mask_source:
+            source_mask = getpar(key="SAVE_SOURCE_MASK", 
+                                 file=os.path.join(self.path.specfem_data,
+                                                   "Par_file"))[1]
+            if source_mask != ".true.":
+                logger.info("updating SPECFEM parameter "
+                            "`SAVE_SOURCE_MASK` = .true.")
+                setpar(key="SAVE_SOURCE_MASK", val=".true.", 
+                       file=os.path.join(self.path.specfem_data, "Par_file"))
+
     def data_wildcard(self, comp="?"):
         """
         Returns a wildcard identifier for synthetic data
@@ -138,7 +200,7 @@ class Specfem3DGlobe(Specfem):
         """
         if self.syn_data_format.upper() == "ASCII":
             return f"*.?X{comp}.sem.ascii"
-
+    
     @property
     def kernel_databases(self):
         """
@@ -164,71 +226,12 @@ class Specfem3DGlobe(Specfem):
                                                     "Par_file"))[1]
         return os.path.basename(self._model_databases)
 
-    def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False, **kwargs):
+    def adjoint_simulation(self, **kwargs):
         """
-        Calls SPECFEM3D_GLOBE forward solver, exports solver outputs to traces.
-
-
-
-        :type executables: list or None                                          
-        :param executables: list of SPECFEM executables to run, in order, to     
-            complete a forward simulation. This can be left None in most cases,  
-            which will select default values based on the specific solver        
-            being called (2D/3D/3D_GLOBE). It is made an optional parameter      
-            to keep the function more general for inheritance purposes.          
-        :type save_traces: str                                                   
-        :param save_traces: move files from their native SPECFEM output location 
-            to another directory. This is used to move output waveforms to       
-            'traces/obs' or 'traces/syn' so that SeisFlows knows where to look   
-            for them, and so that SPECFEM doesn't overwrite existing files       
-            during subsequent forward simulations                                
-        :type export_traces: str                                                 
-        :param export_traces: export traces from the scratch directory to a more 
-            permanent storage location. i.e., copy files from their original     
-            location 
-        """
-        if executables is None:
-            executables = ["bin/xspecfem3D"]
-
-        super().forward_simulation(executables=executables, 
-                                   save_traces=save_traces, 
-                                   export_traces=export_traces, 
-                                   **kwargs)
-
-        if self.prune_scratch:
-            logger.debug("removing '*.vt?' files from database directory")
-            unix.rm(glob(os.path.join(self.model_databases, "proc*_*.vt?")))
-
-    def adjoint_simulation(self, executables=None, save_kernels=False,
-                           export_kernels=False):
-        """
-        Supers SPECFEM3D for adjoint solver and removes GLOBE-specific fwd files
+        Supers SPECFEM for adjoint solver and removes GLOBE-specific fwd files
         Also deals with anisotropic kernels (or lack thereof)
-
-        :type executables: list or None                                          
-        :param executables: list of SPECFEM executables to run, in order, to     
-            complete an adjoint simulation. This can be left None in most cases, 
-            which will select default values based on the specific solver        
-            being called (2D/3D/3D_GLOBE). It is made an optional parameter      
-            to keep the function more general for inheritance purposes.          
-        :type save_kernels: str                                                  
-        :param save_kernels: move the kernels from their native SPECFEM output   
-            location to another path. This is used to move kernels to another    
-            SeisFlows scratch directory so that they are discoverable by         
-            other modules. The typical location they are moved to is             
-            path_eval_grad                                                       
-        :type export_kernels: str                                                
-        :param export_kernels: export/copy/save kernels from the scratch         
-            directory to a more permanent storage location. i.e., copy files     
-            from their original location. Note that kernel file sizes are LARGE, 
-            so exporting kernels can lead to massive storage requirements.
         """
-        if executables is None:
-            executables = ["bin/xspecfem3D"]
-
         # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
-        # !!! Do we need to tailor this to output of preprocess module? !!!
         dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
         if not os.path.exists(dst):
             src = os.path.join(self.cwd, "DATA", "STATIONS")
@@ -241,37 +244,50 @@ class Specfem3DGlobe(Specfem):
         elif self.materials.upper() == "ANISOTROPIC":
             anisotropic_kl = ".true."
             save_transverse_kl_only = ".true."
-        elif self.materials.upper() == "FULLY_ANISOTROPIC":
-            # Work in progress, setting up for full 21 parameter anisotropy
-            raise NotImplementedError("Full anisotropy is not yet implemented "
-                                      "in SeisFlows")
-            anisotropic_kl = ".true."
-            save_transverse_kl_only = ".false."
+        else:
+            raise NotImplementedError("unexpected value for `solver.materials`")
 
         unix.cd(self.cwd)
         setpar(key="ANISOTROPIC_KL", val=anisotropic_kl, file="DATA/Par_file")
         setpar(key="SAVE_TRANSVERSE_KL_ONLY", val=save_transverse_kl_only, 
                file="DATA/Par_file")
+        
+        # SPECFEM3D class takes care of attenuation and STATIONS_ADJOINT file
+        super().adjoint_simulation(**kwargs)
+        
+        # Export the source mask files so that Workflow can find them later.
+        if self.mask_source:
+            dst = os.path.join(self.path.eval_grad, "mask_source", 
+                               self.source_name)
+            unix.mkdir(dst)
+            # Don't overwrite existing files because they will be the same
+            if glob(os.path.join(dst, "*")):
+                logger.debug("source mask files already exist in directory, "
+                             "will not transfer new files")
+                return
+            # Check that the adjoint simulation actually created requisite files
+            mask_files = glob(
+                os.path.join(self.cwd, self.model_databases, 
+                             self.model_wildcard(par="reg?_mask_source"))
+                             )
+            if not mask_files:
+                logger.warning("no source mask files found despite parameter "
+                               "`mask_source`=True")
+                return
 
-        super().adjoint_simulation(executables=executables,                      
-                                   save_kernels=save_kernels,                    
-                                   export_kernels=export_kernels)
+            logger.debug(f"moving source mask files to {dst}")
+            unix.mv(src=mask_files, dst=dst)
 
-        # Working around fact that save_forward arrays have diff naming
-        if self.prune_scratch:                                                   
-            for glob_key in ["proc??????_reg?_absorb_buffer.bin"]: 
-                logger.debug(f"removing '{glob_key}' files from database "       
-                             f"directory")                                       
-                unix.rm(glob(os.path.join(self.model_databases, glob_key)))
 
-    def combine(self, input_path, output_path, parameters=None):                 
+    def combine(self, input_paths, output_path, parameters=None):                 
         """
         Overwrite of xcombine_sem with an additional file check as 
         SPECFEM3D_GLOBE requires file 'mesh_parameters.bin'
                                                                                  
-        :type input_path: str                                                    
-        :param input_path: path to data                                          
-        :type output_path: strs                                                  
+        :type input_paths: str                                                    
+        :param input_paths: list of paths to directories containing binary
+            files to be combined
+        :type output_path: str
         :param output_path: path to export the outputs of xcombine_sem           
         :type parameters: list                                                   
         :param parameters: optional list of parameters,                          
@@ -286,14 +302,14 @@ class Specfem3DGlobe(Specfem):
         # Copy the 'mesh_parameters.bin' from LOCAL_PATH. Assumed to be the 
         # same for all tasks
         src = os.path.join(self.model_databases, "mesh_parameters.bin")
-        for name in self.source_names:
-            dst = os.path.join(input_path, name, "mesh_parameters.bin")
+        for input_path in input_paths:
+            dst = os.path.join(input_path, "mesh_parameters.bin")
             unix.cp(src, dst)
         
         # 3DGLOBE 'xcombine_sem' does not expect `reg?_` prefix, strip off
         stripped_parameters = list(set([_[5:] for _ in parameters]))
 
-        super().combine(input_path=input_path, output_path=output_path,
+        super().combine(input_paths=input_paths, output_path=output_path,
                         parameters=stripped_parameters)
 
     def smooth(self, input_path, output_path, parameters=None, span_h=None,      
@@ -375,7 +391,7 @@ class Specfem3DGlobe(Specfem):
                      f"{span_h}m and vertical span {span_v}m")               
 
         # NOTE: Converting smoothing lengths 'm' -> 'km' as laplacian smoothing
-        #   function is epxecting things in 'km' while SeisFlows expects things
+        #   function is expecting things in 'km' while SeisFlows expects things
         #   in 'm'
         span_h *= 1E-3
         span_v *= 1E-3
@@ -405,18 +421,23 @@ class Specfem3DGlobe(Specfem):
         """
         Wrapper for 'xcombine_vol_data_vtk'. Combines binary files together
         to generate a single .VTK file that can be visualized by external
-        software like ParaView
+        software like ParaView. Different call structure from Cartesian version.
 
         .. rubric::
-            xcombine_data start end quantity input_dir output_dir hi/lo-res
+
+            xcombine_vol_data_vtk slice list filename \
+                input_topo_dir input_file_dir output_dir resolution region (opt)
 
         .. note::
+
             It is ASSUMED that this function is being called by
             system.run(single=True) so that we can use the main solver
             directory to perform the kernel summation task
 
         :type input_path: str
-        :param input_path: path to database files to be summed.
+        :param input_path: path to files that are to be summed, can be different
+            from the database files of the solver (e.g., if kernel files have
+            been moved to another destination)
         :type output_path: strs
         :param output_path: path to export the outputs of xcombine_sem
         :type hi_res: bool
@@ -425,9 +446,16 @@ class Specfem3DGlobe(Specfem):
             nodal vertex. These files are LARGE, and we discourage using
             `hi_res`==True unless you know you want these files.
         :type parameters: list
-        :param parameters: optional list of parameters,
-            defaults to `self._parameters`
+        :param parameters: list of parameter names that should be combined to
+            get individual VTK files. Parameter names do NOT require the 'reg'
+            prefix, e.g., submit 'vsh_kernel', not 'reg1_vsh_kernel'
         """
+        # Expand paths incase they are relative paths
+        input_path = os.path.abspath(input_path)
+        output_path = os.path.abspath(output_path)
+
+        # Change to the MAINSOLVER directory so we can use its machinery for 
+        # VTK combinations
         unix.cd(self.cwd)
 
         if parameters is None:
@@ -437,10 +465,35 @@ class Specfem3DGlobe(Specfem):
             unix.mkdir(output_path)
 
         # Call on xcombine_sem to combine kernels into a single file
-        for name in parameters:
-            # e.g.:  bin/xcombine_vol_data_vtk 0 3 alpha_kernel in/ out/ 0
-            exc = f"bin/xcombine_vol_data_vtk 0 {self.nproc-1} {name} " \
-                  f"{input_path} {output_path} {int(hi_res)}"
-            # e.g., smooth_vp.log
+        for name in list(parameters):
+            exc = f"bin/xcombine_vol_data_vtk all {name} " \
+                  f"DATABASES_MPI/ {input_path} {output_path} {int(hi_res)}"
             stdout = f"{self._exc2log(exc)}_{name}.log"
             self._run_binary(executable=exc, stdout=stdout, with_mpi=False)
+
+    def import_model(self, path_model):
+        """
+        SPECFEM3D_GLOBE acts differently than the Cartesian version when
+        running GLL models. The User must put the GLL model files in
+        directory DATA/GLL (default, manually set PATHNAME_GLL_modeldir in
+        constants.h), and run the mesher to incorporate any model updates.
+
+        The updated GLL model files for iterative inversions need to be stored
+        in a specific directory. Here it is hardcoded to the default value for
+        SPECFEM3D_GLOBE constant `PATHNAME_GLL_modeldir`, which is specified in
+        `src/constants.h` as "DATA/GLL"
+
+        :type path_model: str
+        :param path_model: path to an existing starting model
+        """
+        assert(os.path.exists(path_model)), f"model {path_model} does not exist"
+        unix.cd(self.cwd)
+
+        # Copy the model files (ex: proc000023_vp.bin ...) into database dir
+        src = glob(os.path.join(path_model, f"*{self._ext}"))
+        dst = os.path.join(self.cwd, "DATA", "GLL", "")
+        if not os.path.exists(dst):
+            unix.mkdir(dst)
+
+        unix.cp(src, dst)
+

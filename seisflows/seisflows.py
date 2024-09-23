@@ -19,11 +19,12 @@ import sys
 import argparse
 from glob import glob
 from inspect import getmro
-from seisflows import logger, ROOT_DIR, NAMES
+
+from seisflows import logger, ROOT_DIR, NAMES, __version__
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
-                                     setpar_vel_model)
+                                     setpar_vel_model, check_source_names)
 
 
 
@@ -59,10 +60,10 @@ def sfparser():
     parser = argparse.ArgumentParser(
         formatter_class=SubcommandHelpFormatter,
         description=f"{'='*80}\n\n"
-                    f"{'SeisFlows: Waveform Inversion Package':^80}\n\n"
+                    f"{f'SeisFlows v{__version__}':^80}\n\n"
                     f"{'='*80}",
         epilog="'seisflows [command] -h' for more detailed descriptions "
-               "of each command.",
+               "of each command",
     )
 
     # Optional parameters
@@ -71,6 +72,8 @@ def sfparser():
     parser.add_argument("-p", "--parameter_file", nargs="?",
                         default="parameters.yaml",
                         help=f"Parameters file, default: 'parameters.yaml'")
+    parser.add_argument("-v", "--version", action="store_true",
+                        help=f"Print out the current version of SeisFlows")
 
     # Initiate a sub parser to provide nested help functions and sub commands
     subparser = parser.add_subparsers(
@@ -81,16 +84,12 @@ def sfparser():
     # The following subparsers constitute the available SeisFlows commands
     # and each refers to a function within the SeisFlows class.
     # =========================================================================
-    setup = subparser.add_parser(
-        "setup", help="Setup working directory from scratch",
+    init = subparser.add_parser(
+        "init", help="Runs SeisFlows first-time initiation procedures.",
         description="""In the specified working directory, copy template 
-        parameter file containing only module choices, and symlink source code 
-        for both the base and super repositories for easy edit access. If a 
-        parameter file matching the provided name exists in the working 
-        directory, a prompt will appear asking the user if they want to 
-        overwrite."""
+        parameter file containing only module choices."""
     )
-    setup.add_argument("-f", "--force", action="store_true",
+    init.add_argument("-f", "--force", action="store_true",
                        help="automatically overwrites existing parameter file")
     # =========================================================================
     configure = subparser.add_parser(
@@ -105,7 +104,8 @@ def sfparser():
         can be submitted."""
     )
     configure.add_argument("-a", "--absolute_paths", action="store_true",
-                           help="Set default paths relative to cwd")
+                           help="Set paths as absolute. If not used (default), "
+                                "paths are set relative to `pwd`")
     # =========================================================================
     swap = subparser.add_parser(
         "swap", help="Swap module parameters in an existing parameter file",
@@ -118,6 +118,9 @@ def sfparser():
     )
     swap.add_argument("module", nargs="?", help="Module name to swap")
     swap.add_argument("classname", nargs="?", help="Classname to swap to")
+    swap.add_argument("-a", "--absolute_paths", action="store_true",
+                      help="Set paths as absolute. If not used (default), "
+                           "paths are set relative to `pwd`")
     # =========================================================================
     submit = subparser.add_parser(
         "submit", help="Submit initial workflow to system",
@@ -130,17 +133,17 @@ def sfparser():
     )
     submit.add_argument("-s", "--stop_after", default=None, type=str,
                         help="Optional override of the 'STOP_AFTER' parameter")
-    # =========================================================================
-    resume = subparser.add_parser(
-        "resume", help="Re-submit previous workflow to system",
-        description="""Resume a previously submitted workflow. Used when 
-        an active environment exists in the working directory, and must be 
-        submitted to the system again."""
-    )
-    resume.add_argument("-r", "--resume_from", default=None, type=str,
-                        help="Optional override of the 'RESUME_FROM' parameter")
-    resume.add_argument("-s", "--stop_after", default=None, type=str,
-                        help="Optional override of the 'STOP_AFTER' parameter")
+    # Argument `login` is shared between functions 'submit' and 'restart' so 
+    # define its behavior once and for all here and provide to each parser
+    _direct_kwargs = dict(
+            default=False, action="store_true", 
+            help="`cluster`-based systems only: submit master job 'direct'ly "
+                 "to login node rather than as a separate process on a "
+                 "compute node. Useful for avoiding queue times for master job "
+                 "but may be discouraged by sysadmins as some processing will "
+                 "take place on the shared login node")
+
+    submit.add_argument("-d", "--direct", **_direct_kwargs)
     # =========================================================================
     restart = subparser.add_parser(
         "restart", help="Remove current environment and submit new workflow",
@@ -150,6 +153,7 @@ def sfparser():
     )
     restart.add_argument("-f", "--force", action="store_true",
                          help="Skip the clean warning check statement")
+    restart.add_argument("-d", "--direct", **_direct_kwargs)
     # =========================================================================
     clean = subparser.add_parser(
         "clean", help="Remove files relating to an active working environment",
@@ -203,16 +207,17 @@ def sfparser():
                     "file has been set correctly"
     )
     # =========================================================================
-    init = subparser.add_parser(
-        "init", formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Run check and setup functions to generate a SeisFlows "
-                    "working directory")
+    setup = subparser.add_parser(
+        "setup", formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Run parameter 'check' and module 'setup' all modules "
+                    "to generate a valid SeisFlows working directory. This "
+                    "will not perform any computationally expensive procedures")
     # =========================================================================
     plot2d = subparser.add_parser(
         "plot2d", formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""Plots model/kernels/gradient files located in the output/
         directory. ONLY available for SPECFEM2D models.""",
-        help="Plot 2D figures of models/kernels/gradients.")
+        help="Plot 2D figures of models/kernels/gradients")
 
     plot2d.add_argument("name", type=str, nargs="?",
                         help="Name of directory in the output/ directory")
@@ -249,6 +254,7 @@ Stream.plot() function under the hood. Example call would be
 Print information related to an active environment
 
     modules       List available module names for all available packages
+    sources       List all source names and their respective task index
     tasks         Print out the workflow task list for valid `stop_after` values
     inherit       Track inheritance chain for all modules, determine method 
                   ownership for a given function. 
@@ -441,6 +447,9 @@ class SeisFlows:
             if len(sys.argv) == 1:
                 self._parser.print_help()
                 sys.exit(0)
+            if self._args.version:
+                print(f"v{__version__}")
+                sys.exit(0)
 
             # Call the given function based on the user-defined name.
             # Throw in all arguments as kwargs and let the function sort it out
@@ -457,7 +466,7 @@ class SeisFlows:
         """
         return [_ for _ in dir(self) if not _.startswith("_")]
 
-    def setup(self, force=False, **kwargs):
+    def init(self, force=False, **kwargs):
         """
         Initiate a SeisFlows working directory from scratch by establishing a
         template parameter file.
@@ -518,6 +527,12 @@ class SeisFlows:
             Defaults to False, uses relative paths.
         """
         from traceback import format_exc
+        
+        # Paths/pars that are okay staying default and will be kept together
+        # with -s/--show_hidden
+        _default_paths = ["workdir", "output_log", "state_file", "par_file", 
+                          "output", "scratch", "log_files"]
+        _ignore_paths = ["solver", "eval_func", "eval_grad"]
 
         print("configuring SeisFlows parameter file")
 
@@ -527,7 +542,8 @@ class SeisFlows:
             and remove the path docstrings, those come later.
 
             :type idx: int
-            :param idx: 0 returns parameter docstrings, 1 returns path docstring
+            :param idx: 0 returns parameter docstrings, 1 or -1 returns path 
+                docstring
             """
             docstring = mod.__doc__.replace("\n", "\n#")
             docssplit = docstring.split("***\n#")
@@ -535,9 +551,41 @@ class SeisFlows:
                                 docssplit])
             return docfinal
 
+        def write_dict_to_yaml(f, d, written, recursive=0):
+            """
+            Convenience function to convert Python dict() -> YAML
+            Allows for nested dictionaries to be written through recursive calls
+
+            :type f: _io.TextIOWrapper
+            :type d: dict
+            :type written: list
+            :type recursive: int
+            """
+            # Write the parameters, make sure to not have the same one twice
+            for key, val in d.items():
+                # Skip already written, hidden vars, and path dictionaries
+                if (key in written) or key.startswith("_") or key == "path":
+                    continue
+                # Deal with nested dictionaries. Keep them condensed but
+                # ensure that NoneType -> null
+                if isinstance(val, dict):
+                    f.write(f"{key}: \n")
+                    write_dict_to_yaml(f, val, written, recursive+1)
+                else:
+                    # YAML wants NoneType to be 'null'
+                    if val is None:
+                        val = "null"
+                    f.write(f"{'  ' * recursive}{key}: {val}\n")
+                    written.append(key)
+
         # Load in a barebones parameter file and instantiate specific classes
         parameters = load_yaml(os.path.join(self._args.workdir,
                                             self._args.parameter_file))
+        if len(parameters) > 5:
+            print("error: parameter file has already been configured, either "
+                  "create a new file with 'setup' or swap modules with 'swap'")
+            sys.exit(-1)
+
         modules = [custom_import(name, parameters[name])() for name in NAMES]
 
         # If writing to parameter file fails for any reason, the file will be
@@ -546,7 +594,7 @@ class SeisFlows:
         unix.cp(self._args.parameter_file, temp_par_file)
 
         try:
-            written, path_docstrings = [], []
+            written = []
             f = open(self._args.parameter_file, "a")
             # Write all module parameters and corresponding docstrings
             for module in modules:
@@ -554,16 +602,7 @@ class SeisFlows:
                     continue
                 docstring = split_module_docstring(module, 0)
                 f.write(f"# {'=' * 77}\n#{docstring}\n# {'=' * 77}\n")
-                # Write the parameters, make sure to not have the same one twice
-                for key, val in vars(module).items():
-                    # Skip already written, hidden vars, and paths
-                    if (key in written) or key.startswith("_") or key == "path":
-                        continue
-                    # YAML wants NoneType to be 'null'
-                    if val is None:
-                        val = "null"
-                    f.write(f"{key}: {val}\n")
-                    written.append(key)
+                write_dict_to_yaml(f, vars(module), written)
 
             # Write docstrings for publically accesible path structure
             f.write(f"# {'=' * 77}\n")
@@ -578,7 +617,7 @@ class SeisFlows:
             f.write(f"# {'=' * 77}\n")
 
             # Write values for publically accessible path structure
-            written = []
+            written, defaults = [], {}
             for module in modules:
                 if not module:
                     continue
@@ -586,14 +625,38 @@ class SeisFlows:
                     # '_key' means hidden path so don't include in par file
                     if key in written or key.startswith("_"):
                         continue
+                    elif key in _ignore_paths:
+                        continue
+                    # Don't write default paths yet, will write at the end
+                    elif key in _default_paths:
+                        if key not in defaults:
+                            defaults[key] = val
+                        continue
+                    
                     if val is None:
                         val = "null"
                     if absolute_paths:
                         val = os.path.abspath(val)
                     else:
                         val = os.path.relpath(val)
+                    if key == "scratch":
+                        import pdb;pdb.set_trace()
                     f.write(f"path_{key}: {val}\n")
                     written.append(key)
+            # Write out the default paths at the very end
+            f.write(f"# {'-' * 77}\n")
+            f.write(f"# Parameters below define the working directory and "
+                    f"can be left default\n")
+            f.write(f"# {'-' * 77}\n")
+            for key in _default_paths:
+                if key in defaults:
+                    val = defaults[key]
+                    if absolute_paths:
+                        val = os.path.abspath(val)
+                    else:
+                        val = os.path.relpath(val)
+                    f.write(f"path_{key}: {val}\n")
+
         except Exception:
             unix.rm(self._args.parameter_file)
             unix.cp(temp_par_file, self._args.parameter_file)
@@ -607,7 +670,7 @@ class SeisFlows:
 
         f.close()
 
-    def swap(self, module, classname, **kwargs):
+    def swap(self, module, classname, absolute_paths=False, **kwargs):
         """
         Swap the parameters of an existing parameter file with a new module.
         Useful for changing out parameters without having to re-make a
@@ -618,7 +681,30 @@ class SeisFlows:
 
         .. rubric::
             $ seisflows swap system slurm
+
+        :type absolute_paths: bool
+        :param absolute_paths: if True, expand pathnames to absolute paths,
+            else if False, use path names relative to the working directory.
+            Defaults to False, uses relative paths.
         """
+        # Allow swapping paths only from absolute to relative and back
+        if module == "paths":
+            if classname == "absolute":
+                fx = os.path.abspath
+            elif classname == "relative":
+                fx = os.path.relpath
+            else:
+                print(msg.cli(text="paths swap must be 'absolute', 'relative'",
+                              header="error"))
+                sys.exit(-1)
+
+            pars = load_yaml(self._args.parameter_file)
+            for key, val in pars.items():
+                if key.startswith("path") and val is not None:
+                    setpar(key=key, val=fx(val), file=self._args.parameter_file,
+                           delim=":")
+            return
+            
         if module not in NAMES:
             print(msg.cli(text=f"{module} does not match {NAMES}",
                           header="error"))
@@ -629,7 +715,7 @@ class SeisFlows:
         unix.mv(self._args.parameter_file, f"_{self._args.parameter_file}")
         try:
             # Create a new parameter file with updated module
-            self.setup(force=True)
+            self.init(force=True)
             for name in NAMES:
                 setpar(key=name, val=ogpars[name],
                        file=self._args.parameter_file, delim=":")
@@ -637,13 +723,19 @@ class SeisFlows:
             # Overwrite with new parameters
             setpar(key=module, val=classname, file=self._args.parameter_file,
                    delim=":")
-            self.configure()
+            self.configure(absolute_paths=absolute_paths)
 
             ogpars.pop(module)  # don't edit the parameter were changing
             for key, val in ogpars.items():
                 if val is None:
                     val = "null"
                 try:
+                    # If setting paths, allow setting absolute or relative
+                    if key.startswith("path_"):
+                        if absolute_paths and val != "null":
+                            val = os.path.abspath(val)
+                        else:
+                            val = os.path.relpath(val)
                     setpar(key=key, val=val, file=self._args.parameter_file,
                            delim=":")
                 except KeyError:
@@ -668,10 +760,14 @@ class SeisFlows:
                                     parameter_file=self._args.parameter_file)
         try:
             workflow.check()
+            print(msg.cli("All module checks passed nominally, "
+                          "use 'seisflows submit' to submit workflow", 
+                          border="-")
+                          )
         except AssertionError as e:
             print(msg.cli(str(e), border="=", header="parameter errror"))
 
-    def init(self, **kwargs):
+    def setup(self, **kwargs):
         """
         Run check() + setup() functions for a given parameter file and each of
         the SeisFlows modules, ensuring that parameters are acceptable for the
@@ -687,7 +783,7 @@ class SeisFlows:
             workflow.check()
             workflow.setup()
         except AssertionError as e:
-            print(msg.cli(str(e), border="=", header="parameter errror"))
+            print(msg.cli(str(e), border="=", header="parameter error"))
 
     def submit(self, **kwargs):
         """
@@ -701,8 +797,21 @@ class SeisFlows:
 
         parameters = load_yaml(self._args.parameter_file)
         system = custom_import("system", parameters.system)(**parameters)
-        system.submit(workdir=self._args.workdir,
-                      parameter_file=self._args.parameter_file)
+
+        if self._args.direct is True:
+            try:
+                system.submit(workdir=self._args.workdir,
+                              parameter_file=self._args.parameter_file,
+                              direct=True)
+            except TypeError:
+                print(msg.cli(f"System '{parameters.system}' does not accept "
+                              "argument `direct`. This feature is only allowed "
+                              "for `cluster`-based systems. Please check "
+                              "system and try again.",
+                              border="=", header="submit error"))
+        else:
+            system.submit(workdir=self._args.workdir,
+                          parameter_file=self._args.parameter_file)
 
     def clean(self, force=False, **kwargs):
         """
@@ -731,11 +840,15 @@ class SeisFlows:
 
         if check == "y":
             pars = load_yaml(self._args.parameter_file)
-            for name in ["scratch", "output", "log_files", "state_file", 
-                         "output_log"]:
+            for name in ["scratch", "output", "log_files", 
+                         "state_file", "output_log"]:
                 path = f"path_{name}"
                 if path in pars:
                     unix.rm(pars[path])
+            # Special case for data path, only delete if it's empty
+            if not os.listdir(pars["path_data"]):
+                unix.rm(pars["path_data"])
+
 
     def restart(self, force=False, **kwargs):
         """
@@ -752,23 +865,21 @@ class SeisFlows:
         Does not allow stepping through of code (not a breakpoint).
         """
         from IPython import embed
-
-        workflow = import_seisflows(workdir=self._args.workdir,
-                                    parameter_file=self._args.parameter_file)
+        workflow = import_seisflows(
+            workdir=self._args.workdir, parameter_file=self._args.parameter_file
+            )
+        
+        logger.info(msg.mjr("SEISFLOWS DEBUG", char="%"))
+        print(msg.cli(
+            "SeisFlows' debug mode is an embedded IPython environment. All "
+            "modules are loaded by default and can be accessed by name "
+            "(e.g., workflow, solver, optimize, etc.)", border="-")
+            )
 
         # Break out sub-modules and parameters so they're more easily accesible
+        # within debug mode
         parameters = load_yaml(self._args.parameter_file)
         system, solver, preprocess, optimize = workflow._modules.values()
-
-        print("Loaded SeisFlows Modules:")
-        for module in [workflow, system, solver, preprocess, optimize]:
-            print(f"{module.__class__}")
-
-        print(msg.cli("SeisFlows's debug mode is an embedded IPython "
-                      "environment. All modules are loaded by default. "
-                      "Any changes made here will not be saved unless "
-                      "you explicitely run: 'workflow.checkpoint()'",
-                      header="debug", border="="))
 
         embed(colors="Neutral")
 
@@ -841,7 +952,7 @@ class SeisFlows:
         # formatted the same as the rest of the file
         if parameter == "VELOCITY_MODEL":
             key = parameter
-            items = getpar_vel_model(file=par_file)
+            items = getpar_vel_model(file=par_file, strip=True)
             cur_val = ""
         else:
             try:
@@ -861,7 +972,7 @@ class SeisFlows:
                 setpar_vel_model(file=par_file, model=value.split("+"))
                 if not skip_print:
                     items.append("->")
-                    items += getpar_vel_model(file=par_file)
+                    items += getpar_vel_model(file=par_file, strip=True)
                     print(msg.cli(f"{key}:", items=items))
             else:
                 setpar(key=parameter, val=value, file=par_file, delim="=")
@@ -1026,6 +1137,7 @@ class SeisFlows:
         :param choice: underlying sub-function to choose
         """
         acceptable_args = {"modules": self._print_modules,
+                           "sources": self._print_source_names,
                            "tasks": self._print_tasks,
                            "inherit": self._print_inheritance}
 
@@ -1056,16 +1168,16 @@ class SeisFlows:
             NoneType, will not save the figure
         """
         from obspy import Stream
-        from seisflows.preprocess.default import Default
+        from seisflows.preprocess.default import Default, read
 
         # Take advantage of the Default Preprocessing module's read() function
-        plotter = Default()
-        assert(data_format.upper() in plotter._obs_acceptable_data_formats), \
-            f"data format must be in {plotter._obs_acceptable_data_formats}"  # NOQA
+        default = Default()
+        assert(data_format.upper() in default._obs_acceptable_data_formats), \
+            f"data format must be in {default._obs_acceptable_data_formats}"  # NOQA
 
         st = Stream()
         for fid in fids:
-            st += plotter.read(fid, data_format=data_format)
+            st += read(fid, data_format=data_format)
 
         st.plot(outfile=savefig, **kwargs)
 
@@ -1115,7 +1227,7 @@ class SeisFlows:
         plot_model.coordinates = base_model.coordinates
         # plot2d has internal check for acceptable parameter value
         plot_model.plot2d(parameter=parameter, cmap=cmap, show=True,
-                          title=f"{name} // {parameter.upper()}", save=savefig)
+                          title=f"{name} // {parameter}", save=savefig)
 
     def reset(self, choice=None, **kwargs):
         """
@@ -1123,7 +1235,7 @@ class SeisFlows:
 
         TODO re-write '_reset_line_search'
         """
-        acceptable_args = {"line_search": self._reset_line_search,}
+        acceptable_args = {"line_search": self._restart_line_search,}
 
         # Ensure that help message is thrown for empty commands
         if choice not in acceptable_args.keys():
@@ -1132,6 +1244,21 @@ class SeisFlows:
 
         acceptable_args[choice](*self._args.args, **kwargs)
 
+    def _restart_line_search(self, **kwargs):
+        """
+        Reset the line search back to the initial step so that the line search
+        can be rerun with different parameter choices
+        """
+        print(msg.cli("Resetting line search to initial step", border="="))
+        workflow = import_seisflows(workdir=self._args.workdir,
+                                    parameter_file=self._args.parameter_file)
+        workflow.setup()
+        workflow.optimize._line_search._restart_line_search()
+        workflow.optimize.checkpoint()
+        print(msg.cli("Successful, resume workflow from "
+                      "'initialize_line_search`", border="="))
+
+        
     def _inspect_class_that_defined_method(self, name, func, **kwargs):
         """
         Given a function name and generalized module (e.g. solver), inspect
@@ -1209,7 +1336,6 @@ class SeisFlows:
             items.append(item_str)
         print(msg.cli(items=items, header="seisflows inheritance"))
 
-
     def _print_modules(self, package=None, **kwargs):
         """
         Print out available modules in the SeisFlows name space for all
@@ -1251,6 +1377,24 @@ class SeisFlows:
         print(msg.cli(f"Task list for {type(wf)}", items=items,
                       header="seisflows workflow task list"))
 
+    def _print_source_names(self, **kwargs):
+        """
+        Simply print out the seisflows.workflow.main() flow variable which
+        describes what order workflow functions will be run. Useful for
+        filling out the RESUME_FROM and STOP_AFTER parameters.
+
+        .. rubric::
+            $ seisflows print flow
+        """
+        parameters = load_yaml(os.path.join(self._args.workdir,
+                                            self._args.parameter_file))
+        source_names = check_source_names(
+            path_specfem_data=parameters.path_specfem_data,
+            source_prefix=parameters.source_prefix, ntask=parameters.ntask
+        )
+        items = [f"{a}: {b}" for a, b in enumerate(source_names)]
+        print(msg.cli(items=items, header="seisflows solver source names"))
+
     def _print_inheritance(self, name=None, func=None, **kwargs):
         """
         Inspect inheritance hierarchy of classes, methods defined by SeisFlows.
@@ -1279,89 +1423,6 @@ class SeisFlows:
             self._inspect_module_hierarchy(name, **kwargs)
         else:
             self._inspect_class_that_defined_method(name, func, **kwargs)
-
-    # def _check_model_parameters(self, src=None, **kwargs):
-    #     """
-    #     Print out the min/max values from one or all of the currently available
-    #     models. Useful for checking what models are associated with what part of
-    #     the workflow, e.g. evaluate function, evaluate gradient.
-    #
-    #     :type src: str
-    #     :param src: the name of a specific model to check, e.g. 'm_try',
-    #         otherwise will check parameters for all models
-    #     """
-    #     optimize = sys.modules["seisflows_optimize"]
-    #     PATH = sys.modules["seisflows_paths"]
-    #
-    #     avail = glob(os.path.join(PATH.OPTIMIZE, "m_*"))
-    #     srcs = [os.path.basename(_) for _ in avail]
-    #     if src:
-    #         if src not in srcs:
-    #             print(msg.cli(f"{src} not in available models: {avail}"))
-    #             sys.exit(-1)
-    #         srcs = [src]
-    #     for tag in srcs:
-    #         m = optimize.load(tag)
-    #         m.check()
-    #
-    # def _check_current_iteration(self, **kwargs):
-    #     """
-    #     Display the current point in the workflow in terms of the iteration
-    #     and step count number. Args are not used by allow for a more general
-    #     check() function.
-    #     """
-    #     optimize = sys.modules["seisflows_optimize"]
-    #     try:
-    #         items = []
-    #         ln = optimize.line_search
-    #         items.append(f"Iteration: {optimize.iter}")
-    #         items.append(f"Step Count: {ln.step_count} / {ln.step_count_max}")
-    #         print(msg.cli(items=items))
-    #     except AttributeError:
-    #         print(msg.cli("OPTIMIZATION module has not been initialized yet, "
-    #                       "cannot retrieve iteration or step count values."))
-    #         sys.exit(-1)
-    #
-    # def _check_source_names(self, source_name=None, **kwargs):
-    #     """
-    #     Sources are tagged by name but also by index in the source names which
-    #     can be confusing and usually requires doubling checking. This check
-    #     just prints out source names next to their respective index, or if a
-    #     source name is requested, provides the index for that
-    #
-    #     :type source_name: str
-    #     :param source_name: name of source to check index, if None will simply
-    #         print out all sources
-    #     """
-    #     try:
-    #         source_names = sys.modules["seisflows_solver"].source_names
-    #     except FileNotFoundError as e:
-    #         print(msg.cli(str(e)))
-    #         sys.exit(-1)
-    #
-    #     if source_name:
-    #         print(msg.cli(f"{source_names.index(source_name)}: {source_name}"))
-    #     else:
-    #         items = []
-    #         for i, source_name in enumerate(source_names):
-    #             items.append(f"{i:>3}: {source_name}")
-    #         print(msg.cli(items=items, header="source names"))
-    #
-    # def _check_source_index(self, idx=None, **kwargs):
-    #     """
-    #     Look up source name by index
-    #
-    #     :type idx: int
-    #     :param idx: index of source to look up
-    #     """
-    #     if idx is None:
-    #         self._check_source_names(source_name=None)
-    #     else:
-    #         solver = sys.modules["seisflows_solver"]
-    #         try:
-    #             print(msg.cli(f"{idx}: {solver.source_names[int(idx)]}"))
-    #         except IndexError:
-    #             print(msg.cli(f"idx out of range: {len(solver.source_names)}"))
 
 
 def return_modules():

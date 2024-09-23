@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seisflows"
-version = "2.2.0"
+version = "3.2.7"
 description = "An automated workflow tool for full waveform inversion"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -16,13 +16,19 @@ authors = [
 dependencies = [
     "obspy",
     "pyyaml",
-	"IPython",
-	"dill",
-	"pyatoa>=0.2.2",
+    "pypdf",
+    "IPython",
+    "dill",
+    "pyatoa>=0.4.0",
+    "pysep-adjtomo",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ipython", "ipdb"]
+dev = [
+    "pytest", 
+    "pyatoa @ git+https://github.com/adjtomo/pyatoa.git@devel",
+    "pysep-adjtomo @ git+https://github.com/adjtomo/pysep.git@devel"
+]
 
 [project.urls]
 homepage = "https://github.com/adjtomo/"

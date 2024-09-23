@@ -57,6 +57,7 @@ class SFFwdEx2D(SFExample2D):
         }
 
         self._parameters["export_traces"] = True
+        self._parameters["generate_data"] = False  # overload default par.
         self._parameters["path_model_true"] = "null"  # overload default par.
 
     def print_dialogue(self):
@@ -98,7 +99,6 @@ class SFFwdEx2D(SFExample2D):
         for i in range(self.nproc):
             ln("model_velocity.dat_checker",
                f"proc00000{i}_model_velocity.dat_input")
-
 
     def main(self):
         """
