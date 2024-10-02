@@ -550,7 +550,7 @@ class NoiseInversion(Inversion):
         """
         # If we are the middle of a thrifty inversion, simply load the misfit
         # of the last accepted line search evaluation
-        if self.is_thrifty:
+        if self._was_thrifty:
             total_misfit = self.optimize.load_vector(name="f_new")
             logger.info(f"total misfit `f_new` ({self.evaluation}) = "
                         f"{total_misfit:.2E}")
@@ -1201,7 +1201,7 @@ class NoiseInversion(Inversion):
         # task usually fails due to timeout when `tasktime` is set for an 
         # adjoint simulation (tasktime=self.system.tasktime * 2)
         self.system.run([generate_event_kernels], single=True, 
-                        tasktime=self.system.tasktime * 4)
+                        tasktime=self.system.tasktime * 1)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.

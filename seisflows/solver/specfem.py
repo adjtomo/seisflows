@@ -44,8 +44,15 @@ class Specfem:
     :param syn_data_format: data format for reading synthetic traces into memory.
         Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
     :type materials: str
-    :param materials: Material parameters used to define model. Available:
-        ['ELASTIC': Vp, Vs, 'ACOUSTIC': Vp, 'ISOTROPIC', 'ANISOTROPIC']
+    :param materials: Material name used to define the model parameters that
+        will be updated during an inversion. Different Solvers will have 
+        different options. Available options (case-insensitive):
+        - ACOUSTIC (SPECFEM2D, 3D, 3D_GLOBE): Vp 
+        - ELASTIC (SPECFEM2D, 3D, 3D_GLOBE): Vp, Vs, 
+        - TRANSVSERSE_ISOTROPIC (SPECFEM3D_GLOBE): Vpv, Vph, Vsv, Vsh, Eta
+        - ANISOTROPIC (SPECFEM3D): Vp, Vs, c_ij  (21 parameter anisotropy)
+        
+        + Planned but not implemented: SPECFEM3D Transverse Isotropy
     :type density: bool
     :param density: How to treat density during inversion. If True, updates
         density during inversion. If False, keeps it constant.
@@ -168,8 +175,9 @@ class Specfem:
         # Define available choices for check parameters
         self._available_model_types = ["gll"]
         self._available_materials = [
-            "ELASTIC", "ACOUSTIC",  # specfem2d, specfem3d
-            "ISOTROPIC", "ANISOTROPIC"  # specfem3d_globe
+            "ELASTIC", "ACOUSTIC",  # specfem2d and specfem3d
+            "TRANSVSERSE_ISOTROPIC",  # specfem3d and 3d_globe
+            "ANISOTROPIC",  # specfem3d
         ]
         # SPECFEM2D specific attributes. Should be overwritten by 3D versions
         self._syn_available_data_formats = ["ASCII", "SU"]
