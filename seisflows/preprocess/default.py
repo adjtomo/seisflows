@@ -408,7 +408,9 @@ class Default:
                     residual = future.result()
                     residuals.append(residual)
                 except Exception as e:
-                    logger.critical(f"PREPROC FAILED: {e}")
+                    logger.critical(f"PREPROC FAILED:")
+                    exc_str = traceback.format_exc()
+                    logger.critical(exc_str)
                     sys.exit(-1)
 
         # Write residuals to text file for other modules to find
