@@ -8,11 +8,13 @@ and write adjoint sources that are expected by the solver.
 import os
 import sys
 import numpy as np
+import traceback
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
 
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
+from pysep.utils.io import read_events_plus
 
 from seisflows import logger
 from seisflows.tools import unix
@@ -463,7 +465,7 @@ class Default:
 
         return observed, synthetic
 
-    def _quantify_misfit_single(self, obs_fid, syn_fid, source_name=None,
+    def _quantify_misfit_single(self, obs_fid, syn_fid, source_name,
                                 save_residuals=None, save_adjsrcs=None):
         """
         Run misfit quantification for one pair of data-synthetic waveforms.
@@ -475,8 +477,9 @@ class Default:
         :type syn_fid: str
         :param syn_fid: filename for the synthetic waveform to be procsesed
         :type source_name: str
-        :param source_name: name of the source used for tagging output waveform
-            figures if internal paramter `plot` is set True
+        :param source_name: name of the source used for getting origintime of
+            synthetic waveforms and tagging output waveform figures if internal 
+            parameter `plot` is set True
         :type save_residuals: str
         :param save_residuals: if not None, path to write misfit/residuls to
         :type save_adjsrcs: str
@@ -485,9 +488,18 @@ class Default:
         :return: residual value, calculated by the chosen misfit function
             comparing `obs` and `syn`
         """
+        # Determine origintime of synthetic event, will ONLY be used if 
+        # `*_data_format` == 'ASCII'
+        source_fid = os.path.join(self.path.solver, source_name,
+                                  "DATA", self._source_prefix)
+        cat = read_events_plus(fid=source_fid, format=self._source_prefix)
+
         # Read in waveforms based on the User-defined format(s)
-        obs = read(fid=obs_fid, data_format=self.obs_data_format)
-        syn = read(fid=syn_fid, data_format=self.syn_data_format)
+        # `origintime` will only be applied if format=='ASCII'
+        obs = read(fid=obs_fid, data_format=self.obs_data_format,
+                   origintime=cat[0].preferred_origin().time)
+        syn = read(fid=syn_fid, data_format=self.syn_data_format,
+                   origintime=cat[0].preferred_origin().time)
 
         # Wrap all the preprocessing functions into single function so that
         # it can be more easily overwritten by overwriting classes
