@@ -410,13 +410,14 @@ class Default:
                     residual = future.result()
                     residuals.append(residual)
                 except Exception as e:
-                    logger.critical(f"PREPROC FAILED:")
-                    exc_str = traceback.format_exc()
-                    logger.critical(exc_str)
-                    sys.exit(-1)
+                    logger.critical(f"PREPROC FAILED: {e}")
+                    # Uncomment if you want more extensive debug info
+                    # exc_str = traceback.format_exc()
+                    # logger.critical(exc_str)
 
         # Write residuals to text file for other modules to find
         if save_residuals:
+            unix.mkdir(os.path.dirname(save_residuals)) 
             with open(save_residuals, "a") as f:
                 for residual in residuals:
                     f.write(f"{residual:.2E}\n")
@@ -491,8 +492,8 @@ class Default:
         # Determine origintime of synthetic event, will ONLY be used if 
         # `*_data_format` == 'ASCII'
         source_fid = os.path.join(self.path.solver, source_name,
-                                  "DATA", self._source_prefix)
-        cat = read_events_plus(fid=source_fid, format=self._source_prefix)
+                                  "DATA", self.source_prefix)
+        cat = read_events_plus(fid=source_fid, format=self.source_prefix)
 
         # Read in waveforms based on the User-defined format(s)
         # `origintime` will only be applied if format=='ASCII'
@@ -500,6 +501,9 @@ class Default:
                    origintime=cat[0].preferred_origin().time)
         syn = read(fid=syn_fid, data_format=self.syn_data_format,
                    origintime=cat[0].preferred_origin().time)
+
+
+        logger.info(f"PREPROCESSING {syn[0].get_id()}")
 
         # Wrap all the preprocessing functions into single function so that
         # it can be more easily overwritten by overwriting classes
