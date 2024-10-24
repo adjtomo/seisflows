@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v3.2.9
+- Hotfix: bugfix SPECFEM solver Model class throwing assertion error for model arrays that were all 0,
+  which can happen with fully anisotropic materials
+
 ## v3.2.8 (#225)
 - Changes `materials` input `ANISOTROPIC` to `TRANVERSE_ISOTROPIC` to differentiate from general anisotropy
 - `TRANSVERSE_ISOTROPIC` available for both SPECFEM3D and SPECFEM3D_GLOBE with expected parameters: vsh, vsv, vph, vpv, eta
