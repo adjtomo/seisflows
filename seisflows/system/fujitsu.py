@@ -301,7 +301,6 @@ class Fujitsu(Cluster):
             # Used to track how many jobs completed each batch
             jobs_pending = len(job_ids)
             start += nsubmit  # increment for next loop
-            logger.debug(f"new start {start}")
             if start >= _ntask:
                 complete_all = True  # last batch
 
@@ -324,7 +323,6 @@ class Fujitsu(Cluster):
             else:
                 # Set up for the next round of job submissions
                 completed += jobs_pending- len(job_ids)
-                logger.debug(f"{completed} jobs completed, submit new batch")
 
     def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=15, 
                            complete_all=False):
@@ -406,7 +404,6 @@ class Fujitsu(Cluster):
             for jid, state in zip(job_ids[:], states[:]):
                 # Check for completed jobs 
                 if state in self._completed_states:
-                    logger.debug(f"{jid} completed")
                     job_ids.remove(jid)
                 # Let the User know that a job has failed 
                 elif state in self._failed_states:    
@@ -475,7 +472,6 @@ class Fujitsu(Cluster):
             by putting a stop criteria
         :raises TimeoutError: if 'pjstat' does not return any output for ~1 min.
         """
-        logger.debug(f"querying job ID {job_id}")
         job_ids, job_states = [], []
 
         # Look at currently running jobs as well as completed jobs
