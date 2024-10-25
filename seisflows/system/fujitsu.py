@@ -266,6 +266,7 @@ class Fujitsu(Cluster):
         _ntasks = range(0, _ntask, 1)  # tasks that need to be run
         job_ids = []  # will contain the job IDs for jobs currently submitted
         completed = 0  # keeps track of how many jobs we've finished
+        complete_all = False
 
         # We will keep looping in the While loop until we finish all tasks
         while completed < _ntask:
@@ -299,29 +300,42 @@ class Fujitsu(Cluster):
             
             # Used to track how many jobs completed each batch
             jobs_pending = len(job_ids)
+            start += nsubmit  # increment for next loop
+            logger.debug(f"new start {start}")
+            if start >= _ntask:
+                complete_all = True  # last batch
 
             # Monitor the job queue until atleast one job goes out of pending.
             # If any job returns a failing state, `monitor_job_status` will kill
             # the main workflow
             try:
-                job_ids = self.monitor_job_status(job_ids)
+                job_ids = self.monitor_job_status(job_ids, 
+                                                  complete_all=complete_all
+                                                  )
             except FileNotFoundError:
                 logger.critical(f"cannot access job information through "
                                 f"'pjstat', waited 50s with no return, please "
                                 f"check job scheduler and log messages")
                 sys.exit(-1)
 
-            # Set up for the next round of job submissions
-            completed += jobs_pending- len(job_ids)
-            start += nsubmit 
+            # If last batch, finish when all jobs completed, else rerun
+            if complete_all:
+                return
+            else:
+                # Set up for the next round of job submissions
+                completed += jobs_pending- len(job_ids)
+                logger.debug(f"{completed} jobs completed, submit new batch")
 
-    def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=15):
+    def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=15, 
+                           complete_all=False):
         """
         Repeatedly check the status of currently running job(s) in a clusters' 
         queue. If the job goes into a bad state (like 'FAILED'), log the 
         failing job's id and their states. Returns a state of 1 if all jobs 
         complete nominally, returns a state of -1 if any nonzero number of jobs 
         returns a non-complete status.
+
+        TO DO: probably 
 
         .. note::
             
@@ -389,14 +403,15 @@ class Fujitsu(Cluster):
             # a new job
             ntrack = len(job_ids)
             failed_jobs = []
-            for job_id, state in zip(job_ids[:], states[:]):
+            for jid, state in zip(job_ids[:], states[:]):
                 # Check for completed jobs 
                 if state in self._completed_states:
-                    job_ids.pop(job_id)
+                    logger.debug(f"{jid} completed")
+                    job_ids.remove(jid)
                 # Let the User know that a job has failed 
                 elif state in self._failed_states:    
-                    logger.critical(f"{job_id}: {state}")
-                    failed_jobs.append(job_id)
+                    logger.critical(f"{jid}: {state}")
+                    failed_jobs.append(jid)
                 # Otherwise, jobs are still pending/queued
                 else:
                     continue
@@ -407,10 +422,17 @@ class Fujitsu(Cluster):
                                 f"exiting. Please check log files in logs/")
                 sys.exit(-1)
 
+            # To mimic the input list of `job_id` which will be re-queried
+            job_id = list(job_ids)
+
             # If ANY jobs have completed, break this monitoring loop we can 
-            # submit more to the queue
-            if ntrack != len(job_ids):
+            # submit more to the queue. Except for `complete_all` which triggers
+            # last batch and we wait for all job IDs to finish
+            if complete_all:
+                continue
+            elif ntrack != len(job_ids):
                 return job_ids   
+
        
     def query_job_states(self, job_id, timeout_s=300, wait_time_s=30, 
                          _recheck=0):
@@ -453,6 +475,7 @@ class Fujitsu(Cluster):
             by putting a stop criteria
         :raises TimeoutError: if 'pjstat' does not return any output for ~1 min.
         """
+        logger.debug(f"querying job ID {job_id}")
         job_ids, job_states = [], []
 
         # Look at currently running jobs as well as completed jobs
