@@ -45,7 +45,7 @@ class Fujitsu(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, ntask_max=100, pjm_args="", **kwargs):
+    def __init__(self, ntask_max=None, pjm_args="", **kwargs):
         """
         Fujitsu-specific setup parameters
 
@@ -58,12 +58,13 @@ class Fujitsu(Cluster):
         # Overwrite the existing 'mpiexec'
         if self.mpiexec is None:
             self.mpiexec = "mpiexec"
-        self.ntask_max = ntask_max
+        self.ntask_max = ntask_max or self.ntask
         self.pjm_args = pjm_args
 
         # Must be filled in by child class
         self.group = None
         self.rscgrp = None
+        self.gpu = None
         self._rscgrps = {}
 
         # Convert walltime and tasktime to datetime str 'H:MM:SS'
@@ -216,8 +217,8 @@ class Fujitsu(Cluster):
                             f"`system._stdout_to_job_id()` is set correctly")    
             sys.exit(-1)                                                         
                                                                                  
-        return job_id   
-
+        return job_id  
+    
     def run(self, funcs, single=False, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a PJM
@@ -226,7 +227,11 @@ class Fujitsu(Cluster):
 
         .. note::
         
-            Completely overwrites the `Cluster.run()` command
+            Because Wisteria does not have an option similar to Slurm's 
+            `ntask_max` which limits the amount of concurrently running jobs, 
+            AND the system does not allow >8 concurrently submitted jobs (this 
+            will result in a PJM submission error), I had to completely 
+            rewrite the architecture for the `Cluster.run()` command. 
 
         :type funcs: list of methods
         :param funcs: a list of functions that should be run in order. All
@@ -256,53 +261,157 @@ class Fujitsu(Cluster):
         else:
             environs = ""
 
-        # Default Fujitsu command line input, can be overloaded by subclasses
-        # Copy-paste this default run_call and adjust accordingly for subclass
-        job_ids = []
-        for taskid in range(_ntask):
-            run_call = " ".join([
-                f"{self.run_call_header}",
-                # -x in 'pjsub' sets environment variables which are distributed
-                # in the run script, see custom run scripts for example how
-                # Ensure that these are comma-separated, not space-separated
-                f"-x SEISFLOWS_FUNCS={funcs_fid},"  
-                f"SEISFLOWS_KWARGS={kwargs_fid},"
-                f"SEISFLOWS_TASKID={taskid}{environs},"
-                f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
-                f"{self.run_functions}",
-            ])
+        # Set up variables to keep track of job submissions
+        start = 0  # keeps track of which job were currently submitting
+        _ntasks = range(0, _ntask, 1)  # tasks that need to be run
+        job_ids = []  # will contain the job IDs for jobs currently submitted
+        completed = 0  # keeps track of how many jobs we've finished
 
-            if taskid == 0:
-                logger.debug(run_call)
+        # We will keep looping in the While loop until we finish all tasks
+        while completed < _ntask:
+            nsubmit = self.ntask_max - len(job_ids)  # number of jobs to submit
+            stop = start + nsubmit
+            taskids = _ntasks[start:stop]
+            logger.debug(f"submitting task(s) {taskids[0]}-{taskids[-1]}")
 
-            # Grab the job ids from each stdout message
-            stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
-                                    text=True, shell=True).stdout
-            job_ids.append(self._stdout_to_job_id(stdout))
+            # If this is a `single` run, this will only submit a single task_id
+            for taskid in taskids:
+                run_call = " ".join([
+                    f"{self.run_call_header}",
+                    # -x in 'pjsub' sets environment variables which are 
+                    # distributed in the run script, see custom run scripts for 
+                    # example how Ensure that these are comma-separated, not 
+                    # space-separated
+                    f"-x SEISFLOWS_FUNCS={funcs_fid},"  
+                    f"SEISFLOWS_KWARGS={kwargs_fid},"
+                    f"SEISFLOWS_TASKID={taskid}{environs},"
+                    f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
+                    f"{self.run_functions}",
+                ])
 
-        # Monitor the job queue until all jobs have completed, or any one fails
-        try:
-            status = self.monitor_job_status(job_ids)
-        except FileNotFoundError:
-            logger.critical(f"cannot access job information through 'pjstat', "
-                            f"waited 50s with no return, please check job "
-                            f"scheduler and log messages")
-            sys.exit(-1)
+                if taskid == 0:
+                    logger.debug(run_call)
 
-        if status == -1:  # Failed job
-            logger.critical(
-                msg.cli(f"Stopping workflow. Please check logs for details.",
-                        items=[f"TASKS:  {[_.__name__ for _ in funcs]}",
-                               f"PJSUB:  {run_call}"],
-                        header="PJM run error", border="=")
-            )
-            sys.exit(-1)
-        else:
-            logger.info(f"{self.ntask} tasks finished successfully")
-            # Wait for all processes to finish and write to disk (if they do)
-            # Moving on too quickly may result in required files not being avail
-            time.sleep(5)
+                # Submit to system and grab the job ids from each stdout message
+                stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
+                                        text=True, shell=True).stdout
+                job_ids.append(self._stdout_to_job_id(stdout))
+            
+            # Used to track how many jobs completed each batch
+            jobs_pending = len(job_ids)
 
+            # Monitor the job queue until atleast one job goes out of pending.
+            # If any job returns a failing state, `monitor_job_status` will kill
+            # the main workflow
+            try:
+                job_ids = self.monitor_job_status(job_ids)
+            except FileNotFoundError:
+                logger.critical(f"cannot access job information through "
+                                f"'pjstat', waited 50s with no return, please "
+                                f"check job scheduler and log messages")
+                sys.exit(-1)
+
+            # Set up for the next round of job submissions
+            completed += jobs_pending- len(job_ids)
+            start += nsubmit 
+
+    def monitor_job_status(self, job_id, timeout_s=300, wait_time_s=15):
+        """
+        Repeatedly check the status of currently running job(s) in a clusters' 
+        queue. If the job goes into a bad state (like 'FAILED'), log the 
+        failing job's id and their states. Returns a state of 1 if all jobs 
+        complete nominally, returns a state of -1 if any nonzero number of jobs 
+        returns a non-complete status.
+
+        .. note::
+            
+            This function does nothing in the standalone `Cluster` module, but 
+            it is used by child classes, and so defines a usable code they
+            can inherit. Originally this monitoring system was 
+            written for the SLURM workload manager, but it is generalized.
+
+        :type job_id: str or list
+        :param job_id: main job id(s) to query, returned from the subprocess.run 
+            that ran the job(s). 
+            - if single value, we expect that jobs have been submitted as a job 
+            array (e.g., 1_0, 1_1, 1_2)
+            -if a list, we expect that the jobs have been submitted with 
+            independent
+            job numbers (e.g, 0, 1, 2)
+        :type timeout_s: float
+        :param timeout_s: length of time [s] to wait for system to respond 
+            nominally before rasing a TimeoutError. Sometimes it takes a while
+            for job monitoring to start working.
+        :type wait_time_s: float
+        :param wait_time_s: wait time interval to allow System to initialize 
+            jobs in the queue and to prevent the check system from constantly 
+            querying the queue system.
+        :rtype: int
+        :return: status of all running jobs. 1 for pass (all jobs COMPLETED). 
+            -1 for fail (one or more jobs returned failing status)
+        :raises TimeoutError: if 'sacct' does not return any output for ~1 min.
+        """
+        logger.info(f"monitoring job status for job(s): {job_id}")
+        time_waited = 0
+
+        # This is run in a while loop as we will keep checking job statuses 
+        # until they fall into one of two states, completed or failed
+        # Intermediate states like pending and failing will continue to wait
+        while True:
+            time.sleep(wait_time_s)  # wait so we don't overwhelm queue system
+
+            job_ids, states = [], []
+            for jid in job_id:
+                _job_ids, _states = self.query_job_states(jid)                         
+                job_ids += _job_ids            
+                states += _states       
+
+            # Condition to deal with `query_job_states` not returning correctly
+            if not job_ids or not states:
+                # Only increment wait counter if job query unsuccessful 
+                time_waited += wait_time_s
+
+                # After some timeout time, exit main job, likely error
+                if time_waited >= timeout_s:
+                    logger.critical(msg.cli(
+                        f"Cannot access job information for job {job_id}. "
+                        f"`System.query_job_states()` waited {timeout_s}s. "
+                        f"Please check function, job scheduler and logs, or "
+                        f"increase timeout constant in `timeout_s` in function "
+                        f"`System.Cluster.monitor_job_status`",
+                        header="system run timeout", border="=")
+                    )
+                    sys.exit(-1)
+                continue
+
+            # If ANY of the job IDs completes, immediately drop that job 
+            # from the list and return the remaining job IDs so we can submit
+            # a new job
+            ntrack = len(job_ids)
+            failed_jobs = []
+            for job_id, state in zip(job_ids[:], states[:]):
+                # Check for completed jobs 
+                if state in self._completed_states:
+                    job_ids.pop(job_id)
+                # Let the User know that a job has failed 
+                elif state in self._failed_states:    
+                    logger.critical(f"{job_id}: {state}")
+                    failed_jobs.append(job_id)
+                # Otherwise, jobs are still pending/queued
+                else:
+                    continue
+            
+            # Break the workflow for ANY failed jobs
+            if failed_jobs:
+                logger.critical(f"The following job IDs failed {failed_jobs}, "
+                                f"exiting. Please check log files in logs/")
+                sys.exit(-1)
+
+            # If ANY jobs have completed, break this monitoring loop we can 
+            # submit more to the queue
+            if ntrack != len(job_ids):
+                return job_ids   
+       
     def query_job_states(self, job_id, timeout_s=300, wait_time_s=30, 
                          _recheck=0):
         """
@@ -370,4 +479,3 @@ class Fujitsu(Cluster):
             self.query_job_states(job_id, _recheck=_recheck)
 
         return job_ids, job_states
-
