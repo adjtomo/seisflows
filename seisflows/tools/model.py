@@ -413,7 +413,7 @@ class Model:
         # checks will fail unexpectedly
         for key, val in self.model.items():
             # Make sure there are values in the model (not empty)
-            assert(val.any()), (
+            assert(val.size != 0), (
                  f"SPECFEM_{self.flavor} model '{key}' has no values, please "
                  f"check your input model `path_model_init` and the chosen "
                  f"`material` which controls the expected parameters"
