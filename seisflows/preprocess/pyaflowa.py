@@ -363,6 +363,7 @@ class Pyaflowa:
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
         if save_residuals:
+            unix.mkdir(os.path.dirname(save_residuals)) 
             # Normalize the raw misfit by the number of measurements
             if total_windows != 0:
                 summed_misfit = total_misfit / total_windows
