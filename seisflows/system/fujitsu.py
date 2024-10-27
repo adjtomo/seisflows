@@ -426,7 +426,10 @@ class Fujitsu(Cluster):
             # submit more to the queue. Except for `complete_all` which triggers
             # last batch and we wait for all job IDs to finish
             if complete_all:
-                continue
+                if job_ids:
+                    continue
+                else:
+                    return
             elif ntrack != len(job_ids):
                 return job_ids   
 
