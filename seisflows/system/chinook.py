@@ -112,17 +112,15 @@ class Chinook(Slurm):
 
         # Determine if this is a single-process or array job
         if single:
-            ntasks = 1
             env = "SEISFLOWS_TASKID=0," 
         else:
-            ntasks = self.nproc
             env = ""
         
         _call = " ".join([
              f"sbatch",
              f"{self.slurm_args or ''}",
              f"--job-name={self.title}",
-             f"--ntasks={ntasks:d}",
+             f"--ntasks={self.nproc:d}",
              f"--partition={self.partition}",
              f"--time={tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",

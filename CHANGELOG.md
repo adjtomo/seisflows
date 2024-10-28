@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v3.2.10
+- Hotfix: system Chinook was only using 1 core for single jobs which is not enough for combine_sem and smooth operations (but okay for xcombine_vol_data_vtk)
+
 ## v3.2.9
 - Hotfix: bugfix SPECFEM solver Model class throwing assertion error for model arrays that were all 0,
   which can happen with fully anisotropic materials
