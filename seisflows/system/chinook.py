@@ -77,7 +77,7 @@ class Chinook(Slurm):
             f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--partition={self.submit_to}",
-            f"--time={self._walltime}"
+            f"--time={self.walltime}"
         ])
         return _call
 
@@ -104,11 +104,7 @@ class Chinook(Slurm):
         :return: the system-dependent portion of a run call
         """
         array = array or self.task_ids(single=single)  # get job array str
-        if tasktime is None:
-            # 0 is there just for initialization. `tasktime` will superceded
-            tasktime = str(timedelta(minutes=0 or self.tasktime))
-        else:
-            tasktime = str(timedelta(minutes=tasktime))
+        tasktime = tasktime or self.tasktime
 
         # Determine if this is a single-process or array job
         if single:
