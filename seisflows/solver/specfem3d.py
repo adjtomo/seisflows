@@ -103,7 +103,8 @@ class Specfem3D(Specfem):
         """SPECFEM3D_Cartesian specific check tasks"""
         super().check()
 
-        if self.materials.upper() == "ANISOTROPIC":
+        if isinstance(self.materials, str) and \
+            self.materials.upper() == "ANISOTROPIC":
             logger.warning("the 'ANISOTROPIC' material parameter is an "
                            "experimental feature that requires "
                            "a modified version of SPECFEM3D. Use at your own "
