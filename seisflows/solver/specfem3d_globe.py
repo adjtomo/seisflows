@@ -119,7 +119,9 @@ class Specfem3DGlobe(Specfem):
         self._regions = sorted(self.regions) 
 
         # Define parameters based on material type
-        if self.materials.upper() == "ACOUSTIC":
+        if isinstance(self.materials, list):
+            self._parameters += self.materials
+        elif self.materials.upper() == "ACOUSTIC":
             self._parameters += ["vp"]
         elif self.materials.upper()  == "ELASTIC":
             self._parameters += ["vp", "vs"]

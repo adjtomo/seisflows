@@ -47,6 +47,10 @@ class Specfem:
     :param materials: Material name used to define the model parameters that
         will be updated during an inversion. Different Solvers will have 
         different options. Available options (case-insensitive):
+        - `type: list` (SPECFEM2D, 3D, 3D_GLOBE): User-defined list of 
+            parameters overwrites any existing parameters. 
+            NOTE: User is responsible for understanding if their chosen 
+            parameters are actually represented in SPECFEM
         - ACOUSTIC (SPECFEM2D, 3D, 3D_GLOBE): Vp 
         - ELASTIC (SPECFEM2D, 3D, 3D_GLOBE): Vp, Vs, 
         - TRANSVSERSE_ISOTROPIC (SPECFEM3D_GLOBE): Vpv, Vph, Vsv, Vsh, Eta
@@ -316,6 +320,8 @@ class Specfem:
             logger.warning("no SPECFEM model type specified to define file "
                            "extension, defaulting to '.bin'")
             self._ext = ".bin"
+
+        logger.info(f"solver parameters to be updated are: {self._parameters}")
 
         self._initialize_working_directories()
         self._export_starting_models()
