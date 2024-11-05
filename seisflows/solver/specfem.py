@@ -321,7 +321,11 @@ class Specfem:
                            "extension, defaulting to '.bin'")
             self._ext = ".bin"
 
+        # Remove any doubles, e.g., if User includes 'rho' in their list and 
+        # also has `update_density` set, we don't want rho in there twice
+        self._parameters = list(set(self._parameters))
         logger.info(f"solver parameters to be updated are: {self._parameters}")
+
 
         self._initialize_working_directories()
         self._export_starting_models()
