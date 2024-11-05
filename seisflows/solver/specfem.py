@@ -204,8 +204,9 @@ class Specfem:
         """
         Checks parameter validity for SPECFEM input files and model parameters
         """
-        assert(self.materials.upper() in self._available_materials), \
-            f"solver.materials must be in {self._available_materials}"
+        if isinstance(self.materials, str):
+            assert(self.materials.upper() in self._available_materials), \
+                f"solver.materials must be in {self._available_materials}"
 
         if self.syn_data_format.upper() not in self._syn_available_data_formats:
             raise NotImplementedError(
