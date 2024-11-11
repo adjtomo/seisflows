@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v3.3.0 (#227)
+- Updates for System class Wisteria
+- Overhauled `Fujitsu` System class to now allow parameter `ntask_max`. This is not an inherent option in Fujitsu-brand clusters so I needed to code it up directly in SeisFlows. General architecture is that SeisFlows submits `ntask_max` jobs to the System and monitors them, whenever a job completes, a new job is submitted to take its place, until `ntask` jobs have completed.
+- Replace some default module loading in Wisteria custom run scripts to not use CUDA-aware MPI as this is not used in SPECFEM3D_Cartesian
+- Shifted `residuals` directory creation into the responsibility of Workflow module, rather than preprocessing module, to keep dir. creation high-level
+- Bugfix: Default preprocessing was not correctly attributing event origin time to synthetics which causes waveform timing mismatch when using real data (this was okay for synthetics because they both then had default timing)
+- Bugfix: SPECFEM solver `nproc` check because there is a case where mpiexec gets defined to a default value for the system (if assigned NoneType), leading to serial runs when the User is expecting MPI processes. This is a redundant check to the System check
+- Preprocessing modules (both Default and Pyaflowa) improved error logging
+- Renamed log files for individual solver directories for `xgenerate_databases` as these were the same as the mesher (mesher -> database)
+
 ## v3.2.10
 - Hotfix: system Chinook was only using 1 core for single jobs which is not enough for combine_sem and smooth operations (but okay for xcombine_vol_data_vtk)
 

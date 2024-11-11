@@ -1121,8 +1121,8 @@ class SeisFlows:
             items=[
                 "'seisflows examples <name_or_idx>': print example description",
                 "'seisflows examples setup <name_or_idx>': setup example but "
-                "don't run workflow 'seisflows examples run <name_or_idx>': "
-                "setup and run example"
+                "don't run workflow ",
+                "'seisflows examples run <name_or_idx>': setup and run example"
             ],
             header="seisflows examples"
         ))

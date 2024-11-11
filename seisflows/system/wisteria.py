@@ -100,16 +100,3 @@ class Wisteria(Fujitsu):
                 "share-debug": 1, "share-short": 2, "share": 5
                 }
 
-    @property
-    def run_call_header(self):
-        """Override run call header to allow for GPU version requirements"""
-        if self.gpu:
-            _call = super().run_call_header.replace(
-                    f"-L node={self.nodes}",
-                    f"-L gpu={self.gpu}"
-                    )
-            return _call
-        else:
-            return super().run_call_header
-
-
