@@ -21,7 +21,7 @@ from pysep.utils.io import read_events_plus, read_stations
 from seisflows import logger
 from seisflows.tools import unix
 from seisflows.tools.config import Dict
-from seisflows.tools.graphics import imgs_to_pdf, merge_pdfs
+from seisflows.tools.graphics import imgs_to_pdf
 from seisflows.tools.specfem import return_matching_waveform_files
 from seisflows.preprocess.default import read, initialize_adjoint_traces
 
@@ -373,7 +373,6 @@ class Pyaflowa:
             with open(save_residuals, "w") as f:
                 f.write(f"{summed_misfit:.2E}\n")
             if export_residuals:
-                unix.mkdir(export_residuals)
                 unix.cp(src=save_residuals, dst=export_residuals)
 
         # Combine all the individual .png files created into a single PDF for

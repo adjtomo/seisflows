@@ -274,6 +274,15 @@ class Specfem:
                 f"SeisFlows solver module"
             )
 
+        # Make sure mpiexec is defined. We can get into a tricky situation where 
+        # mpiexec gets default defined by System but is not defined for solver
+        # leading to binaries getting unexpectedly run in serial mode 
+        if self.nproc > 1:
+            assert(self._mpiexec is not None), (
+                f"Multi-core workflows (`nproc`>1) require an MPI executable "
+                f"`mpiexec`"
+            ) 
+
         # Check that SPECFEM/DATA directory exists
         assert(self.path.specfem_data is not None and
                os.path.exists(self.path.specfem_data)), (
@@ -1044,7 +1053,7 @@ class Specfem:
         :return: logfile name that matches executable name
         """
         convert_dict = {"specfem": "solver", "meshfem": "mesher",
-                        "generate_databases": "mesher", "smooth": "smooth",
+                        "generate_databases": "database", "smooth": "smooth",
                         "combine": "combine"}
         for key, val in convert_dict.items():
             if key in exc:

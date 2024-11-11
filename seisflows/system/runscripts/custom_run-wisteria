@@ -22,7 +22,7 @@ if [ $GPU_MODE -eq 1 ]; then  # Use GPUs
 	echo "loading GPU modules on compute node"
     module load cuda/12.2
     module load gcc
-    module load ompi-cuda
+    module load ompi
 else
 	echo "loading CPU modules on compute node"
     module load intel
