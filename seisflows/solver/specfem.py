@@ -59,7 +59,7 @@ class Specfem:
         - ANISOTROPIC (3D, 3D_GLOBE): c_ij  (21 parameter anisotropy)
         
     :type update_density: bool
-    :param update_density: How to treat density during inversion. If True, \
+    :param update_density: How to treat density during inversion. If True, 
         updates density during inversion. If False, keeps it constant.
         TODO allow density scaling during an inversion
     :type attenuation: bool
@@ -228,9 +228,9 @@ class Specfem:
         Checks parameter validity for SPECFEM input files and model parameters
         """
         if isinstance(self.materials, str):
-            assert(self.materials in self._available_materials), \
+            assert(self.materials.upper() in self._available_materials), (
             f"Although `self.materials` is a valid material type, it is not an "
-            f"available material type for this solver choice. Please re-choose"
+            f"available material type for this solver choice. Please re-choose")
 
             if self.materials.upper() == "ANISOTROPIC":
                 logger.warning("the 'ANISOTROPIC' material parameter is an "
