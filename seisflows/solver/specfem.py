@@ -232,6 +232,20 @@ class Specfem:
             f"Although `self.materials` is a valid material type, it is not an "
             f"available material type for this solver choice. Please re-choose"
 
+            if self.materials.upper() == "ANISOTROPIC":
+                logger.warning("the 'ANISOTROPIC' material parameter is an "
+                               "experimental feature. Use at your "
+                               "own risk - NOT guaranteed to work")
+
+                anisotropic_kl = getpar(key="ANISOTROPIC_KL", 
+                                        file=os.path.join(
+                                            self.path.specfem_data,  
+                                            "Par_file"))[1]
+                
+                assert(anisotropic_kl == ".true."), (
+                    f"SPECFEM3D Par_file parameter 'ANISOTROPIC_KL' must be "
+                    f"set to '.true.' for ANISOTROPIC parameters")
+
         # Check that we have set parameters correctly. Since `rho` can be added
         # separately we need to account for that when checking length of array
         if len(self._parameters) < int(self.update_density):
