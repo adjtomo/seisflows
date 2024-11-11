@@ -103,7 +103,7 @@ class TestFlow:
 
         # Force some internal module variables to keep testing lightweight
         logger.info("overwriting internal System parameters from given values")
-        # self.system.ntask = 3
+        self.system.ntask = 3
         self.system.nproc = 1
         self.system.tasktime = .25  # 15 seconds
         self.system.walltime = 2.5  # 2.5 minutes
