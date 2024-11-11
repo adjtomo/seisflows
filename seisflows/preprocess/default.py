@@ -414,17 +414,16 @@ class Default:
                     # Uncomment if you want more extensive debug info
                     # exc_str = traceback.format_exc()
                     # logger.critical(exc_str)
+                    sys.exit(-1)
 
         # Write residuals to text file for other modules to find
         if save_residuals:
-            unix.mkdir(os.path.dirname(save_residuals)) 
             with open(save_residuals, "a") as f:
                 for residual in residuals:
                     f.write(f"{residual:.2E}\n")
 
             # Exporting residuals to disk (output/) for more permanent storage
             if export_residuals:
-                unix.mkdir(export_residuals)
                 unix.cp(src=save_residuals, dst=export_residuals)
 
         logger.info(f"FINISH QUANTIFY MISFIT: {source_name}")

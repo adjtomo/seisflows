@@ -625,9 +625,11 @@ class Forward:
                 f"in `save_residuals`: {save_residuals}"
             )
             save_residuals = save_residuals.format(src=self.solver.source_name)
+            unix.mkdir(os.path.dirname(save_residuals)) 
 
         if self.export_residuals:
             export_residuals = os.path.join(self.path.output, "residuals")
+            unix.mkdir(export_residuals)
         else:
             export_residuals = False
 
