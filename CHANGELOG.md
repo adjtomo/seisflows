@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v3.4.0 (#228)
+- Solver now allows input of list of parameters rather than using pre-defined labels to select. 
+- Moved all parameters setup and check tasks into the main Specfem solver module, rather than having it be distributed around the child classes
+- New material label '2D_ANISOTROPIC' for SPECFEM2D C_ij anisotropy definition
+- Bugfix: `Optimize` module now kills workflow if maximum allowable steplength exceeded. Previously the workflow would just evaluate the same capped step length until `step_count_max` was exceeded
+
 ## v3.3.0 (#227)
 - Updates for System class Wisteria
 - Overhauled `Fujitsu` System class to now allow parameter `ntask_max`. This is not an inherent option in Fujitsu-brand clusters so I needed to code it up directly in SeisFlows. General architecture is that SeisFlows submits `ntask_max` jobs to the System and monitors them, whenever a job completes, a new job is submitted to take its place, until `ntask` jobs have completed.

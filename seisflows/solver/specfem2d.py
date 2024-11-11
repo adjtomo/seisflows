@@ -41,14 +41,7 @@ class Specfem2D(Specfem):
 
         self.multiples = multiples
         self._f0 = None
-
-        # Define parameters based on material type
-        if self.materials.upper() == "ACOUSTIC":
-            self._parameters += ["vp"]
-        elif self.materials.upper() == "ELASTIC":
-            self._parameters += ["vp", "vs"]
-        else:
-            raise NotImplementedError(f"Invalid material {self.materials}")
+        self._available_materials = ["ACOUSTIC", "ELASTIC", "2D_ANISOTROPIC"]
 
     def setup(self):
         """

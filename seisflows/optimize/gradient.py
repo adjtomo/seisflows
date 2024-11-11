@@ -465,7 +465,8 @@ class Gradient:
                         logger.info("forcing step length to minimum value")
                         alpha = min_allowable_alpha
                     else:
-                        logger.critical(msg.mjr("EXITING WORKFLOW"))
+                        logger.critical(msg.mjr("MINIMUM STEP LENGTH EXCEEDED, "
+                                                "EXITING WORKFLOW"))
                         sys.exit(-1)
             # Determine maximum alpha as a fraction of the current model
             if self.step_len_max:
@@ -474,13 +475,17 @@ class Gradient:
                 max_allowable_alpha = self.step_len_max * norm_m / norm_p
                 if alpha > max_allowable_alpha:
                     logger.warning(f"`alpha` has exceeded maximum value "
-                                   f"{max_allowable_alpha:.2f}, capping")
+                                   f"{self.step_len_max * 100}%")
                     if first_step:
                         # If this is the first step, pull back slightly so that 
                         # line search can safely increase step length later
+                        # TODO: Where does this value come from?
                         alpha = 0.618034 * max_allowable_alpha
+                        logger.info("reducing step length for first step")
                     else:
-                        alpha = max_allowable_alpha
+                        logger.critical(msg.mjr("MAXIMUM STEP LENGTH EXCEEDED, "
+                                                "EXITING WORKFLOW"))
+                        sys.exit(-1)
 
         if alpha is not None:
             logger.info(f"step length `alpha` = {alpha:.3E}")
