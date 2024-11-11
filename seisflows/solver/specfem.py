@@ -195,7 +195,7 @@ class Specfem:
 
         # Allow density to be updated. `setup` will remove doubles if 
         # `materials` wase a custom list
-        if self.update_density:
+        if self.update_density and ("rho" not in self._parameters):
             self._parameters.append("rho")
 
         self._mpiexec = mpiexec
@@ -253,6 +253,8 @@ class Specfem:
                 f"Invalid material: {self.materials}. `materials` must be as "
                 f"list of parameter names or a pre-defined label. See "
                 f"parameter file docstring for more information")
+
+        logger.debug(f"solver parameters to be updated are: {self._parameters}")
 
         if self.syn_data_format.upper() not in self._syn_available_data_formats:
             raise NotImplementedError(
@@ -367,11 +369,6 @@ class Specfem:
             logger.warning("no SPECFEM model type specified to define file "
                            "extension, defaulting to '.bin'")
             self._ext = ".bin"
-
-        # Remove any doubles, e.g., if User includes 'rho' in their list and 
-        # also has `update_density` set, we don't want rho in there twice
-        self._parameters = list(set(self._parameters))
-        logger.info(f"solver parameters to be updated are: {self._parameters}")
 
         self._initialize_working_directories()
         self._export_starting_models()
