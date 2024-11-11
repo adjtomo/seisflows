@@ -43,23 +43,24 @@ class Specfem:
     :type syn_data_format: str
     :param syn_data_format: data format for reading synthetic traces into memory.
         Available: ['SU': seismic unix format, 'ASCII': human-readable ascii]
-    :type materials: str
+    :type materials: str or list
     :param materials: Material name used to define the model parameters that
-        will be updated during an inversion. Different Solvers will have 
-        different options. Available options (case-insensitive):
-        - `type: list` (SPECFEM2D, 3D, 3D_GLOBE): User-defined list of 
+        will be updated during an Inversion workflow. Available options 
+        (case-insensitive):
+        - `type: list` (2D, 3D, 3D_GLOBE): User-defined list of 
             parameters overwrites any existing parameters. 
             NOTE: User is responsible for understanding if their chosen 
-            parameters are actually represented in SPECFEM
-        - ACOUSTIC (SPECFEM2D, 3D, 3D_GLOBE): Vp 
-        - ELASTIC (SPECFEM2D, 3D, 3D_GLOBE): Vp, Vs, 
-        - TRANSVSERSE_ISOTROPIC (SPECFEM3D_GLOBE): Vpv, Vph, Vsv, Vsh, Eta
-        - ANISOTROPIC (SPECFEM3D): Vp, Vs, c_ij  (21 parameter anisotropy)
+            parameters are actually represented in SPECFEM, there are no guard
+            rails here to protect incorrect parameter naming
+        - ACOUSTIC (2D, 3D, 3D_GLOBE): Vp 
+        - ELASTIC (2D, 3D, 3D_GLOBE): Vp, Vs, 
+        - TRANSVERSE_ISOTROPIC (3D, 3D_GLOBE): Vpv, Vph, Vsv, Vsh, Eta
+        - 2D_ANISOTROPIC (2D): c11 c13 c15 c33 c35 c55 c12 c23 c25 c22
+        - ANISOTROPIC (3D, 3D_GLOBE): C_ij  (21 parameter anisotropy)
         
-        + Planned but not implemented: SPECFEM3D Transverse Isotropy
-    :type density: bool
-    :param density: How to treat density during inversion. If True, updates
-        density during inversion. If False, keeps it constant.
+    :type update_density: bool
+    :param update_density: How to treat density during inversion. If True, \
+        updates density during inversion. If False, keeps it constant.
         TODO allow density scaling during an inversion
     :type attenuation: bool
     :param attenuation: How to treat attenuation during inversion.
@@ -167,8 +168,33 @@ class Specfem:
         self.path["_mainsolver"] = os.path.join(self.path.scratch, "mainsolver")
         self.path["_solver_output"] = os.path.join(self.path.output, "solver")
 
-        # Private internal parameters for keeping track of solver requirements
+        # Define parameters to be updated based on `material` type.  
+        # If User inputs as a list then set and forget. Some of these are Solver
+        # specific and `Solver.check()` will fail the workflow if the incorrect
+        # solver is used.
         self._parameters = []
+        if isinstance(self.materials, list):  # Custom list e.g., ['vp', 'vs']
+            self._parameters = self.materials
+        elif self.materials.upper() == "ACOUSTIC":  # 2D/3D/3D_GLOBE
+            self._parameters = ["vp"]
+        elif self.materials.upper()  == "ELASTIC":  # 2D/3D/3D_GLOBE
+            self._parameters = ["vp", "vs"]
+        # Transverse Isotropic / Radially Anisotropic (2D/3D/3D_GLOBE)
+        elif self.materials.upper() == "TRANSVERSE_ISOTROPIC":  # 
+            self._parameters = ["vpv", "vph", "vsv", "vsh", "eta"]
+        # General anisotropic in 2D (SPECFEM2D)
+        elif self.materials.upper() == "2D_ANISOTROPIC":
+            self._parameters = ["c11", "c13", "c15", "c33", "c35", "c55", 
+                                "c12", "c23", "c25", "c22"]
+        # General 21 parameter anisotropy c_ij in 3D: c11, c12... c66
+        elif self.materials.upper() == "ANISOTROPIC":
+            for i in range(1, 7):
+                for j in range(1, 7):
+                    if j >= i:
+                        self._parameters.append(f"c{i}{j}")
+
+        # Allow density to be updated. `setup` will remove doubles if 
+        # `materials` wase a custom list
         if self.update_density:
             self._parameters.append("rho")
 
@@ -178,11 +204,8 @@ class Specfem:
 
         # Define available choices for check parameters
         self._available_model_types = ["gll"]
-        self._available_materials = [
-            "ELASTIC", "ACOUSTIC",  # specfem2d and specfem3d
-            "TRANSVSERSE_ISOTROPIC",  # specfem3d and 3d_globe
-            "ANISOTROPIC",  # specfem3d
-        ]
+        self._available_materials = None  # To be overwritten by Child classes
+        
         # SPECFEM2D specific attributes. Should be overwritten by 3D versions
         self._syn_available_data_formats = ["ASCII", "SU"]
         self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
@@ -205,8 +228,17 @@ class Specfem:
         Checks parameter validity for SPECFEM input files and model parameters
         """
         if isinstance(self.materials, str):
-            assert(self.materials.upper() in self._available_materials), \
-                f"solver.materials must be in {self._available_materials}"
+            assert(self.materials in self._available_materials), \
+            f"Although `self.materials` is a valid material type, it is not an "
+            f"available material type for this solver choice. Please re-choose"
+
+        # Check that we have set parameters correctly. Since `rho` can be added
+        # separately we need to account for that when checking length of array
+        if len(self._parameters) < int(self.update_density):
+            raise NotImplementedError(
+                f"Invalid material: {self.materials}. `materials` must be as "
+                f"list of parameter names or a pre-defined label. See "
+                f"parameter file docstring for more information")
 
         if self.syn_data_format.upper() not in self._syn_available_data_formats:
             raise NotImplementedError(
@@ -326,7 +358,6 @@ class Specfem:
         # also has `update_density` set, we don't want rho in there twice
         self._parameters = list(set(self._parameters))
         logger.info(f"solver parameters to be updated are: {self._parameters}")
-
 
         self._initialize_working_directories()
         self._export_starting_models()
@@ -1137,6 +1168,8 @@ class Specfem:
     def _export_starting_models(self, parameters=None):
         """
         Export the initial and target models to the SeisFlows output/ directory.
+        These are not used for actual simulations, just to keep track of models
+        that were used during the workflow.
 
         :type parameters: list
         :param parameters: list of parameters to export. If None, will default

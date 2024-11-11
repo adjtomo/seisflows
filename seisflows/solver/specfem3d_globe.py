@@ -118,19 +118,8 @@ class Specfem3DGlobe(Specfem):
         self.regions = str(regions)
         self._regions = sorted(self.regions) 
 
-        # Define parameters based on material type
-        if isinstance(self.materials, list):
-            self._parameters += self.materials
-        elif self.materials.upper() == "ACOUSTIC":
-            self._parameters += ["vp"]
-        elif self.materials.upper()  == "ELASTIC":
-            self._parameters += ["vp", "vs"]
-        elif self.materials.upper() == "TRANSVERSE_ISOTROPIC":
-            self._parameters += ["vpv", "vph", "vsv", "vsh", "eta"]
-        else:
-            raise NotImplementedError(f"Invalid material: {self.materials}")
-
-        # Append regions to to the parameters, e.g., 'reg1_vpv'
+        # Append regions to to the parameters, e.g., 'reg1_vpv'. This is
+        # specific to SPECFEM3D_GLOBE because there are 3 available regions
         overwrite_parameters = []
         for reg in self._regions:
             overwrite_parameters.extend([f"reg{reg}_{_}" for _ in 
@@ -138,6 +127,8 @@ class Specfem3DGlobe(Specfem):
         self._parameters = sorted(overwrite_parameters)
 
         # Overwriting the base class parameters
+        self._available_materials = ["ELASTIC", "ACOUSTIC", 
+                                     "TRANSVERSE_ISOTROPIC", "ANISOTROPIC"]
         self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]

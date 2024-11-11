@@ -63,24 +63,11 @@ class Specfem3D(Specfem):
         # See note about repeated variables above
         self.export_vtk = export_vtk
         self._export_vtk = export_vtk
-        
-        # Define parameters based on material type
-        if isinstance(self.materials, list):
-            self._parameters += self.materials
-        elif self.materials.upper() == "ACOUSTIC":
-            self._parameters += ["vp"]
-        elif self.materials.upper() == "ELASTIC":
-            self._parameters += ["vp", "vs"]
-        elif self.materials.upper() == "ANISOTROPIC":
-            # General 21 parameter anisotropy: c11, c12... c66
-            for i in range(1, 7):
-                for j in range(1, 7):
-                    if j >= i:
-                        self._parameters.append(f"c{i}{j}")
-        else:
-            raise NotImplementedError(f"invalid material: {self.materials}")
 
         # Overwriting the base class parameters
+        self._available_materials = ["ELASTIC", "ACOUSTIC", 
+                                     "TRANSVERSE_ISOTROPIC", "ANISOTROPIC"]
+
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
