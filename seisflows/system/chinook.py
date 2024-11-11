@@ -77,7 +77,7 @@ class Chinook(Slurm):
             f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--partition={self.submit_to}",
-            f"--time={self._walltime}"
+            f"--time={self.walltime}"
         ])
         return _call
 
@@ -104,25 +104,19 @@ class Chinook(Slurm):
         :return: the system-dependent portion of a run call
         """
         array = array or self.task_ids(single=single)  # get job array str
-        if tasktime is None:
-            # 0 is there just for initialization. `tasktime` will superceded
-            tasktime = str(timedelta(minutes=0 or self.tasktime))
-        else:
-            tasktime = str(timedelta(minutes=tasktime))
+        tasktime = tasktime or self.tasktime
 
         # Determine if this is a single-process or array job
         if single:
-            ntasks = 1
             env = "SEISFLOWS_TASKID=0," 
         else:
-            ntasks = self.nproc
             env = ""
         
         _call = " ".join([
              f"sbatch",
              f"{self.slurm_args or ''}",
              f"--job-name={self.title}",
-             f"--ntasks={ntasks:d}",
+             f"--ntasks={self.nproc:d}",
              f"--partition={self.partition}",
              f"--time={tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",

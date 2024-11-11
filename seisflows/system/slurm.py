@@ -77,9 +77,6 @@ class Slurm(Cluster):
         self.submit_to = None
         self._partitions = {}
 
-        # Convert walltime and tasktime to datetime str 'H:MM:SS'
-        self._walltime = str(timedelta(minutes=self.walltime))
-    
         # Define SLURM-dependent job states used for monitoring queue
         # Available job states are listed here: 
         #                   https://slurm.schedmd.com/sacct.html
@@ -142,7 +139,7 @@ class Slurm(Cluster):
             f"--error={self.path.output_log}",
             f"--ntasks-per-node={self.node_size}",
             f"--nodes=1",
-            f"--time={self._walltime}"
+            f"--time={self.walltime}"
         ])
         return _call
 
@@ -169,18 +166,12 @@ class Slurm(Cluster):
         :return: the system-dependent portion of a run call
         """
         array = array or self.task_ids(single=single)  # get job array str
-        if tasktime is None:
-            # 0 is there just for initialization. `tasktime` will superceded
-            tasktime = str(timedelta(minutes=0 or self.tasktime))
-        else:
-            tasktime = str(timedelta(minutes=tasktime))
+        tasktime = tasktime or self.tasktime  # allow override of tasktime
 
         # Determine if this is a single-process or array job
         if single:
-            ntasks = 1
             env = "SEISFLOWS_TASKID=0," 
         else:
-            ntasks = self.nproc
             env = ""
         
         _call = " ".join([
@@ -420,4 +411,5 @@ class Slurm(Cluster):
                         )
 
         return job_ids, job_states
+
 
