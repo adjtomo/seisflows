@@ -47,16 +47,16 @@ class Specfem:
     :param materials: Material name used to define the model parameters that
         will be updated during an Inversion workflow. Available options 
         (case-insensitive):
-        - `type: list` (2D, 3D, 3D_GLOBE): User-defined list of 
-            parameters overwrites any existing parameters. 
+        - `type: list` (2D, 3D, 3D_GLOBE): User-defined list of lower-case
+            parameters (e.g., ['vp', 'vs'] to mimic 'ELASTIC')
             NOTE: User is responsible for understanding if their chosen 
             parameters are actually represented in SPECFEM, there are no guard
             rails here to protect incorrect parameter naming
-        - ACOUSTIC (2D, 3D, 3D_GLOBE): Vp 
-        - ELASTIC (2D, 3D, 3D_GLOBE): Vp, Vs, 
-        - TRANSVERSE_ISOTROPIC (3D, 3D_GLOBE): Vpv, Vph, Vsv, Vsh, Eta
+        - ACOUSTIC (2D, 3D, 3D_GLOBE): vp 
+        - ELASTIC (2D, 3D, 3D_GLOBE): vp, vs 
+        - TRANSVERSE_ISOTROPIC (3D, 3D_GLOBE): vpv, vph, vsv, vsh, eta
         - 2D_ANISOTROPIC (2D): c11 c13 c15 c33 c35 c55 c12 c23 c25 c22
-        - ANISOTROPIC (3D, 3D_GLOBE): C_ij  (21 parameter anisotropy)
+        - ANISOTROPIC (3D, 3D_GLOBE): c_ij  (21 parameter anisotropy)
         
     :type update_density: bool
     :param update_density: How to treat density during inversion. If True, \

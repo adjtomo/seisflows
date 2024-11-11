@@ -65,9 +65,8 @@ class Specfem3D(Specfem):
         self._export_vtk = export_vtk
 
         # Overwriting the base class parameters
-        self._available_materials = ["ELASTIC", "ACOUSTIC", 
+        self._available_materials = ["ACOUSTIC", "ELASTIC", 
                                      "TRANSVERSE_ISOTROPIC", "ANISOTROPIC"]
-
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",

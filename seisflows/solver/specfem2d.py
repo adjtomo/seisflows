@@ -41,7 +41,7 @@ class Specfem2D(Specfem):
 
         self.multiples = multiples
         self._f0 = None
-        self._available_materials = ["ELASTIC", "ACOUSTIC", "2D_ANISOTROPIC"]
+        self._available_materials = ["ACOUSTIC", "ELASTIC", "2D_ANISOTROPIC"]
 
     def setup(self):
         """

@@ -127,7 +127,7 @@ class Specfem3DGlobe(Specfem):
         self._parameters = sorted(overwrite_parameters)
 
         # Overwriting the base class parameters
-        self._available_materials = ["ELASTIC", "ACOUSTIC", 
+        self._available_materials = ["ACOUSTIC", "ELASTIC",
                                      "TRANSVERSE_ISOTROPIC", "ANISOTROPIC"]
         self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
