@@ -53,7 +53,6 @@ class Model:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
     
-
     def __init__(self, path=os.getcwd(), fmt="", parameters=None, regions="123", 
                  flavor=None):
         """
@@ -333,7 +332,7 @@ class Model:
 
         return m
 
-    def write(self, path, fmt=None):
+    def write(self, path=os.getcwd(), fmt=None):
         """
         Save a SPECFEM model/gradient/kernel vector loaded into memory back to
         disk in the appropriate format expected by SPECFEM

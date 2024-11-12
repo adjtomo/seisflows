@@ -198,9 +198,12 @@ class Gradient:
     def load_vector(self, name):
         """
         Convenience function to access the full paths of model and gradient
-        vectors that are saved to disk
+        vectors that are saved to disk. Corresponding `save_vector` function
+        saves vectors into the correct location and format that can be loaded
+        by this function.
 
         .. note::
+
             Model, gradient and misfit vectors are named as follows:
             m_new: current model
             m_old: previous model
@@ -216,15 +219,18 @@ class Gradient:
 
         :type name: str
         :param name: name of the vector, acceptable: m, g, p, f, alpha
+        :rtype: Model, vector or float
+        :return: loaded vector corresponding to `name` that may take on 
+            different type based on which vector it is
         """
         assert(name in self._acceptable_vectors)
 
-        model_npz = os.path.join(self.path.scratch, f"{name}.npz")
-        model_npy = model_npz.replace(".npz", ".npy")
-        model_txt = model_npz.replace(".npz", ".txt")
+        model = os.path.join(self.path.scratch, f"{name}")
+        model_npy = os.path.join(self.path.scratch, f"{name}.npy")
+        model_txt = os.path.join(self.path.scratch, f"{name}.txt")
 
-        if os.path.exists(model_npz):
-            model = Model(path=model_npz)
+        if os.path.exists(model):
+            model = Model(path=model)
         elif os.path.exists(model_npy):
             model = np.load(model_npy)
         elif os.path.exists(model_txt):
@@ -236,19 +242,22 @@ class Gradient:
 
     def save_vector(self, name, m):
         """
-        Convenience function to save/overwrite vectors on disk
+        Convenience function to save/overwrite vectors on disk. Corresponding
+        function `load_vector` loads in vectors that have been saved with
+        this function
 
         :type name: str
-        :param name: name of the vector to overwrite
+        :param name: name of the vector to save or overwrite
         :type m: seisflows.tools.specfem.Model or float
-        :param m: Model to save to disk as npz array
+        :param m: Model, vector, or value to save to disk 
         """
         assert(name in self._acceptable_vectors)
 
         if isinstance(m, Model):
-            path = os.path.join(self.path.scratch, f"{name}.npz")
-            m.model = m.split()  # overwrite m representation
-            m.save(path=path)
+            path = os.path.join(self.path.scratch, f"{name}")
+            unix.rm(path)  # ensure that no old files are stored here
+            unix.mkdir(path)
+            m.write(path=path)  # write in the same format as SPECFEM uses
         elif isinstance(m, np.ndarray):
             path = os.path.join(self.path.scratch, f"{name}.npy")
             np.save(path=path)
