@@ -540,10 +540,12 @@ class Gradient:
         logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
         # Remove the old-old model parameters (from the last time this was run)
-        if glob("?_old*"):
-            logger.info("removing previously accepted model files (?_old)")
-            for fid in ["m_old.npz", "f_old.txt", "g_old.npz", "p_old.npz"]:
-                unix.rm(os.path.join(self.path.scratch, fid))
+        old_files = glob(os.path.join(self.path.scratch, "?_old*"))
+        if old_files:
+            logger.info(f"removing previous iteration model files: "
+                        f"{old_files}")
+            for old_file in old_files:
+                unix.rm(old_file)
 
         # Export stats and figures to output, must run before shifting model
         self.write_stats(fid=os.path.join(self.path._optim_output, 
@@ -552,15 +554,15 @@ class Gradient:
                                           "output_optim.txt"),
                          path_out=self.path._optim_output)
 
-        logger.info("setting current model as previous model (new -> old)")
-        # e.g., m_new.npz -> m_old.npz
-        for src in glob(os.path.join(self.path.scratch, "*_new.*")):
-            dst = src.replace("_new.", "_old.")
+        logger.info("setting current model as previous model (?_new -> ?_old)")
+        # e.g., f_new.txt -> f_old.txt
+        for src in glob(os.path.join(self.path.scratch, "?_new*")):
+            dst = src.replace("_new", "_old")
             unix.mv(src, dst)
 
         logger.info("setting trial model as starting model (m_try -> m_new)")
-        unix.mv(src=os.path.join(self.path.scratch, "m_try.npz"),
-                dst=os.path.join(self.path.scratch, "m_new.npz"))
+        unix.mv(src=os.path.join(self.path.scratch, "m_try"),
+                dst=os.path.join(self.path.scratch, "m_new"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
         x, f = self._line_search.get_search_history()

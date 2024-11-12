@@ -105,7 +105,7 @@ class Model:
                 f"User-defined `flavor' must be in {acceptable_flavors}"
 
         # Load an existing model if a valid path is given
-        if self.path and os.path.exists(path):
+        if self.path and os.path.exists(self.path):
             # Dynamically guess things about the model based on files given
             if not self.fmt:
                 self.fmt = self._guess_file_format()
@@ -281,10 +281,10 @@ class Model:
                 coordinates["x"].append(np.loadtxt(fid).T[:, 0])
                 coordinates["z"].append(np.loadtxt(fid).T[:, 0])
 
-        # If nothing is found even though we expected files to be there
+        # If no coordinates then move on, sometimes we don't save the 
+        # coordinates if we're just using the model for updates. But without
+        # coordinates the default plot functions will not work
         if not list(coordinates["x"]) or not list(coordinates["z"]):
-            logger.warning("no coordinates found for assumed SPECFEM2D model, "
-                           "will not be able to plot figures")
             return None
 
         # Internal check for parameter validity by checking length of coord
@@ -330,7 +330,7 @@ class Model:
         disk in the appropriate format expected by SPECFEM
         """
         path = path or os.getcwd()
-        
+
         unix.mkdir(path)
         if fmt is None:
             assert (self.fmt is not None), f"must specifiy model format: `fmt`"
