@@ -487,9 +487,14 @@ class Model:
 
     def save(self, path):
         """
+        THIS FUNCTION WILL BE REMOVED UPON THE NEXT MINOR UPDATE (v3.5.0)
+
         Save instance attributes (model, vector, metadata) to disk as an
         .npz array so that it can be loaded in at a later time for future use
         """
+        raise Exception("This functionality has been deprecated and will be "
+                        "removed from the Model class, see GitHub Issue #227")
+    
         model = self.split()
         if self.coordinates:
             # Incase we have model parameters called 'x' or 'z', rename for save
@@ -500,6 +505,8 @@ class Model:
 
     def load(self, file):
         """
+        THIS FUNCTION WILL BE REMOVED UPON THE NEXT MINOR UPDATE (v3.5.0)
+
         Load in a previously saved .npz file containing model information
         and re-create a Model instance matching the one that was `save`d
 
@@ -509,6 +516,9 @@ class Model:
         :rtype: tuple (Dict, list, str)
         :return: (Model Dictionary, ngll points for each slice, file format)
         """
+        raise Exception("This functionality has been deprecated and will be "
+                        "removed from the Model class, see GitHub Issue #227")
+    
         model = Dict()
         coords = Dict()
         ngll = []
