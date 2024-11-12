@@ -397,11 +397,11 @@ class Gradient:
                     f"{self.step_count}")
 
         # Log out the current line search stats for reference
-        x, f = self._line_search.get_search_history()
-        i_str = ", ".join([f"{_:>9}" for _ in range(len(x))])
-        x_str = ", ".join([f"{_:.3E}" for _ in x])
-        f_str = ", ".join([f"{_:.3E}" for _ in f])
-        logger.info(f"step count  = {i_str}")
+        x, f, idx = self._line_search.get_search_history()
+        idx_str = ", ".join([f"{_:>9}" for _ in idx])   # step count
+        x_str = ", ".join([f"{_:.3E}" for _ in x])  # step length
+        f_str = ", ".join([f"{_:.3E}" for _ in f])  # misfit value
+        logger.info(f"step count  = {idx_str}")
         logger.info(f"step length = {x_str}")
         logger.info(f"misfit val  = {f_str}")
 
@@ -565,9 +565,13 @@ class Gradient:
                 dst=os.path.join(self.path.scratch, "m_new"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
-        x, f = self._line_search.get_search_history()
+        x, f, idx = self._line_search.get_search_history()
+
+        # Figure out what step length and step count that corresponds to
+        _fidx = f.index(f.min())  # index of the minimum step length
         self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
+        logger.info(f"step count={idx[_fidx]}; step length={x[_fidx]:.3E}")
 
         logger.info("resetting line search step count to 0")
         self._line_search.step_count = 0
@@ -643,7 +647,7 @@ class Gradient:
         # step lengths (x) and function values/misfit (f)
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
-        x, f  = self._line_search.get_search_history()
+        x, f, _  = self._line_search.get_search_history()
         step_count = self._line_search.step_count
 
         # Construct statistics
@@ -684,7 +688,7 @@ class Gradient:
         # are set to 0 by default
         if not os.path.exists(fid):
             with open(fid, "w") as f_:
-                x, f  = self._line_search.get_search_history()
+                x, f, _  = self._line_search.get_search_history()
                 header = ",".join(keys) + "\n"
                 f_.write(header)
                 # Write values for first iteration
