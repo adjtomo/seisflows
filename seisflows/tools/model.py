@@ -106,28 +106,20 @@ class Model:
 
         # Load an existing model if a valid path is given
         if self.path and os.path.exists(path):
-            # Read existing model from a previously saved .npz file
-            if os.path.splitext(path)[-1] == ".npz":
-                self.model, self.coordinates, self._ngll, self.fmt = \
-                    self.load(file=self.path)
-                _first_key = list(self.model.keys())[0]
-                self._nproc = len(self.model[_first_key])
-            # Read a SPECFEM model from its native output files
-            else:
-                # Dynamically guess things about the model based on files given
-                if not self.fmt:
-                    self.fmt = self._guess_file_format()
-                if not self.flavor:
-                    self.flavor = self._guess_specfem_flavor()
-    
-                # Gather internal representation of the model for manipulation
-                self._nproc, self.available_parameters = \
-                    self._get_nproc_parameters()
-                self.model = self.read(parameters=parameters)
+            # Dynamically guess things about the model based on files given
+            if not self.fmt:
+                self.fmt = self._guess_file_format()
+            if not self.flavor:
+                self.flavor = self._guess_specfem_flavor()
 
-                # Coordinates are only useful for SPECFEM2D models
-                if self.flavor == "2D":
-                    self.coordinates = self.read_coordinates_specfem2d()
+            # Gather internal representation of the model for manipulation
+            self._nproc, self.available_parameters = \
+                self._get_nproc_parameters()
+            self.model = self.read(parameters=parameters)
+
+            # Coordinates are only useful for SPECFEM2D models
+            if self.flavor == "2D":
+                self.coordinates = self.read_coordinates_specfem2d()
 
             # .sorted() enforces parameter order every time, otherwise things
             # can get screwy if keys returns different each time
@@ -773,6 +765,7 @@ class Model:
         Data are written as single precision floating point numbers
 
         .. note::
+        
             FORTRAN unformatted binaries are bounded by an INT*4 byte count.
             This function mimics that behavior by tacking on the boundary data
             as 'int32' at the top and bottom of the data array.
