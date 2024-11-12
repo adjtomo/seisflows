@@ -21,11 +21,6 @@ class Model:
     """
     A container for reading, storing and manipulating model/gradient/kernel
     parameters from SPECFEM2D/3D/3D_GLOBE.
-    Stores metadata information alongside model data allowing models to be
-    converted to back and forth between vector representations required by the
-    optimization library.
-    Also contains utility functions to read/write itself so that models can be
-    saved alongside their metadata.
     """
     # Dictate the parameters that Model can handle, which does not cover all
     # files created by SPECFEM, which includes things like 'ibool', 'info' etc.
@@ -69,21 +64,25 @@ class Model:
         :type path: str
         :param path: path to SPECFEM model/kernel/gradient files
         :type fmt: str
-        :param fmt: expected format of the files (e.g., '.bin'), if None, will
-            attempt to guess based on the file extensions found in `path`
-            Available formats are: .bin, .dat
+        :param fmt: expected format of the files (e.g., '.bin'). By default the 
+            Model class will attempt to guess based on the file extensions found 
+            in `path` (`fmt`==NoneType). Available formats are: 
+            - .bin: Fortran binary format
+            - .dat: ASCII-based data format used for SPECFEM2D
         :type parameters: list
-        :param parameters: the list of parameters to consider when defining
-            the 'model', which is what will be updated during an inversion. 
+        :param parameters: optional list of parameters to consider when defining
+            the 'model', which is what will be updated during an inversion. If 
+            not given, all parameters found in `path` that match 
+            `acceptable_parameters` will be used to define the model.
         :type regions: str
-        :param regions: only for SPECFEM3D_GLOBE, which regions of the chunk 
+        :param regions: SPECFEM3D_GLOBE ONLY! Defines which regions of the chunk 
             to consider in your 'model'. Valid regions are 1, 2 and 3. If you 
             want all regions, set as '123'. If you only want region 1, set as 
             '1'. Order insensitive.
         :type flavor: str
-        :param flavor: optional, tell Model what version of SPECFEM was used
+        :param flavor: Optional, tells Model what version of SPECFEM was used
             to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
-            If None, will try to guess based on file matching
+            By default Model will try to guess based on file matching.
         """
         self.path = path or os.getcwd()
         self.fmt = fmt
@@ -478,60 +477,6 @@ class Model:
                             logger.warning(f"minimum {vp_par}, {vs_par} "
                                            f"poisson's ratio out of bounds: "
                                            f"{pr.min():.2f} < {min_pr}")
-
-    def save(self, path):
-        """
-        THIS FUNCTION WILL BE REMOVED UPON THE NEXT MINOR UPDATE (v3.5.0)
-
-        Save instance attributes (model, vector, metadata) to disk as an
-        .npz array so that it can be loaded in at a later time for future use
-        """
-        raise Exception("This functionality has been deprecated and will be "
-                        "removed from the Model class, see GitHub Issue #227")
-    
-        model = self.split()
-        if self.coordinates:
-            # Incase we have model parameters called 'x' or 'z', rename for save
-            model["x_coord"] = self.coordinates["x"]
-            model["z_coord"] = self.coordinates["z"]
-
-        np.savez(file=path, fmt=self.fmt, **model)
-
-    def load(self, file):
-        """
-        THIS FUNCTION WILL BE REMOVED UPON THE NEXT MINOR UPDATE (v3.5.0)
-
-        Load in a previously saved .npz file containing model information
-        and re-create a Model instance matching the one that was `save`d
-
-        :type file: str
-        :param file: .npz file to load data from. Must have been created by
-            Model.save()
-        :rtype: tuple (Dict, list, str)
-        :return: (Model Dictionary, ngll points for each slice, file format)
-        """
-        raise Exception("This functionality has been deprecated and will be "
-                        "removed from the Model class, see GitHub Issue #227")
-    
-        model = Dict()
-        coords = Dict()
-        ngll = []
-        data = np.load(file=file, allow_pickle=True)
-        for i, key in enumerate(data.files):
-            if key == "fmt":
-                continue
-            # Special case where we are using SPECFEM2D and carry around coords
-            elif "coord" in key:
-                coords[key[0]] = data[key]  # drop '_coord' suffix from `save`
-            else:
-                model[key] = data[key]
-                # Assign the number of GLL points per slice. Only needs to happen
-                # once because all model values should have same points/slice
-                if not ngll:
-                    for array in model[key]:
-                        ngll.append(len(array))
-
-        return model, coords, ngll, str(data["fmt"])
 
     def update(self, model=None, vector=None):
         """
