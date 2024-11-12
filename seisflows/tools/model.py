@@ -498,37 +498,6 @@ class Model:
 
         np.savez(file=path, fmt=self.fmt, **model)
 
-    def _load2d3d(self, file):
-        """
-        Load in a previously saved .npz file containing model information
-        and re-create a Model instance matching the one that was `save`d
-
-        :type file: str
-        :param file: .npz file to load data from. Must have been created by
-            Model.save()
-        :rtype: tuple (Dict, list, str)
-        :return: (Model Dictionary, ngll points for each slice, file format)
-        """
-        model = Dict()
-        coords = Dict()
-        ngll = []
-        data = np.load(file=file)
-        for i, key in enumerate(data.files):
-            if key == "fmt":
-                continue
-            # Special case where we are using SPECFEM2D and carry around coords
-            elif "coord" in key:
-                coords[key[0]] = data[key]  # drop '_coord' suffix from `save`
-            else:
-                model[key] = data[key]
-                # Assign the number of GLL points per slice. Only needs to happen
-                # once because all model values should have same points/slice
-                if not ngll:
-                    for array in model[key]:
-                        ngll.append(len(array))
-
-        return model, coords, ngll, str(data["fmt"])
-
     def load(self, file):
         """
         Load in a previously saved .npz file containing model information
