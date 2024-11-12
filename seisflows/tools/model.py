@@ -53,7 +53,7 @@ class Model:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
     
-    def __init__(self, path=os.getcwd(), fmt="", parameters=None, regions="123", 
+    def __init__(self, path=None, fmt="", parameters=None, regions="123", 
                  flavor=None):
         """
         Model only needs path to model to determine model parameters. Format
@@ -85,7 +85,7 @@ class Model:
             to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
             If None, will try to guess based on file matching
         """
-        self.path = path
+        self.path = path or os.getcwd()
         self.fmt = fmt
         self.flavor = flavor
         self.model = None
@@ -324,11 +324,13 @@ class Model:
 
         return m
 
-    def write(self, path=os.getcwd(), fmt=None):
+    def write(self, path=None, fmt=None):
         """
         Save a SPECFEM model/gradient/kernel vector loaded into memory back to
         disk in the appropriate format expected by SPECFEM
         """
+        path = path or os.getcwd()
+        
         unix.mkdir(path)
         if fmt is None:
             assert (self.fmt is not None), f"must specifiy model format: `fmt`"
