@@ -238,7 +238,7 @@ class Bracket:
         func_vals = np.array(self.func_vals[idx:])  # f
 
         # Sort by the step lengths taken
-        step_cnts = self.iteridx[abs(step_lens).argsort()]
+        step_cnts = np.array(self.iteridx)[abs(step_lens).argsort()]
         func_vals = func_vals[abs(step_lens).argsort()]
         step_lens = step_lens[abs(step_lens).argsort()]
 
