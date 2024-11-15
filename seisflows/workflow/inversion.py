@@ -410,7 +410,7 @@ class Inversion(Migration):
                                             **kwargs)
 
             # Expose the initial model to the optimization library
-            model = Model(self.path.model_init,
+            model = Model(path=self.path.model_init,
                           parameters=self.solver._parameters,
                           regions=self.solver._regions  # req. for 3D_GLOBE only
                           )
@@ -536,7 +536,7 @@ class Inversion(Migration):
         # m_try = m_new + alpha * p_new (i.e., m_i+1 = m_i + dm)
         logger.info("calculating step length `alpha`")
         alpha, _ = self.optimize.calculate_step_length()
-        
+
         logger.info("computing line search trial model `m_try`")
         m_try = self.optimize.compute_trial_model(alpha=alpha)
         

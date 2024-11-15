@@ -83,8 +83,10 @@ class Model:
         :param flavor: Optional, tells Model what version of SPECFEM was used
             to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
             By default Model will try to guess based on file matching.
+        :raises AssertionError: if the `path` does not exist or the `path`
+            does not contain expected Model files
         """
-        self.path = path or os.getcwd()
+        self.path = path 
         self.fmt = fmt
         self.flavor = flavor
         self.model = None
@@ -93,6 +95,8 @@ class Model:
         else:
             self.regions = None
         self.coordinates = None
+
+        # Internally used parameters
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
@@ -103,28 +107,51 @@ class Model:
             assert(self.flavor in acceptable_flavors), \
                 f"User-defined `flavor' must be in {acceptable_flavors}"
 
-        # Load an existing model if a valid path is given
-        if self.path and os.path.exists(self.path):
-            # Dynamically guess things about the model based on files given
-            if not self.fmt:
-                self.fmt = self._guess_file_format()
-            if not self.flavor:
-                self.flavor = self._guess_specfem_flavor()
-
-            # Gather internal representation of the model for manipulation
-            self._nproc, self.available_parameters = \
-                self._get_nproc_parameters()
-            self.model = self.read(parameters=parameters)
-
-            # Coordinates are only useful for SPECFEM2D models
-            if self.flavor == "2D":
-                self.coordinates = self.read_coordinates_specfem2d()
-
-            # .sorted() enforces parameter order every time, otherwise things
-            # can get screwy if keys returns different each time
-            self._parameters = sorted(self.model.keys())
+        # Load an existing model if a valid `path`` is given
+        if self.path:
+            self.setup()
         else:
             logger.warning("no/invalid `path` given, initializing empty Model")
+
+    def setup(self, path=None):
+        """
+        Set up the internal Model definition by guessing or ingesting the
+        file format, solver flavor, reading the model values and metadata
+        and assigning internal variables
+
+        :type path: str
+        :param path: optional path to Model files. If not given, defaults to 
+            the internal `path` attribute.
+        :raises AssertionError: if the `path` does not exist or the `path`
+            does not contain expected Model files
+        """
+        path = path or self.path
+
+        # Dynamically guess things about the model based on files given
+        if not self.fmt:
+            self.fmt = self._guess_file_format()
+        if not self.flavor:
+            self.flavor = self._guess_specfem_flavor()
+
+        # A few checks, if the User gives a `path`, we EXPECT model files
+        # otherwise don't give a path
+        assert(os.path.exists(path)), \
+            f"Model `path` does not exist, cannot read model: '{path}'"
+        assert(glob(os.path.join(path, self.fnfmt(val="*", ext=self.fmt)))), \
+            (f"Model `path` contains no matching model files matching "
+             f"wildcard '*{self.fmt}': '{path}'")
+
+        # Gather internal representation of the model for manipulation
+        self._nproc, self.available_parameters = self._get_nproc_parameters()
+        self.model = self.read(parameters=self._parameters)
+
+        # Coordinates are only useful for SPECFEM2D models
+        if self.flavor == "2D":
+            self.coordinates = self.read_coordinates_specfem2d()
+
+        # .sorted() enforces parameter order every time, otherwise things
+        # can get screwy if keys returns different each time
+        self._parameters = sorted(self.model.keys())
 
     def fnfmt(self, i="*", val="*", ext="*"):
         """
