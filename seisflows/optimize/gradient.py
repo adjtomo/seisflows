@@ -371,6 +371,8 @@ class Gradient:
         f = self.load_vector("f_new")  # current misfit value from preprocess
         g = self.load_vector("g_new")  # current gradient from scaled kernels
         p = self.load_vector("p_new")  # current search direction
+        
+        logger.info("calculating gradient dot products GTG and GTP")
         gtg = dot(g.vector, g.vector)
         gtp = dot(g.vector, p.vector)
 

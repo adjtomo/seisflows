@@ -534,7 +534,10 @@ class Inversion(Migration):
 
         # Determine the model we will use for first line search step count
         # m_try = m_new + alpha * p_new (i.e., m_i+1 = m_i + dm)
+        logger.info("calculating step length `alpha`")
         alpha, _ = self.optimize.calculate_step_length()
+        
+        logger.info("computing line search trial model `m_try`")
         m_try = self.optimize.compute_trial_model(alpha=alpha)
         
         # Save the current state of the optimization module to disk
