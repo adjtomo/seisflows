@@ -145,7 +145,6 @@ def get_task_id():
         if _taskid is not None:
             return int(_taskid)
     else:
-        logger.warning("Environment Task ID variable not found. Assigning 0")
         return 0
 
 
