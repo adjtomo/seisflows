@@ -82,8 +82,8 @@ class Specfem3DGlobe(Specfem):
     __doc__ = Specfem.__doc__ + __doc__
 
     def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
-                 prune_scratch=True,  regions="123", smooth_type="laplacian", 
-                 mask_source=False, scale_mask_region=False, **kwargs):
+                 prune_scratch=True,  regions="123", mask_source=False, 
+                 scale_mask_region=False, **kwargs):
         """
         Instantiate a Specfem3D_Globe solver interface
         
@@ -98,7 +98,6 @@ class Specfem3DGlobe(Specfem):
         """
         super().__init__(source_prefix=source_prefix, **kwargs)
 
-        self.smooth_type = smooth_type
         self.prune_scratch = prune_scratch
         self.mask_source = mask_source
         self.scale_mask_region = scale_mask_region
@@ -129,10 +128,12 @@ class Specfem3DGlobe(Specfem):
                                    "xcombine_vol_data_vtk"]
 
         # Choose what type of smoothing to use
-        if smooth_type == "laplacian":
-            self._required_binaries.append("xsmooth_laplacian_sem")
-        elif smooth_type == "gaussian":
+        if self.smooth_type == "gaussian":
+            logger.warning("`smooth_type` 'gaussian' is very slow, recommend "
+                           "switching to type 'laplacian'")
             self._required_binaries.append("xsmooth_sem")
+        elif self.smooth_type == "laplacian":
+            self._required_binaries.append("xsmooth_laplacian_sem")
         else:
             raise NotImplementedError("`smooth_type` must be 'laplacian' or "
                                       "'gaussian'")

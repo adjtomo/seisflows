@@ -71,11 +71,15 @@ class Specfem3D(Specfem):
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
                                    "xcombine_vol_data_vtk"]
-        
-        if self.smooth_type == "pde":
+
+        # Choose what type of smoothing to use
+        if self.smooth_type == "gaussian":
+            logger.warning("`smooth_type` 'gaussian' is very slow, recommend "
+                           "switching to type 'pde'")
+            self._required_binaries.append("xsmooth_sem")        
+        elif self.smooth_type == "pde":
+            
             self._required_binaries.append("xsmooth_sem_pde")
-        elif self.smooth_type == "gaussian":
-            self._required_binaries.append("xsmooth_sem")
         else:
             raise NotImplementedError("`smooth_type` must be 'pde' or "
                                       "'gaussian'")
