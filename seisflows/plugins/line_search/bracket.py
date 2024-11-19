@@ -238,8 +238,7 @@ class Bracket:
         func_vals = np.array(self.func_vals[idx:])  # f
 
         # Sort by the step lengths taken
-        import pdb;pdb.set_trace()
-        step_cnts = np.array(self.iteridx)[abs(step_lens).argsort()]
+        step_cnts = np.arange(0, len(func_vals), 1)[abs(step_lens).argsort()]
         func_vals = func_vals[abs(step_lens).argsort()]
         step_lens = step_lens[abs(step_lens).argsort()]
 
