@@ -570,10 +570,8 @@ class Gradient:
         x, f, idx = self._line_search.get_search_history()
 
         # Figure out what step length and step count that corresponds to
-        _fidx = f.index(f.min())  # index of the minimum step length
         self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
-        logger.info(f"step count={idx[_fidx]}; step length={x[_fidx]:.3E}")
 
         logger.info("resetting line search step count to 0")
         self._line_search.step_count = 0
