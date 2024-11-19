@@ -70,8 +70,16 @@ class Specfem3D(Specfem):
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
-                                   "xsmooth_sem"]  #, "xcombine_vol_data_vtk"]
-
+                                   "xcombine_vol_data_vtk"]
+        
+        if self.smooth_type == "pde":
+            self._required_binaries.append("xsmooth_sem_pde")
+        elif self.smooth_type == "gaussian":
+            self._required_binaries.append("xsmooth_sem")
+        else:
+            raise NotImplementedError("`smooth_type` must be 'pde' or "
+                                      "'gaussian'")
+        
         # Overwriting constants that will be referenced during simulations 
         self._fwd_simulation_executables = [
             "bin/xmeshfem3D", "bin/xgenerate_databases", "bin/xspecfem3D"

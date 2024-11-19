@@ -54,13 +54,6 @@ class Specfem3DGlobe(Specfem):
     :param regions: which regions of the chunk  to consider in your 'model'. 
         Valid regions are 1, 2 and 3. If you want all regions, set as '123'. 
         If you only want region 1, set as  '1', etc. Order insensitive. 
-    :type smooth_type: str
-    :param smooth_type: choose how smoothing is performed for gradients.
-        these are tied to the internal smoothing functions available.
-        - 'gaussian': convolve with a 3D gaussian, slow and computationally
-            intensive, but default and matches 2D and 3D_Cartesian smoothing
-        - 'laplacian' (default): average points around vertex to smooth. 
-            faster and preferred method for GLOBE code
     :type mask_source: bool
     :param mask_source: mask the source region of the gradient to avoid high
         amplitude updates around source region. If True, uses the SPECFEM 
@@ -132,11 +125,17 @@ class Specfem3DGlobe(Specfem):
         self._syn_available_data_formats = ["ASCII"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._acceptable_smooth_types = ["laplacian", "gaussian"]
-        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem"]
+        self._required_binaries = ["xspecfem3D", "xmeshfem3D", "xcombine_sem",
+                                   "xcombine_vol_data_vtk"]
+
+        # Choose what type of smoothing to use
         if smooth_type == "laplacian":
             self._required_binaries.append("xsmooth_laplacian_sem")
-        else:
+        elif smooth_type == "gaussian":
             self._required_binaries.append("xsmooth_sem")
+        else:
+            raise NotImplementedError("`smooth_type` must be 'laplacian' or "
+                                      "'gaussian'")
 
         # Overwriting constants that will be referenced during simulations 
         self._fwd_simulation_executables = ["bin/xmeshfem3D", "bin/xspecfem3D"]
@@ -327,7 +326,8 @@ class Specfem3DGlobe(Specfem):
     def smooth(self, input_path, output_path, parameters=None, span_h=None,      
                span_v=None, use_gpu=False):                                      
         """
-        Logic function to choose between available smoothing types for GLOBE
+        Override the `smooth` command to strip off part of the parameters that 
+        are not accepted for 3D_GLOBE smoothing.
                                                                                  
         :type input_path: str                                                    
         :param input_path: path to data                                          
@@ -350,83 +350,9 @@ class Specfem3DGlobe(Specfem):
         # 3DGLOBE 'xsmooth_*sem' does not expect `reg?_` prefix, strip off
         stripped_parameters = list(set([_[5:] for _ in parameters]))
 
-        if self.smooth_type == "gaussian":
-            super().smooth(input_path=input_path, output_path=output_path, 
-                           parameters=stripped_parameters, span_h=span_h, 
-                           span_v=span_v, use_gpu=use_gpu)
-        elif self.smooth_type == "laplacian":
-            self.smooth_laplacian(
-                    input_path=input_path, output_path=output_path, 
-                    parameters=stripped_parameters, span_h=span_h, span_v=span_v
-                    )
-
-    def smooth_laplacian(self, input_path, output_path, parameters=None, 
-                         span_h=None, span_v=None):
-        """                                                                      
-        Wrapper for SPECFEM binary: xsmooth_laplacian_sem
-
-        Smooths kernels by with Laplacian smoothing which takes averages of a
-        mesh corner with all it's surrounding points.
-
-        .. note::
-            Externally this smooth function behaves almost identically to
-            the normal gaussian smoothing function
-                                                                                 
-        .. note::                                                                
-            It is ASSUMED that this function is being called by                  
-            system.run(single=True) so that we can use the main solver           
-            directory to perform the kernel smooth task                          
-                                                                                 
-        :type input_path: str                                                    
-        :param input_path: path to data                                          
-        :type output_path: str                                                   
-        :param output_path: path to export the outputs of xcombine_sem           
-        :type parameters: list                                                   
-        :param parameters: optional list of parameters,                          
-            defaults to `self._parameters`                                       
-        :type span_h: float                                                      
-        :param span_h: horizontal smoothing length in km
-        :type span_v: float                                                      
-        :param span_v: vertical smoothing length in km
-        """                                                                      
-        unix.cd(self.cwd)                                                        
-                                                                                 
-        # Assign some default parameters from class attributes if not given      
-        if parameters is None:                                                   
-            parameters = self._parameters                                        
-        if span_h is None:                                                       
-            span_h = self.smooth_h 
-        if span_v is None:                                                       
-            span_v = self.smooth_v
-                                                                                 
-        logger.debug(f"smoothing {parameters} with laplacian, horizontal span "
-                     f"{span_h}m and vertical span {span_v}m")               
-
-        # NOTE: Converting smoothing lengths 'm' -> 'km' as laplacian smoothing
-        #   function is expecting things in 'km' while SeisFlows expects things
-        #   in 'm'
-        span_h *= 1E-3
-        span_v *= 1E-3
-
-        if not os.path.exists(output_path):                                      
-            unix.mkdir(output_path)                                              
-                                                                                 
-        # Ensure trailing '/' character, required by xsmooth_sem                 
-        input_path = os.path.join(input_path, "")                                
-        output_path = os.path.join(output_path, "")                              
-
-        # mpiexec ./bin/xsmooth_laplacian_sem SIGMA_H SIGMA_V name input output
-        for name in parameters:                                                  
-            exc = (f"bin/xsmooth_laplacian_sem {str(span_h)} {str(span_v)} "
-                   f"{name}_kernel {input_path} {output_path}")
-            # e.g., combine_vs.log                                               
-            stdout = f"{self._exc2log(exc)}_{name}.log"                          
-            self._run_binary(executable=exc, stdout=stdout)                      
-                                                                                 
-        # Rename output files to remove the '_smooth' suffix which SeisFlows     
-        # will not recognize                                                     
-        files = glob(os.path.join(output_path, "*"))                             
-        unix.rename(old="_smooth", new="", names=files)
+        super().smooth(input_path=input_path, output_path=output_path, 
+                        parameters=stripped_parameters, span_h=span_h, 
+                        span_v=span_v, use_gpu=use_gpu)
         
     def combine_vol_data_vtk(self, input_path, output_path, hi_res=False,
                              parameters=None):

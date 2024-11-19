@@ -42,6 +42,7 @@ class Specfem2D(Specfem):
         self.multiples = multiples
         self._f0 = None
         self._available_materials = ["ACOUSTIC", "ELASTIC", "2D_ANISOTROPIC"]
+        self._required_binaries.append("xsmooth_sem")
 
     def setup(self):
         """

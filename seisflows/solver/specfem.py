@@ -73,12 +73,22 @@ class Specfem:
         ['migration', 'inversion'], ignored for 'forward' workflow.
         SPECFEM3D_GLOBE only: if `smooth_type`=='laplacian' then this is just 
         the X and Y extent of the applied smoothing
-    :type smooth_h: float
+    :type smooth_v: float
     :param smooth_v: Gaussian half-width for vertical smoothing in units
         of meters. Only applicable for workflows: ['migration', 'inversion'],
         ignored for 'forward' workflow.
         SPECFEM3D_GLOBE only: if `smooth_type`=='laplacian' then this is just 
         the Z extent of the applied smoothing
+    :type smooth_type: str
+    :param smooth_type: choose how smoothing is performed for gradients.
+        these are tied to the internal smoothing functions available, and only
+        certain code flavors have certain smoothing functions available:
+        - 'gaussian' [2D (default) /3D/3D_GLOBE]: convolve with a 3D gaussian, 
+            slow and computationally intensive. Default for SPECFEM2D and 3D
+        - 'laplacian' [3D_GLOBE]: average points around vertex to 
+            smooth.  faster and preferred method for GLOBE code
+        - 'pde' [3D]: diffusion-based PDE smoothing. for Cartesian code only, 
+            much faster than gaussian smoothing. See SPECFEM3D PR#1725
     :type components: str
     :param components: components to search for synthetic data with. None by
         default which uses a wildcard when searching for synthetics. If
@@ -112,9 +122,9 @@ class Specfem:
     """
     def __init__(self, syn_data_format="ascii",  materials="acoustic",
                  update_density=False, nproc=1, ntask=1, attenuation=False,
-                 smooth_h=0., smooth_v=0., components=None,
-                 source_prefix=None, mpiexec=None, workdir=os.getcwd(),
-                 path_solver=None, path_eval_grad=None,
+                 smooth_h=0., smooth_v=0., smooth_type="gaussian", 
+                 components=None, source_prefix=None, mpiexec=None, 
+                 workdir=os.getcwd(), path_solver=None, path_eval_grad=None,
                  path_data=None, path_specfem_bin=None, path_specfem_data=None,
                  path_model_init=None, path_model_true=None, path_output=None,
                  **kwargs):
@@ -149,6 +159,7 @@ class Specfem:
         self.attenuation = attenuation
         self.smooth_h = smooth_h
         self.smooth_v = smooth_v
+        self.smooth_type = smooth_type  # can be overwritten by child class
         self.components = components
         self.source_prefix = source_prefix or "SOURCE"
         self.prune_scratch = None  # SPECFEM3D/GLOBE only
@@ -208,8 +219,7 @@ class Specfem:
         
         # SPECFEM2D specific attributes. Should be overwritten by 3D versions
         self._syn_available_data_formats = ["ASCII", "SU"]
-        self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem",
-                                   "xsmooth_sem"]
+        self._required_binaries = ["xspecfem2D", "xmeshfem2D", "xcombine_sem"]
         self._acceptable_source_prefixes = ["SOURCE", "FORCE", "FORCESOLUTION"]
 
         # Constants that will be referenced during simulations and file I/O.
@@ -919,8 +929,10 @@ class Specfem:
     def smooth(self, input_path, output_path, parameters=None, span_h=None,
                span_v=None, use_gpu=False):
         """
-        Wrapper for SPECFEM binary: xsmooth_sem
-        Smooths kernels by convolving them with a 3D Gaussian
+        Wrapper for SPECFEM smoothing binaries: 
+        xsmooth_sem, xsmooth_sem_pde, xsmooth_laplacian_sem
+        User chooses which underlying function they want with the `smooth_type` 
+        parameter
 
         .. note::
             It is ASSUMED that this function is being called by
@@ -941,7 +953,7 @@ class Specfem:
         :type use_gpu: bool
         :param use_gpu: whether to use GPU acceleration for smoothing. Requires
             GPU compiled binaries and GPU compute node.
-        """
+        """ 
         unix.cd(self.cwd)
 
         # Assign some default parameters from class attributes if not given
@@ -952,8 +964,8 @@ class Specfem:
         if span_v is None:
             span_v = self.smooth_v
 
-        logger.debug(f"smoothing {parameters} with horizontal Gaussian "
-                     f"{span_h}m and vertical Gaussian {span_v}m")
+        logger.debug(f"{self.smooth_type} smoothing {parameters} horizontal "
+                     f"span {span_h}m and vertical span {span_v}m")
 
         if not os.path.exists(output_path):
             unix.mkdir(output_path)
@@ -965,9 +977,21 @@ class Specfem:
             use_gpu = ".true"
         else:
             use_gpu = ".false"
+
+        # Determine which smoothing function we are using
+        if self.smooth_type.lower() == "gaussian":  # 2D/3D/3D_GLOBE
+            cmd = "bin/xmooth_sem"
+        elif self.smooth_type.lower() == "laplacian":  # 3D_GLOBE ONLY
+            cmd = "bin/xsmooth_laplacian_sem"
+            # laplacian smoothing expects span values in km, not m
+            span_h *= 1E-3  # m -> km
+            span_v *= 1E-3  # m -> km
+        elif self.smooth_type == "pde":  # 3D ONLY
+            cmd = "bin/xsmooth_sem_pde"
+
         # mpiexec ./bin/xsmooth_sem SMOOTH_H SMOOTH_V name input output use_gpu
         for name in parameters:
-            exc = (f"bin/xsmooth_sem {str(span_h)} {str(span_v)} {name}_kernel "
+            exc = (f"{cmd} {str(span_h)} {str(span_v)} {name}_kernel "
                    f"{input_path} {output_path} {use_gpu}")
             # e.g., combine_vs.log
             stdout = f"{self._exc2log(exc)}_{name}.log"
