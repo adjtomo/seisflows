@@ -980,7 +980,7 @@ class Specfem:
 
         # Determine which smoothing function we are using
         if self.smooth_type.lower() == "gaussian":  # 2D/3D/3D_GLOBE
-            cmd = "bin/xmooth_sem"
+            cmd = "bin/xsmooth_sem"
         elif self.smooth_type.lower() == "laplacian":  # 3D_GLOBE ONLY
             cmd = "bin/xsmooth_laplacian_sem"
             # laplacian smoothing expects span values in km, not m
@@ -1032,8 +1032,9 @@ class Specfem:
         """
         # Executable may come with additional sub arguments, we only need to
         # check that the actually executable exists
-        if not unix.which(executable.split(" ")[0]):
-            logger.critical(msg.cli(f"executable '{executable}' does not exist",
+        exc_check = executable.split(" ")[0]
+        if not unix.which(exc_check):
+            logger.critical(msg.cli(f"executable '{exc_check}' does not exist",
                             header="external solver error", border="="))
             sys.exit(-1)
 
