@@ -83,12 +83,12 @@ class Specfem:
     :param smooth_type: choose how smoothing is performed for gradients.
         these are tied to the internal smoothing functions available, and only
         certain code flavors have certain smoothing functions available:
-        - 'gaussian' [2D (default) /3D/3D_GLOBE]: convolve with a 3D gaussian, 
-            slow and computationally intensive. Default for SPECFEM2D and 3D
-        - 'laplacian' [3D_GLOBE]: average points around vertex to 
-            smooth.  faster and preferred method for GLOBE code
-        - 'pde' [3D]: diffusion-based PDE smoothing. for Cartesian code only, 
-            much faster than gaussian smoothing. See SPECFEM3D PR#1725
+        - 'gaussian' [2D/3D/3D_GLOBE]: Default, convolve with a 3D gaussian, 
+            slow and computationally intensive. Only option for 2D.
+        - 'laplacian' [3D_GLOBE]: RECOMMENDED FOR 3D_GLOBE. Average points 
+            around vertex to smooth. Much faster than Gaussian.
+        - 'pde' [3D]: RECOMMENDED for 3D. Diffusion-based PDE smoothing. 
+            Much faster than Gaussian. See SPECFEM3D PR#1725
     :type components: str
     :param components: components to search for synthetic data with. None by
         default which uses a wildcard when searching for synthetics. If
