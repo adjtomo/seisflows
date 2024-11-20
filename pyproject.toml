@@ -19,7 +19,7 @@ dependencies = [
     "pypdf",
     "IPython",
     "dill",
-    "pyatoa>=0.4.0",
+    "pyatoa>=0.4.2",
     "pysep-adjtomo",
 ]
 
