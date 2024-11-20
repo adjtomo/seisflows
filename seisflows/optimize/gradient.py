@@ -198,9 +198,12 @@ class Gradient:
     def load_vector(self, name):
         """
         Convenience function to access the full paths of model and gradient
-        vectors that are saved to disk
+        vectors that are saved to disk. Corresponding `save_vector` function
+        saves vectors into the correct location and format that can be loaded
+        by this function.
 
         .. note::
+
             Model, gradient and misfit vectors are named as follows:
             m_new: current model
             m_old: previous model
@@ -216,15 +219,18 @@ class Gradient:
 
         :type name: str
         :param name: name of the vector, acceptable: m, g, p, f, alpha
+        :rtype: Model, vector or float
+        :return: loaded vector corresponding to `name` that may take on 
+            different type based on which vector it is
         """
         assert(name in self._acceptable_vectors)
 
-        model_npz = os.path.join(self.path.scratch, f"{name}.npz")
-        model_npy = model_npz.replace(".npz", ".npy")
-        model_txt = model_npz.replace(".npz", ".txt")
+        model = os.path.join(self.path.scratch, f"{name}")
+        model_npy = os.path.join(self.path.scratch, f"{name}.npy")
+        model_txt = os.path.join(self.path.scratch, f"{name}.txt")
 
-        if os.path.exists(model_npz):
-            model = Model(path=model_npz)
+        if os.path.exists(model):
+            model = Model(path=model)
         elif os.path.exists(model_npy):
             model = np.load(model_npy)
         elif os.path.exists(model_txt):
@@ -236,19 +242,22 @@ class Gradient:
 
     def save_vector(self, name, m):
         """
-        Convenience function to save/overwrite vectors on disk
+        Convenience function to save/overwrite vectors on disk. Corresponding
+        function `load_vector` loads in vectors that have been saved with
+        this function
 
         :type name: str
-        :param name: name of the vector to overwrite
+        :param name: name of the vector to save or overwrite
         :type m: seisflows.tools.specfem.Model or float
-        :param m: Model to save to disk as npz array
+        :param m: Model, vector, or value to save to disk 
         """
         assert(name in self._acceptable_vectors)
 
         if isinstance(m, Model):
-            path = os.path.join(self.path.scratch, f"{name}.npz")
-            m.model = m.split()  # overwrite m representation
-            m.save(path=path)
+            path = os.path.join(self.path.scratch, f"{name}")
+            unix.rm(path)  # ensure that no old files are stored here
+            unix.mkdir(path)
+            m.write(path=path)  # write in the same format as SPECFEM uses
         elif isinstance(m, np.ndarray):
             path = os.path.join(self.path.scratch, f"{name}.npy")
             np.save(path=path)
@@ -362,6 +371,8 @@ class Gradient:
         f = self.load_vector("f_new")  # current misfit value from preprocess
         g = self.load_vector("g_new")  # current gradient from scaled kernels
         p = self.load_vector("p_new")  # current search direction
+        
+        logger.info("calculating gradient dot products GTG and GTP")
         gtg = dot(g.vector, g.vector)
         gtp = dot(g.vector, p.vector)
 
@@ -388,11 +399,11 @@ class Gradient:
                     f"{self.step_count}")
 
         # Log out the current line search stats for reference
-        x, f = self._line_search.get_search_history()
-        i_str = ", ".join([f"{_:>9}" for _ in range(len(x))])
-        x_str = ", ".join([f"{_:.3E}" for _ in x])
-        f_str = ", ".join([f"{_:.3E}" for _ in f])
-        logger.info(f"step count  = {i_str}")
+        x, f, idx = self._line_search.get_search_history()
+        idx_str = ", ".join([f"{_:>9}" for _ in idx])   # step count
+        x_str = ", ".join([f"{_:.3E}" for _ in x])  # step length
+        f_str = ", ".join([f"{_:.3E}" for _ in f])  # misfit value
+        logger.info(f"step count  = {idx_str}")
         logger.info(f"step length = {x_str}")
         logger.info(f"misfit val  = {f_str}")
 
@@ -531,10 +542,12 @@ class Gradient:
         logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
         # Remove the old-old model parameters (from the last time this was run)
-        if glob("?_old*"):
-            logger.info("removing previously accepted model files (?_old)")
-            for fid in ["m_old.npz", "f_old.txt", "g_old.npz", "p_old.npz"]:
-                unix.rm(os.path.join(self.path.scratch, fid))
+        old_files = glob(os.path.join(self.path.scratch, "?_old*"))
+        if old_files:
+            logger.info(f"removing previous iteration model files: "
+                        f"{old_files}")
+            for old_file in old_files:
+                unix.rm(old_file)
 
         # Export stats and figures to output, must run before shifting model
         self.write_stats(fid=os.path.join(self.path._optim_output, 
@@ -543,18 +556,20 @@ class Gradient:
                                           "output_optim.txt"),
                          path_out=self.path._optim_output)
 
-        logger.info("setting current model as previous model (new -> old)")
-        # e.g., m_new.npz -> m_old.npz
-        for src in glob(os.path.join(self.path.scratch, "*_new.*")):
-            dst = src.replace("_new.", "_old.")
+        logger.info("setting current model as previous model (?_new -> ?_old)")
+        # e.g., f_new.txt -> f_old.txt
+        for src in glob(os.path.join(self.path.scratch, "?_new*")):
+            dst = src.replace("_new", "_old")
             unix.mv(src, dst)
 
         logger.info("setting trial model as starting model (m_try -> m_new)")
-        unix.mv(src=os.path.join(self.path.scratch, "m_try.npz"),
-                dst=os.path.join(self.path.scratch, "m_new.npz"))
+        unix.mv(src=os.path.join(self.path.scratch, "m_try"),
+                dst=os.path.join(self.path.scratch, "m_new"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
-        x, f = self._line_search.get_search_history()
+        x, f, idx = self._line_search.get_search_history()
+
+        # Figure out what step length and step count that corresponds to
         self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
@@ -632,7 +647,7 @@ class Gradient:
         # step lengths (x) and function values/misfit (f)
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
-        x, f  = self._line_search.get_search_history()
+        x, f, _  = self._line_search.get_search_history()
         step_count = self._line_search.step_count
 
         # Construct statistics
@@ -673,7 +688,7 @@ class Gradient:
         # are set to 0 by default
         if not os.path.exists(fid):
             with open(fid, "w") as f_:
-                x, f  = self._line_search.get_search_history()
+                x, f, _  = self._line_search.get_search_history()
                 header = ",".join(keys) + "\n"
                 f_.write(header)
                 # Write values for first iteration

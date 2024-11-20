@@ -130,7 +130,7 @@ class Bracket:
         :param step_len: length of step for the trial model (alpha)
         """
         # Quick check to make sure this is expected
-        x, f = self.get_search_history()
+        x, *_ = self.get_search_history()
         assert len(x) == self.step_count, \
             "update was not expected, step count does not match array length"
         
@@ -220,9 +220,10 @@ class Bracket:
             f = np.array(self.func_vals[k - i - 1:k])
             j = count_zeros(self.step_lens) - 1  # update count
 
-        :rtype: (np.array, np.array)
+        :rtype: (np.array, np.array, np.array)
         :return: (step lengths of current line search, 
-                  misfits of current line search)
+                  misfits of current line search,
+                  step count associated with given step length and misfit)
         """
         if not self.iteridx:
             logger.warning("line search has not yet been initialized")
@@ -237,10 +238,11 @@ class Bracket:
         func_vals = np.array(self.func_vals[idx:])  # f
 
         # Sort by the step lengths taken
+        step_cnts = np.arange(0, len(func_vals), 1)[abs(step_lens).argsort()]
         func_vals = func_vals[abs(step_lens).argsort()]
         step_lens = step_lens[abs(step_lens).argsort()]
 
-        return step_lens, func_vals
+        return step_lens, func_vals, step_cnts
 
     def calculate_step_length(self):
         """
@@ -259,7 +261,7 @@ class Bracket:
             status==how to treat the next step count evaluation)
         """
         # Determine the line search history
-        x, f = self.get_search_history()  
+        x, f, _ = self.get_search_history()  
         # Some boolean checks to see where we're at in the inversion
         first_iteration = bool(self.update_count == 1)
         first_step = bool(self.step_count == 1)

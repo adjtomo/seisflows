@@ -58,7 +58,7 @@ class Backtrack(Bracket):
             status==how to treat the next step count evaluation)
         """
         # Determine the current line search history
-        x, f = self.get_search_history()
+        x, f, _ = self.get_search_history()
         first_iteration = bool(self.update_count == 1)
         first_step = bool(self.step_count == 1)
         

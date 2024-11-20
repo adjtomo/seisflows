@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v3.4.1 (#230)
+- Replaces Optimize.gradient `save_vector` and `load_vector` functions internal I/O for Model class with read/write in native SPECFEM format, rather than in the middle-man .npz format which was taking excessive time
+- Models in the Optimization module are now saved in directories rather than as single files
+- Replaces all occurrences of .npz with references to the Model paths
+- Cleans up some of the Optimize.Gradient and Model class definitions and internal logic
+- Bugfix Model class was defining `os.getcwd()` once and for all in the path definition so changing paths and calling Model again was not updating this. Removed auto `path` setting since Model class depends on User explicitly setting path to activate the `setup` command. 
+- Adds a few additional log messages during the initialize line search function so that there isn't such a long gap without logging
+- #233 Model class now throws AssertionError if model `path` is empty (which might happen if a previous step failed quietly)
+- #234 remove log warning when get_task_id returns 0 since this is a feature not a bug
+- #236  adds smoothing option for `xsmooth_sem_pde` in SPECFEM3D, consolidates some of the smoothing code blocks
+
 ## v3.4.0 (#228)
 - Solver now allows input of list of parameters rather than using pre-defined labels to select. 
 - Moved all parameters setup and check tasks into the main Specfem solver module, rather than having it be distributed around the child classes
