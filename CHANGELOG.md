@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v3.4.1 (#230)
+## v3.5.0 (#230)
 - Replaces Optimize.gradient `save_vector` and `load_vector` functions internal I/O for Model class with read/write in native SPECFEM format, rather than in the middle-man .npz format which was taking excessive time
 - Models in the Optimization module are now saved in directories rather than as single files
 - Replaces all occurrences of .npz with references to the Model paths
