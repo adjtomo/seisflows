@@ -128,8 +128,7 @@ class Fujitsu(Cluster):
         ])
         return _call
 
-    @property
-    def run_call_header(self):
+    def run_call(self, executable="", tasktime=None):
         """
         The run call defines the PJM header which is used to run tasks during
         an executing workflow. Like the submit call its arguments are dictated
@@ -139,6 +138,8 @@ class Fujitsu(Cluster):
         :rtype: str
         :return: the system-dependent portion of a run call
         """
+        tasktime = tasktime or self.tasktime  # allow override of tasktime
+
         _call = " ".join([
              f"pjsub",
              f"{self.pjm_args or ''}",
@@ -150,6 +151,7 @@ class Fujitsu(Cluster):
              f"-L elapse={self._tasktime}",  # [[hour:]minute:]second
              f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
+             f"{executable}"
         ])
         return _call
     
@@ -219,7 +221,7 @@ class Fujitsu(Cluster):
                                                                                  
         return job_id  
     
-    def run(self, funcs, single=False, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a PJM
         cluster. Executes the list of functions (`funcs`) NTASK times with each
@@ -243,9 +245,13 @@ class Fujitsu(Cluster):
             defined, such that the job is submitted as a single-core job to
             the system.
         """
-        funcs_fid, kwargs_fid = pickle_function_list(funcs,
-                                                     path=self.path.scratch,
-                                                     **kwargs)
+        logger.info(f"running functions {[_.__name__ for _ in funcs]}")
+
+        funcs_fid, kwargs_fid = pickle_function_list(
+            funcs, path=self.path.scratch, **kwargs
+            )
+        
+        # Differences in running an array of jobs or if only mainsolver runs
         if single:
             logger.info(f"running functions {[_.__name__ for _ in funcs]} on "
                         f"system 1 time")
@@ -277,18 +283,19 @@ class Fujitsu(Cluster):
 
             # If this is a `single` run, this will only submit a single task_id
             for taskid in taskids:
-                run_call = " ".join([
-                    f"{self.run_call_header}",
-                    # -x in 'pjsub' sets environment variables which are 
-                    # distributed in the run script, see custom run scripts for 
-                    # example how Ensure that these are comma-separated, not 
-                    # space-separated
-                    f"-x SEISFLOWS_FUNCS={funcs_fid},"  
-                    f"SEISFLOWS_KWARGS={kwargs_fid},"
-                    f"SEISFLOWS_TASKID={taskid}{environs},"
-                    f"GPU_MODE={int(bool(self.gpu))}",  # 0 if False, 1 if True
-                    f"{self.run_functions}",
-                ])
+                run_call = self.run_call(
+                    # -x in 'pjsub' sets SeisFlows env. variables which are 
+                    # distributed to the run script. See custom run scripts for 
+                    # example. NOTE: Ensure that -x vars are comma-separated, 
+                    # and that the run function is space separated from the -x 
+                    # parameters!
+                    executable=f"-x SEISFLOWS_FUNCS={funcs_fid},"  
+                               f"SEISFLOWS_KWARGS={kwargs_fid},"
+                               f"SEISFLOWS_TASKID={taskid}{environs},"
+                               f"GPU_MODE={int(bool(self.gpu))} "  
+                               f"{self.run_functions}",
+                    tasktime=tasktime
+                    )
 
                 if taskid == 0:
                     logger.debug(run_call)
