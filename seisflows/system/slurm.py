@@ -29,7 +29,6 @@ import numpy as np
 import time
 import subprocess
 
-from datetime import timedelta
 from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
@@ -180,7 +179,7 @@ class Slurm(Cluster):
              f"--job-name={self.title}",
              f"--nodes={self.nodes}",
              f"--ntasks-per-node={self.node_size:d}",
-             f"--ntasks={ntasks:d}",
+             f"--ntasks={self.nproc:d}",
              f"--time={tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
              f"--array={array}",
