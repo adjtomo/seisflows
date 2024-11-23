@@ -69,15 +69,11 @@ class Fujitsu(Cluster):
         # Convert walltime and tasktime from minutes to str 'HH:MM:SS'
         # https://stackoverflow.com/questions/20291883/\
         #                           converting-minutes-to-hhmm-format-in-python
-        if not self.tasktime.is_integer() or not self.walltime.is_integer():
-            logger.warning("Fujitsu system cannot handle decimal minutes for "
-                           "`tasktime` or `walltime`, rounding up to the "
-                           "nearest whole minute"
-                           )
+        # Round because this only works for integers not floats
         self._tasktime = "{:02d}:{:02d}:00".format(
-            *divmod(np.ceil(self.tasktime), 60))
+            *divmod(round(self.tasktime), 60))
         self._walltime = "{:02d}:{:02d}:00".format(
-            *divmod(np.ceil(self.walltime), 60))
+            *divmod(round(self.walltime), 60))
     
         # Define PJM-dependent job states used for monitoring queue which
         # can be found in the User manual
