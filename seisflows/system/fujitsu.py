@@ -65,15 +65,6 @@ class Fujitsu(Cluster):
         self.rscgrp = None
         self.gpu = None
         self._rscgrps = {}
-
-        # Convert walltime and tasktime from minutes to str 'HH:MM:SS'
-        # https://stackoverflow.com/questions/20291883/\
-        #                           converting-minutes-to-hhmm-format-in-python
-        # Round because this only works for integers not floats
-        self._tasktime = "{:02d}:{:02d}:00".format(
-            *divmod(round(self.tasktime), 60))
-        self._walltime = "{:02d}:{:02d}:00".format(
-            *divmod(round(self.walltime), 60))
     
         # Define PJM-dependent job states used for monitoring queue which
         # can be found in the User manual
@@ -118,6 +109,12 @@ class Fujitsu(Cluster):
         :rtype: str
         :return: the system-dependent portion of a submit call
         """
+        # Convert walltime from minutes to str 'HH:MM:SS'
+        # https://stackoverflow.com/questions/20291883/\
+        #                           converting-minutes-to-hhmm-format-in-python
+        # Round because this only works for integers not floats
+        walltime = "{:02d}:{:02d}:00".format(*divmod(round(self.walltime), 60))
+
         _call = " ".join([
             f"pjsub",
             f"{self.pjm_args or ''}",
@@ -126,7 +123,7 @@ class Fujitsu(Cluster):
             f"-N {self.title}",  # job name
             f"-o {self.path.output_log}",  # write stdout to file
             f"-e {self.path.output_log}",  # write stderr to file
-            f"-L elapse={self._walltime}",  # [[hour:]minute:]second
+            f"-L elapse={walltime}",  # [[hour:]minute:]second
             f"-L node=1",
             f"--mpi proc=1",
         ])
@@ -142,7 +139,13 @@ class Fujitsu(Cluster):
         :rtype: str
         :return: the system-dependent portion of a run call
         """
-        tasktime = tasktime or self.tasktime  # allow override of tasktime
+        _tasktime = tasktime or self.tasktime  # allow override of tasktime
+
+        # Convert tasktime from minutes to str 'HH:MM:SS'
+        # https://stackoverflow.com/questions/20291883/\
+        #                           converting-minutes-to-hhmm-format-in-python
+        # Round because this only works for integers not floats
+        tasktime = "{:02d}:{:02d}:00".format(*divmod(round(_tasktime), 60))
 
         _call = " ".join([
              f"pjsub",
@@ -152,7 +155,7 @@ class Fujitsu(Cluster):
              f"-N {self.title}",  # job name
              f"-o {os.path.join(self.path.log_files, '%j')}", 
              f"-j",  # merge stderr with stdout
-             f"-L elapse={self._tasktime}",  # [[hour:]minute:]second
+             f"-L elapse={tasktime}",  # [[hour:]minute:]second
              f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
              f"{executable}"
