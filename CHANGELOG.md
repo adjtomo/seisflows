@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v3.5.1 (#239)
+- Implements custom tasktimes in Fujitsu system
+- Modifies Fujitsu run_call structure to be more like Slurm system
+- Bugfix Fujitsu tasktime and walltime were not able to exceed 1 day
+- Bugfix: Slurm system class was using an undefined parameter
+
 ## v3.5.0 (#230)
 - Replaces Optimize.gradient `save_vector` and `load_vector` functions internal I/O for Model class with read/write in native SPECFEM format, rather than in the middle-man .npz format which was taking excessive time
 - Models in the Optimization module are now saved in directories rather than as single files
