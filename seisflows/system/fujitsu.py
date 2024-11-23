@@ -18,7 +18,6 @@ import numpy as np
 import time
 import subprocess
 
-from datetime import timedelta
 from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
@@ -67,9 +66,18 @@ class Fujitsu(Cluster):
         self.gpu = None
         self._rscgrps = {}
 
-        # Convert walltime and tasktime to datetime str 'H:MM:SS'
-        self._tasktime = str(timedelta(minutes=self.tasktime))
-        self._walltime = str(timedelta(minutes=self.walltime))
+        # Convert walltime and tasktime from minutes to str 'HH:MM:SS'
+        # https://stackoverflow.com/questions/20291883/\
+        #                           converting-minutes-to-hhmm-format-in-python
+        if not self.tasktime.is_integer() or not self.walltime.is_integer():
+            logger.warning("Fujitsu system cannot handle decimal minutes for "
+                           "`tasktime` or `walltime`, rounding up to the "
+                           "nearest whole minute"
+                           )
+        self._tasktime = "{:02d}:{:02d}:00".format(
+            *divmod(np.ceil(self.tasktime), 60))
+        self._walltime = "{:02d}:{:02d}:00".format(
+            *divmod(np.ceil(self.walltime), 60))
     
         # Define PJM-dependent job states used for monitoring queue which
         # can be found in the User manual

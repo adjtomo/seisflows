@@ -14,6 +14,7 @@ import os
 import sys
 import subprocess
 import time
+import numpy as np
 from concurrent.futures import ProcessPoolExecutor, wait
 from seisflows import logger, ROOT_DIR
 from seisflows.tools import msg
