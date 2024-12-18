@@ -38,7 +38,7 @@ class Pyaflowa:
     :type min_period: float
     :param min_period: Minimum filter corner in unit seconds. Bandpass
         filter if set with `max_period`, highpass filter if set without
-    `max_period`, no filtering if not set and `max_period also not set
+        `max_period`, no filtering if not set and `max_period also not set
     :type pyflex_parameters: dict
     :param pyflex_parameters: overwrite for Pyflex parameters defined
         in the Pyflex.Config object. Incorrectly defined argument names
@@ -54,13 +54,15 @@ class Pyaflowa:
     :param fix_windows: How to address misfit window evaluation at each
         evaluation. Options to re-use misfit windows collected during an
         inversion, available options:
-        [True, False, 'ITER', 'ONCE']
-        True: Re-use windows after first evaluation (i01s00);
-        False: Calculate new windows each evaluation;
-        'ITER': Calculate new windows at first evaluation of
-        each iteration (e.g., i01s00... i02s00...
-        'ONCE': Calculate new windows at first evaluation of
-        the workflow, i.e., at self.par.BEGIN
+        [True, False, 'ITER', 'ONCE', 'OFF']
+        - True: Re-use windows after first evaluation (i01s00);
+        - False: Calculate new windows each evaluation;
+        - 'ITER': Calculate new windows at first evaluation of
+          each iteration (e.g., i01s00... i02s00...
+        - 'ONCE': Calculate new windows at first evaluation of
+          the workflow, i.e., at self.par.BEGIN
+        - 'OFF': Turn off windowing, adjoint source will be calculated
+          on the entire waveform. 
     :type revalidate: bool
     :param revalidate: Only used if `fix_windows` is True, ITER or ONCE. Windows
         that are retrieved from datasets will be revalidated against parameters
@@ -526,7 +528,12 @@ class Pyaflowa:
 
             # Filter waveforms
             mgmt.preprocess(remove_response=False)
-            if fix_windows:
+
+            if fix_windows is None:
+                pass  
+            elif fix_windows is False:
+                mgmt.window()  
+            elif fix_windows is True:
                 # Determine components from waveforms on the fly so that we can
                 # use that information to only select windows we need
                 components = [tr.stats.component for tr in mgmt.st_syn]
@@ -550,8 +557,7 @@ class Pyaflowa:
                         # time
                         time.sleep(random.random())
                 del ds
-            else:
-                mgmt.window()
+
             mgmt.measure()
         except Exception as e:
             station_logger.critical(f"FLOW FAILED:")
@@ -707,9 +713,10 @@ class Pyaflowa:
         :param step_count: Current line search step count within the SeisFlows3
             workflow. Within SeisFlows3 this is defined by
             `optimize.line_search.step_count`
-        :rtype: tuple (bool, str)
-        :return: (bool on whether to use windows from the previous step,
-            and a message that can be sent to the logger)
+        :rtype: tuple (bool or None, str)
+        :return: (bool on whether to use windows from the previous step or None 
+                  if fix window turned off, a message that can be sent to the 
+                  logger)
         """
         fix_windows = False
         msg = ""
@@ -736,6 +743,9 @@ class Pyaflowa:
                 else:
                     fix_windows = True
                     msg = "mid workflow, fix windows from last evaluation"
+            elif self.fix_windows.upper() == "OFF":
+                fix_windows = None
+                msg = "fixed windows set 'OFF', no misfit window will be used"
         # Bool fix windows simply sets the parameter
         elif isinstance(self.fix_windows, bool):
             fix_windows = self.fix_windows
