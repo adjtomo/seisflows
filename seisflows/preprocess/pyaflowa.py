@@ -531,7 +531,8 @@ class Pyaflowa:
         # If any part of this processing fails for whatever reason, move on to 
         # plotting and don't let it affect the other tasks
         try:
-            mgmt.standardize()
+            if self.preproc_toggles.standardize:
+                mgmt.standardize()
 
             # Copy the standardized version of the waveform to save into the
             # ASDFDataSet because we don't want to save processed versions
@@ -539,35 +540,39 @@ class Pyaflowa:
             st_syn_raw = mgmt.st_syn.copy()
 
             # Filter waveforms
-            mgmt.preprocess(remove_response=False)
+            if self.preproc_toggles.preprocess:
+                mgmt.preprocess(remove_response=False)
 
-            if not fix_windows:
-                mgmt.window()  
-            else:
-                # Determine components from waveforms on the fly so that we can
-                # use that information to only select windows we need
-                components = [tr.stats.component for tr in mgmt.st_syn]
+            if self.preproc_toggles.window:
+                if not fix_windows:
+                    mgmt.window()  
+                else:
+                    # Determine components from waveforms on the fly so that we 
+                    # can use that information to only select windows we need
+                    components = [tr.stats.component for tr in mgmt.st_syn]
 
-                # Retrieve windows from the last available evaluation. Wrap in
-                # try-except block incase file lock is in place by other procs.
-                while True:
-                    try:
-                        with ASDFDataSet(
-                                os.path.join(self.path["_datasets"],
-                                             f"{config.event_id}.h5"),
-                                mode="r") as ds:
-                            mgmt.retrieve_windows_from_dataset(
-                                    ds=ds, components=components,
-                                    revalidate=self.revalidate
-                                    )
-                        break
-                    except (BlockingIOError, FileExistsError):
-                        # Random sleep time [0,1]s to decrease chances of two
-                        # processes attempting to access at exactly the same
-                        # time
-                        time.sleep(random.random())
-                del ds
-
+                    # Retrieve windows from the last available evaluation. Wrap 
+                    # in try-except block incase file lock is in place by other 
+                    # procs.
+                    while True:
+                        try:
+                            with ASDFDataSet(
+                                    os.path.join(self.path["_datasets"],
+                                                f"{config.event_id}.h5"),
+                                    mode="r") as ds:
+                                mgmt.retrieve_windows_from_dataset(
+                                        ds=ds, components=components,
+                                        revalidate=self.revalidate
+                                        )
+                            break
+                        except (BlockingIOError, FileExistsError):
+                            # Random sleep time [0,1]s to decrease chances of 
+                            # two processes attempting to access at exactly the 
+                            # same time
+                            time.sleep(random.random())
+                    del ds
+                    
+            # Calculate adjoint source
             mgmt.measure()
         except Exception as e:
             station_logger.critical(f"FLOW FAILED:")
