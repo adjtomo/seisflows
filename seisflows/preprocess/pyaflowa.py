@@ -39,6 +39,19 @@ class Pyaflowa:
     :param min_period: Minimum filter corner in unit seconds. Bandpass
         filter if set with `max_period`, highpass filter if set without
         `max_period`, no filtering if not set and `max_period also not set
+    :type preproc_toggles: dict
+    :param preproc_toggles: A dictionary with keys that represent toggles that
+        allow the User to turn on/off the default preprocessing steps. 
+        Corresponding values should be 'True' to toggle on, and 'False' for off.
+        All toggles are set 'True' by default.
+        - 'standardize': resamples and trims time series to match. Turn off if 
+          your 'obs' and 'syn' data are already the same length. See 
+          `Pyatoa.manager.standardize()`
+        - 'preprocess': Detrend, taper, filter and normalize (optional). Turn 
+          off if your data are synthetics that do not need filtering, or if
+          your data are already preprocessed
+        - 'window': misfit windowing using PyFlex. Turn off if you want to 
+          compute adjoint sources on the entire trace.
     :type pyflex_parameters: dict
     :param pyflex_parameters: overwrite for Pyflex parameters defined
         in the Pyflex.Config object. Incorrectly defined argument names
@@ -61,8 +74,6 @@ class Pyaflowa:
           each iteration (e.g., i01s00... i02s00...
         - 'ONCE': Calculate new windows at first evaluation of
           the workflow, i.e., at self.par.BEGIN
-        - 'OFF': Turn off windowing, adjoint source will be calculated
-          on the entire waveform. 
     :type revalidate: bool
     :param revalidate: Only used if `fix_windows` is True, ITER or ONCE. Windows
         that are retrieved from datasets will be revalidated against parameters
@@ -103,7 +114,7 @@ class Pyaflowa:
     :param path_preprocess: scratch path for preprocessing related steps
     ***
     """
-    def __init__(self, min_period=1., max_period=10.,
+    def __init__(self, min_period=1., max_period=10., preproc_toggles=None,
                  pyflex_parameters=None, pyadjoint_parameters=None,
                  fix_windows=False, revalidate=False, 
                  adj_src_type="cc_traveltime", plot_waveforms=True, 
@@ -156,6 +167,8 @@ class Pyaflowa:
         self.adj_src_type = adj_src_type
         self.plot_waveforms = plot_waveforms
         self.preprocess_log_level = preprocess_log_level
+        self.preproc_toggles = preproc_toggles or \
+            Dict(standardize=True, preprocess=True, window=True)
 
         # Set the Pyflex and Pyadjoint external parameters
         _cfg = Config(adj_src_type=adj_src_type,
@@ -224,14 +237,18 @@ class Pyaflowa:
         workflow to ensure that things are set appropriately.
         """
         assert(self.syn_data_format.upper() == "ASCII"), \
-            "Pyatoa preprocess requires `syn_data_format`=='ASCII'"
+            "Pyaflowa preprocess requires `syn_data_format`=='ASCII'"
 
         assert(self._source_prefix in self._acceptable_source_prefixes), (
-            f"Pyatoa can only accept `source_prefix` in " 
+            f"Pyaflowa can only accept `source_prefix` in " 
             f"{self._acceptable_source_prefixes}, not '{self._source_prefix}'"
         )
         assert(self._fix_windows in self._acceptable_fix_windows), \
-            f"Pyatoa `fix_windows` must be in {self._acceptable_fix_windows}"
+            f"Pyaflowa `fix_windows` must be in {self._acceptable_fix_windows}"
+        
+        for key in ["standardize", "preprocess", "window"]:
+            assert(key in self.preproc_toggles), \
+                f"Pyaflowa `preproc_toggles` missing key {key}"
 
     def setup(self):
         """
@@ -524,11 +541,9 @@ class Pyaflowa:
             # Filter waveforms
             mgmt.preprocess(remove_response=False)
 
-            if fix_windows is None:
-                pass  
-            elif fix_windows is False:
+            if not fix_windows:
                 mgmt.window()  
-            elif fix_windows is True:
+            else:
                 # Determine components from waveforms on the fly so that we can
                 # use that information to only select windows we need
                 components = [tr.stats.component for tr in mgmt.st_syn]
@@ -738,9 +753,6 @@ class Pyaflowa:
                 else:
                     fix_windows = True
                     msg = "mid workflow, fix windows from last evaluation"
-            elif self.fix_windows.upper() == "OFF":
-                fix_windows = None
-                msg = "fixed windows set 'OFF', no misfit window will be used"
         # Bool fix windows simply sets the parameter
         elif isinstance(self.fix_windows, bool):
             fix_windows = self.fix_windows
