@@ -87,10 +87,6 @@ class Pyaflowa:
     :param preprocess_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
         Available: ['null': no logging, 'warning': warnings only,
         'info': task tracking, 'debug': log all small details (recommended)]
-    :type unit_output: str
-    :param unit_output: Data units. Must match the synthetic output of
-        external solver. Available: ['DISP': displacement, 'VEL': velocity,
-        'ACC': acceleration]. Requires metadata.
     :type export_datasets: bool
     :param export_datasets: periodically save the output ASDFDataSets which
         contain data, metadata and results collected during the
@@ -216,7 +212,6 @@ class Pyaflowa:
         self._acceptable_source_prefixes = ["SOURCE", "FORCESOLUTION",
                                             "CMTSOLUTION"]
         self._acceptable_fix_windows = ["ITER", "ONCE", True, False]
-        self._acceptable_unit_outputs = ["VEL", "DISP", "ACC"]
 
         # Internal bookkeeping attributes to be filled in by self.setup()
         self._inv = None
