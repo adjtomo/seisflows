@@ -97,6 +97,7 @@ class Wisteria(Fujitsu):
                 # Node-occupied resource allocation (Aquarius)
                 "debug-a": 36, "short-a": 36, "regular-a": 36, 
                 # GPU-exclusive resource allocation
-                "share-debug": 1, "share-short": 2, "share": 5
+                "share-debug": 1, "share-short": 2, 
+                "share-1": 1, "share-2": 2, "share-4": 4
                 }
 
