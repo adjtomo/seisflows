@@ -62,10 +62,13 @@ class Wisteria(Fujitsu):
 
         - share-debug: Aquarius GPU debug, 30 min max, 1, 2, 4 GPU available
         - share-short: Aquarius GPU short queue, 2 hr. max, 1, 2, 4 GPU avail.
+        - share: Aquarius GPU-exclusive, available 1, 2 and 4 GPU, select 
+          using `gpu`
     :type gpu: int
     :param gpu: if not None, tells SeisFlows to use the GPU version of SPECFEM, 
         the integer value of `gpu` will set the number of requested GPUs for a 
-        simulation on system (i.e., #PJM -L gpu=`gpu`)
+        simulation on system (i.e., #PJM -L gpu=`gpu`). Required if using 
+        GPU-exclusive rscgrps's
 
     Paths
     -----
@@ -98,8 +101,8 @@ class Wisteria(Fujitsu):
                 "debug-o": 48, "short-o": 48, "regular-o": 48, "priority-o": 48,
                 # Node-occupied resource allocation (Aquarius)
                 "debug-a": 36, "short-a": 36, "regular-a": 36, 
-                # GPU-exclusive resource allocation
-                "share-debug": 1, "share-short": 2, 
-                "share-1": 1, "share-2": 2, "share-4": 4
+                # GPU-exclusive resource allocation. Share will give you access
+                # to N GPUs based on `gpu`
+                "share-debug": 1, "share-short": 2, "share": 1,
                 }
 

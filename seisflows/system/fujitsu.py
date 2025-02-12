@@ -160,10 +160,17 @@ class Fujitsu(Cluster):
              f"-o {os.path.join(self.path.log_files, '%j')}", 
              f"-j",  # merge stderr with stdout
              f"-L elapse={tasktime}",  # [[hour:]minute:]second
-             f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
-             f"{executable}"
         ])
+
+        # GPU-exclusive vs. hybrid nodes require different submit arugments
+        if self.gpu and self.rscgrp.startswith("share"):
+            _call += f" -L gpu={self.gpu}"
+        else:
+            _call += f" -L node={self.nodes}"
+
+        _call += f" {executable}"
+
         return _call
     
     def submit(self, workdir=None, parameter_file="parameters.yaml", 
