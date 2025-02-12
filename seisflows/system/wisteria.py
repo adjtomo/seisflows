@@ -82,13 +82,15 @@ class Wisteria(Fujitsu):
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", 
                                  "custom_run-wisteria")   
 
-    def __init__(self, group=None, rscgrp=None, gpu=None, **kwargs):
+    def __init__(self, group=None, rscgrp=None, gpu=None, submit_to=None,
+                 **kwargs):
         """Wisteria init"""
         super().__init__(**kwargs)
 
         self.group = group
         self.rscgrp = rscgrp
         self.gpu = gpu
+        self.submit_to = submit_to or self.rscgrp
 
         # Wisteria resource groups and their cores per node
         self._rscgrps = {
