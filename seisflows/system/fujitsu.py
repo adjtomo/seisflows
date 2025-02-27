@@ -297,7 +297,8 @@ class Fujitsu(Cluster):
             nsubmit = self.ntask_max - len(job_ids)  # number of jobs to submit
             stop = start + nsubmit
             taskids = _ntasks[start:stop]
-            logger.debug(f"submitting task(s) {taskids[0]}-{taskids[-1]}")
+            if taskids:
+                logger.debug(f"submitting task(s) {taskids[0]}-{taskids[-1]}")
 
             # If this is a `single` run, this will only submit a single task_id
             for taskid in taskids:
