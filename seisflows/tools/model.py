@@ -392,7 +392,7 @@ class Model:
                 imax = sum(self.ngll) * idim + sum(self.ngll[:iproc + 1])
                 model[key].extend([vector[imin:imax]])
 
-            model[key] = np.array(model[key])
+            model[key] = np.array(model[key], dtype="object")
         return model
 
     def print_stats(self):
@@ -731,7 +731,7 @@ class Model:
         for fid in sorted(fids):
             array.append(np.loadtxt(fid).T[:, column_idx])
 
-        return np.array(array)
+        return np.array(array, dtype="object")
 
     def _write_model_fortran_binary(self, path):
         """

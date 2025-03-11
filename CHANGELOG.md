@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v3.5.2 (#243)
+- Additional bugfix inhomogeneous Model error
+
 ## v3.5.1 (#239)
 - Implements custom tasktimes in Fujitsu system
 - Modifies Fujitsu run_call structure to be more like Slurm system
