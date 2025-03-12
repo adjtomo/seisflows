@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v3.5.3 
+- Hotfix: extend floating point precision to avoid rounding off dt for very 
+  small values of `dt` in SPECFEM (see #244)
+
 ## v3.5.2 (#243)
 - Additional bugfix inhomogeneous Model error
 

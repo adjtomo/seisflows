@@ -735,8 +735,11 @@ def read_ascii(fid, origintime=None, **kwargs):
     if origintime is None:
         origintime = UTCDateTime("2000-01-01T00:00:00")
 
-    # We assume that dt is constant after 'precision' decimal points
-    delta = round(times[1] - times[0], 4)
+    # Truncate after double precision due to floating point rounding, see #244
+    delta = round(times[1] - times[0], 14)
+    if delta == 0:
+        logger.critical("SPECFEM time step is too small, cannot resolve dt")
+        sys.exit(-1)
 
     # Honor that Specfem doesn't start exactly on 0
     origintime += times[0]
