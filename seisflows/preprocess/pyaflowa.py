@@ -167,8 +167,10 @@ class Pyaflowa:
         self.adj_src_type = adj_src_type
         self.plot_waveforms = plot_waveforms
         self.preprocess_log_level = preprocess_log_level
-        self.preproc_toggles = Dict(preproc_toggles) or \
-            Dict(standardize=True, preprocess=True, window=True)
+        if preproc_toggles is None: 
+            self.preproc_toggles = Dict(standardize=True, preprocess=True, window=True)
+        else:
+            self.preproc_toggles = Dict(preproc_toggles)
 
         # Set the Pyflex and Pyadjoint external parameters
         _cfg = Config(adj_src_type=adj_src_type,
