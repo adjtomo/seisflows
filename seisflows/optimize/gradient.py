@@ -195,77 +195,77 @@ class Gradient:
         self.load_checkpoint()
         self.checkpoint()  # will be empty
 
-    def load_vector(self, name):
-        """
-        Convenience function to access the full paths of model and gradient
-        vectors that are saved to disk. Corresponding `save_vector` function
-        saves vectors into the correct location and format that can be loaded
-        by this function.
+    # def load_vector(self, name):
+    #     """
+    #     Convenience function to access the full paths of model and gradient
+    #     vectors that are saved to disk. Corresponding `save_vector` function
+    #     saves vectors into the correct location and format that can be loaded
+    #     by this function.
 
-        .. note::
+    #     .. note::
 
-            Model, gradient and misfit vectors are named as follows:
-            m_new: current model
-            m_old: previous model
-            m_try: line search model
-            f_new: current objective function value
-            f_old: previous objective function value
-            f_try: line search function value
-            g_new: current gradient direction
-            g_old: previous gradient direction
-            p_new: current search direction
-            p_old: previous search direction
-            alpha: trial search direction (aka p_try)
+    #         Model, gradient and misfit vectors are named as follows:
+    #         m_new: current model
+    #         m_old: previous model
+    #         m_try: line search model
+    #         f_new: current objective function value
+    #         f_old: previous objective function value
+    #         f_try: line search function value
+    #         g_new: current gradient direction
+    #         g_old: previous gradient direction
+    #         p_new: current search direction
+    #         p_old: previous search direction
+    #         alpha: trial search direction (aka p_try)
 
-        :type name: str
-        :param name: name of the vector, acceptable: m, g, p, f, alpha
-        :rtype: Model, vector or float
-        :return: loaded vector corresponding to `name` that may take on 
-            different type based on which vector it is
-        """
-        assert(name in self._acceptable_vectors)
+    #     :type name: str
+    #     :param name: name of the vector, acceptable: m, g, p, f, alpha
+    #     :rtype: Model, vector or float
+    #     :return: loaded vector corresponding to `name` that may take on 
+    #         different type based on which vector it is
+    #     """
+    #     assert(name in self._acceptable_vectors)
 
-        model = os.path.join(self.path.scratch, f"{name}")
-        model_npy = os.path.join(self.path.scratch, f"{name}.npy")
-        model_txt = os.path.join(self.path.scratch, f"{name}.txt")
+    #     model = os.path.join(self.path.scratch, f"{name}")
+    #     model_npy = os.path.join(self.path.scratch, f"{name}.npy")
+    #     model_txt = os.path.join(self.path.scratch, f"{name}.txt")
 
-        if os.path.exists(model):
-            model = Model(path=model)
-        elif os.path.exists(model_npy):
-            model = np.load(model_npy)
-        elif os.path.exists(model_txt):
-            model = float(np.loadtxt(model_txt))
-        else:
-            raise FileNotFoundError(f"no optimization file found for '{name}'")
+    #     if os.path.exists(model):
+    #         model = Model(path=model)
+    #     elif os.path.exists(model_npy):
+    #         model = np.load(model_npy)
+    #     elif os.path.exists(model_txt):
+    #         model = float(np.loadtxt(model_txt))
+    #     else:
+    #         raise FileNotFoundError(f"no optimization file found for '{name}'")
 
-        return model
+    #     return model
 
-    def save_vector(self, name, m):
-        """
-        Convenience function to save/overwrite vectors on disk. Corresponding
-        function `load_vector` loads in vectors that have been saved with
-        this function
+    # def save_vector(self, name, m):
+    #     """
+    #     Convenience function to save/overwrite vectors on disk. Corresponding
+    #     function `load_vector` loads in vectors that have been saved with
+    #     this function
 
-        :type name: str
-        :param name: name of the vector to save or overwrite
-        :type m: seisflows.tools.specfem.Model or float
-        :param m: Model, vector, or value to save to disk 
-        """
-        assert(name in self._acceptable_vectors)
+    #     :type name: str
+    #     :param name: name of the vector to save or overwrite
+    #     :type m: seisflows.tools.specfem.Model or float
+    #     :param m: Model, vector, or value to save to disk 
+    #     """
+    #     assert(name in self._acceptable_vectors)
 
-        if isinstance(m, Model):
-            path = os.path.join(self.path.scratch, f"{name}")
-            unix.rm(path)  # ensure that no old files are stored here
-            unix.mkdir(path)
-            m.write(path=path)  # write in the same format as SPECFEM uses
-        elif isinstance(m, np.ndarray):
-            path = os.path.join(self.path.scratch, f"{name}.npy")
-            np.save(path=path)
-        elif isinstance(m, (float, int)):
-            path = os.path.join(self.path.scratch, f"{name}.txt")
-            np.savetxt(path, [m])
-        else:
-            raise TypeError(f"optimize.save unrecognized type error {type(m)}")
+    #     if isinstance(m, Model):
+    #         path = os.path.join(self.path.scratch, f"{name}")
+    #         unix.rm(path)  # ensure that no old files are stored here
+    #         unix.mkdir(path)
+    #         m.write(path=path)  # write in the same format as SPECFEM uses
+    #     elif isinstance(m, np.ndarray):
+    #         path = os.path.join(self.path.scratch, f"{name}.npy")
+    #         np.save(path=path)
+    #     elif isinstance(m, (float, int)):
+    #         path = os.path.join(self.path.scratch, f"{name}.txt")
+    #         np.savetxt(path, [m])
+    #     else:
+    #         raise TypeError(f"optimize.save unrecognized type error {type(m)}")
 
     def checkpoint(self):
         """
@@ -347,9 +347,9 @@ class Gradient:
         :raises SystemError: if the search direction is 0, signifying a zero
             gradient which will not do anything in an update
         """
-        g_new = self.load_vector("g_new")
-        p_new = g_new.copy()
-        p_new.update(vector=-1 * self._precondition(g_new.vector))
+        p_new = Model(path=os.path.join(self.path.scratch, "g_new"))
+        # p_new = g_new.copy()
+        p_new.update(vector=-1 * self._precondition(p_new.vector))
 
         if sum(p_new.vector) == 0:
             logger.critical(msg.cli(
