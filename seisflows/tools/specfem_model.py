@@ -3,6 +3,7 @@
 A class for interfacing with SPECFEM velocity models, used to manipulate SPECFEM 
 binary models. Processing is done in parallel to keep things efficient
 """
+from math import e
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,12 +45,10 @@ class Model:
     for parameter in acceptable_parameters[:]:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
-    # Acceptable flavors of SPECFEM
-    acceptable_flavors = ["2D", "3D", "3DGLOBE"]
 
     
     def __init__(self, path, fmt="", parameters=None, regions=None, 
-                 flavor=None, parallel=True):
+                 parallel=True):
         """
         Model only needs path to model to determine model parameters. Format
         `fmt` can be provided by the user or guessed based on available file
@@ -73,10 +72,6 @@ class Model:
             to consider in your 'model'. Valid regions are 1, 2 and 3. If you 
             want all regions, set as '123'. If you only want region 1, set as 
             '1'. Order insensitive.
-        :type flavor: str
-        :param flavor: Optional, tells Model what version of SPECFEM was used
-            to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
-            By default Model will try to guess based on file matching.
         :type parallel: bool
         :param parallel: run tasks in parallel using Concurrent.futures
         :raises AssertionError: if the `path` does not exist or the `path`
@@ -96,14 +91,11 @@ class Model:
 
         # Guess model format and flavor or have User define it
         self.fmt = fmt or self._guess_file_format()
-        self.flavor = flavor or self._guess_specfem_flavor()
 
         # Requires that `fmt` be defined before running
         self.nproc = self._get_nproc()
 
         # A few checks to make sure things are acceptable
-        assert(self.flavor in self.acceptable_flavors), \
-            f"SPECFEM `flavor' must be in {self.acceptable_flavors}"
         for par in self.parameters:
             assert(par in self.acceptable_parameters), \
                 (f"parameter `{par}` does not match `acceptable_parameters`")
@@ -113,12 +105,14 @@ class Model:
             assert(glob(os.path.join(path, self.get_filename(val=par, 
                                                              ext=self.fmt)))), \
                 f"Model `path` contains no match for parameter {par}"
-
-        # Coordinates are only useful for SPECFEM2D models
-        if self.flavor == "2D":
-            self.coordinates = self._read_coordinates_specfem2d()
-        else:
-            self.coordinates = None
+            
+        # Generate filename list. Ensure it is sorted so that other models with
+        # the same parameters will have the same indexing
+        self.filenames = []
+        for par in sorted(self.parameters):
+            for iproc in range(self.nproc):
+                filename = self.get_filename(i=iproc, val=par, ext=self.fmt)
+                self.filenames.append(os.path.join(self.path, filename))
 
     def get_filename(self, i="*", val="*", ext="*"):
         """
@@ -183,46 +177,62 @@ class Model:
             write_fortran_binary(arr=arr, filename=filename)
         else:
             raise NotImplementedError
-
-    def loop_over(self, action, value, export_to=None):
+                                             
+    def apply(self, action, value, export_to=None):
         """
         Loop over the model by processor and parameter in order to: extract
         information, scale by a constant, export the model to disk
     
+        :type action: str
+        :param action: action to perform using the `actions` functions
+        :type value: float
+        :param value: value to use in the `action`
         :type export_to: str
-        :param export_to: path to export the model values to incase they have
-            been manipulated and the user wants the updated model to be 
-            exported to disk
+        :param export_to: path to the directory to export the action'ed file.
+            filename will match the input filename of `fid`
         """
         if self.parallel:
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
                 futures = [
-                    executor.submit(self._update_model, par, iproc, action)
-                    for (par, iproc) in zip(self.parmaeters, self.nproc)
-                    ]
+                    executor.submit(self._apply_single, fid, action, 
+                                    value, export_to) for fid in self.filenames
+                                    ]
                 wait(futures)                   
         else:
-            for par in self.parameters:
-                for iproc in range(self.nproc):
-                    fid = self.get_filename(i=iproc, val=par, ext=self.fmt)
-                    arr = self.read(filename=os.path.join(self.path, fid))
-                    arr_out = self.update_model(action, value)
-                        
-    def export_model():
-        """
-        TO DO finish creating this function that will take over all the actions
-        for exporting model and then feed it into the single and parallel tasks
-        """
-        if multiply_by:  # TODO this might be faster with NumPy?
-            arr *= multiply_by
-        if add_with:
-            arr += add_with                        
-        if export_to:
-            self.write(arr=arr, 
-                        filename=os.path.join(export_to, fid)
-                        )
+            for fid in self.filenames:
+                self._apply_single(fid, action, value, export_to)
                     
-    def loop_with(self, other, action, export_to=None):
+    def _apply_single(self, fid, action, value, export_to=None):
+        """
+        Apply an action to a single parameter and processor, should be 
+        parallelized by a main calling function and not called individually
+    
+        :type fid: str
+        :param fid: full path to filename to read and maninpulate
+        :type action: str
+        :param action: action to perform using the `actions` functions
+        :type value: float
+        :param value: value to use in the `action`
+        :type export_to: str
+        :param export_to: path to the directory to export the action'ed file.
+            filename will match the input filename of `fid`
+        """
+        arr = self.read(filename=fid)
+
+        if action == "multiply":  # TODO this might be faster with NumPy?
+            arr *= value
+        elif action == "divide": 
+            arr /= value
+        elif action == "add":
+            arr += value    
+        # ADD ADDITIONAL ACTIONS HERE
+        else:
+            raise NotImplementedError("`action` choice is not valid")
+
+        fid_out = os.path.basename(fid)
+        self.write(arr=arr, filename=os.path.join(export_to, fid_out))
+                    
+    def apply_with(self, other, action, export_to=None):
         """
         Loop over model with another Model that must have the same vector 
         length (same number of processors and parameters) in order to 
@@ -250,33 +260,52 @@ class Model:
         assert(self.nproc == other.nproc), (
             f"Model nproc {self.nproc} do not match other model "
             f"{other.nproc}")
-
+        
         if self.parallel:
-            raise NotImplementedError
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._apply_with_single, fid, other_fid, 
+                                    action, export_to) 
+                                    for fid, other_fid in zip(self.filenames, 
+                                                              other.filenames)
+                                    ]
+                wait(futures)                   
         else:
-            # TODO impose a check that makes sure model parameters are matched
-            for par_a, par_b in zip(self.parameters, other.parameters):
-                for iproc in range(self.nproc):
-                    # Read in the data from both Models to memory
-                    fid_a = self.get_filename(i=iproc, val=par_a, ext=self.fmt)
-                    arr_a = self.read(fid_a)
-                    fid_b = other.get_filename(i=iproc, val=par_b, ext=self.fmt)
-                    arr_b = other.read(fid_b)
+            for fid, other_fid in zip(self.filenames, other.filenames):
+                self._apply_with_single(fid, other_fid, action, export_to)
+                        
+    def _apply_with_single(self, fid, other_fid, action, export_to=None):
+        """
+        Apply an action to a single parameter and processor, should be 
+        parallelized by a main calling function and not called individually
+    
+        :type fid: str
+        :param fid: full path to filename to read and maninpulate
+        :type action: str
+        :param action: action to perform using the `actions` functions
+        :type value: float
+        :param value: value to use in the `action`
+        :type export_to: str
+        :param export_to: path to the directory to export the action'ed file.
+            filename will match the input filename of `fid`
+        """
+        arr = self.read(filename=fid)
+        other_arr = self.read(filename=other_fid)
 
-                    if action == "dot":
-                        arr_out = dot(arr_a, arr_b)
-                    elif action == "multiply":
-                        arr_out = arr_a * arr_b
-                    elif action == "divide":
-                        arr_out = arr_a / arr_b
-                    elif action == "add":
-                        arr_out = arr_a + arr_b
-                    elif action == "subtract":
-                        arr_out = arr_a - arr_b
+        if action == "multiply":  # TODO this might be faster with NumPy?
+            arr *= other_arr
+        elif action == "divide": 
+            arr /= other_arr
+        elif action == "add":
+            arr += other_arr    
+        elif action == "dot":
+            arr = dot(arr, other_arr)
+        # ADD ADDITIONAL ACTIONS HERE
+        else:
+            raise NotImplementedError("`action` choice is not valid")
 
-                    if export_to:
-                        self.write(arr=arr_out, 
-                                   filename=os.path.join(export_to, fid_a))
+        fid_out = os.path.basename(fid)
+        self.write(arr=arr, filename=os.path.join(export_to, fid_out))
                         
     def _get_nproc(self):
         """
@@ -394,121 +423,121 @@ class Model:
         return flavor
 
     # SPECFEM2D-specific functions below
-    def _read_coordinates_specfem2d(self):
-        """
-        Attempt to read coordinate files from the given model definition.
-        This is only really useful for SPECFEM2D, where we can plot the
-        model, kernel and gradient using matplotlib.
+    # def _read_coordinates_specfem2d(self):
+    #     """
+    #     Attempt to read coordinate files from the given model definition.
+    #     This is only really useful for SPECFEM2D, where we can plot the
+    #     model, kernel and gradient using matplotlib.
 
-        .. warning
-            This will NOT work for SPECEFM3D. When you get to 3D, the
-            coordinates don't match up one-to-one with the model values so you
-            need external viewing software (e.g., ParaView) to plot.
+    #     .. warning
+    #         This will NOT work for SPECEFM3D. When you get to 3D, the
+    #         coordinates don't match up one-to-one with the model values so you
+    #         need external viewing software (e.g., ParaView) to plot.
 
-        :rtype: Dict
-        :return: a dictioanary with the X and Z coordinates read in from
-            a SPECFEM2D model, if applicable
-        """
-        coordinates = {"x": [], "z": []}
-        if self.fmt == ".bin":
-            coordinates["x"] = self._read_model_fortran_binary(parameter="x")
-            coordinates["z"] = self._read_model_fortran_binary(parameter="z")
-        elif self.fmt == ".dat":
-            fids = glob(os.path.join(self.path,
-                                     self.get_filename(val="*", ext=".dat")))
-            for fid in sorted(fids):
-                coordinates["x"].append(np.loadtxt(fid).T[:, 0])
-                coordinates["z"].append(np.loadtxt(fid).T[:, 0])
+    #     :rtype: Dict
+    #     :return: a dictioanary with the X and Z coordinates read in from
+    #         a SPECFEM2D model, if applicable
+    #     """
+    #     coordinates = {"x": [], "z": []}
+    #     if self.fmt == ".bin":
+    #         coordinates["x"] = self._read_model_fortran_binary(parameter="x")
+    #         coordinates["z"] = self._read_model_fortran_binary(parameter="z")
+    #     elif self.fmt == ".dat":
+    #         fids = glob(os.path.join(self.path,
+    #                                  self.get_filename(val="*", ext=".dat")))
+    #         for fid in sorted(fids):
+    #             coordinates["x"].append(np.loadtxt(fid).T[:, 0])
+    #             coordinates["z"].append(np.loadtxt(fid).T[:, 0])
 
-        # If no coordinates then move on, sometimes we don't save the 
-        # coordinates if we're just using the model for updates. But without
-        # coordinates the default plot functions will not work
-        if not list(coordinates["x"]) or not list(coordinates["z"]):
-            return None
+    #     # If no coordinates then move on, sometimes we don't save the 
+    #     # coordinates if we're just using the model for updates. But without
+    #     # coordinates the default plot functions will not work
+    #     if not list(coordinates["x"]) or not list(coordinates["z"]):
+    #         return None
 
-        # Internal check for parameter validity by checking length of coord
-        # against length of model. If they're not the same, then it's not
-        # useful to store coordinates because they can't be used for plotting
-        assert (len(coordinates["x"]) == len(coordinates["z"])), \
-            f"coordinate arrays do not match in length"
-        # Assuming all model parameters have the same length
-        assert (len(coordinates["x"]) ==
-                len(self.model[list(self.model.keys())[0]])), \
-            f"length of coordinates array does not match model length"
+    #     # Internal check for parameter validity by checking length of coord
+    #     # against length of model. If they're not the same, then it's not
+    #     # useful to store coordinates because they can't be used for plotting
+    #     assert (len(coordinates["x"]) == len(coordinates["z"])), \
+    #         f"coordinate arrays do not match in length"
+    #     # Assuming all model parameters have the same length
+    #     assert (len(coordinates["x"]) ==
+    #             len(self.model[list(self.model.keys())[0]])), \
+    #         f"length of coordinates array does not match model length"
 
-        return coordinates
+    #     return coordinates
 
-    def plot2d(self, parameter, cmap=None, show=True, title="", save=None):
-        """
-        TODO Consider moving this into a plotting utility
-        Plot internal model parameters as a 2D image plot.
+    # def plot2d(self, parameter, cmap=None, show=True, title="", save=None):
+    #     """
+    #     TODO Consider moving this into a plotting utility
+    #     Plot internal model parameters as a 2D image plot.
 
-        .. warning::
-            This is only available for SPECFEM2D models. SPECFEM3D model
-            coordinates do not match the model vectors (because the grids are
-            irregular) and cannot be visualized like this.
+    #     .. warning::
+    #         This is only available for SPECFEM2D models. SPECFEM3D model
+    #         coordinates do not match the model vectors (because the grids are
+    #         irregular) and cannot be visualized like this.
 
-        :type parameter: str
-        :param parameter: chosen internal parameter value to plot.
-        :type cmap: str
-        :param cmap: colormap which match available matplotlib colormap.
-            If None, will choose default colormap based on parameter choice.
-        :type show: bool
-        :param show: show the figure after plotting
-        :type title: str
-        :param title: optional title to prepend to some values that are
-            provided by default. Useful for adding information about iteration,
-            step count etc.
-        :type save: str
-        :param save: if not None, full path to figure to save the output image
-        """
-        assert (parameter in self._parameters), \
-            f"chosen `parameter` must be in {self._parameters}"
+    #     :type parameter: str
+    #     :param parameter: chosen internal parameter value to plot.
+    #     :type cmap: str
+    #     :param cmap: colormap which match available matplotlib colormap.
+    #         If None, will choose default colormap based on parameter choice.
+    #     :type show: bool
+    #     :param show: show the figure after plotting
+    #     :type title: str
+    #     :param title: optional title to prepend to some values that are
+    #         provided by default. Useful for adding information about iteration,
+    #         step count etc.
+    #     :type save: str
+    #     :param save: if not None, full path to figure to save the output image
+    #     """
+    #     assert (parameter in self._parameters), \
+    #         f"chosen `parameter` must be in {self._parameters}"
 
-        assert (self.coordinates is not None), (
-            f"`plot2d` function requires model coordinates which are only "
-            f"available for solver SPECFEM2D"
-        )
+    #     assert (self.coordinates is not None), (
+    #         f"`plot2d` function requires model coordinates which are only "
+    #         f"available for solver SPECFEM2D"
+    #     )
 
-        # Choose default colormap based on parameter values
-        if cmap is None:
-            if "kernel" in parameter:
-                cmap = "seismic_r"
-                zero_midpoint = True
-            else:
-                cmap = "Spectral"
-                zero_midpoint = False
+    #     # Choose default colormap based on parameter values
+    #     if cmap is None:
+    #         if "kernel" in parameter:
+    #             cmap = "seismic_r"
+    #             zero_midpoint = True
+    #         else:
+    #             cmap = "Spectral"
+    #             zero_midpoint = False
 
-        # 'Merge' the coordinate matrices to get a vector representation
-        x, z = np.array([]), np.array([])
-        for iproc in range(self.nproc):
-            x = np.append(x, self.coordinates["x"][iproc])
-            z = np.append(z, self.coordinates["z"][iproc])
-        data = self.merge(parameter=parameter)
+    #     # 'Merge' the coordinate matrices to get a vector representation
+    #     x, z = np.array([]), np.array([])
+    #     for iproc in range(self.nproc):
+    #         x = np.append(x, self.coordinates["x"][iproc])
+    #         z = np.append(z, self.coordinates["z"][iproc])
+    #     data = self.merge(parameter=parameter)
 
-        f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap,
-                                   zero_midpoint=zero_midpoint)
+    #     f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap,
+    #                                zero_midpoint=zero_midpoint)
 
-        # Set some figure labels based on information we know here
-        ax = plt.gca()
-        ax.set_xlabel("X [m]")
-        ax.set_ylabel("Z [m]")
-        # Allow User to title the figure, e.g., with iteration, step count etc.
-        _title = (f"{parameter.title()}_min = {data.min()};\n"
-                  f"{parameter.title()}_max = {data.max()};\n"
-                  f"{parameter.title()}_mean = {data.mean()}")
-        if title:
-            _title = f"{title}\n{_title}"
-        ax.set_title(_title)
-        cbar.ax.set_ylabel(parameter.title(), rotation=270, labelpad=15)
+    #     # Set some figure labels based on information we know here
+    #     ax = plt.gca()
+    #     ax.set_xlabel("X [m]")
+    #     ax.set_ylabel("Z [m]")
+    #     # Allow User to title the figure, e.g., with iteration, step count etc.
+    #     _title = (f"{parameter.title()}_min = {data.min()};\n"
+    #               f"{parameter.title()}_max = {data.max()};\n"
+    #               f"{parameter.title()}_mean = {data.mean()}")
+    #     if title:
+    #         _title = f"{title}\n{_title}"
+    #     ax.set_title(_title)
+    #     cbar.ax.set_ylabel(parameter.title(), rotation=270, labelpad=15)
 
-        if save:
-            plt.savefig(save)
-        if show:
-            plt.show()
+    #     if save:
+    #         plt.savefig(save)
+    #     if show:
+    #         plt.show()
 
  
-    def check(self, min_pr=-1., max_pr=0.5):
+    def check(self, arr, min_pr=-1., max_pr=0.5):
         """
         Checks parameters in the model. If Vs and Vp present, checks poissons
         ratio. Checks for negative velocity values. 
@@ -523,80 +552,71 @@ class Model:
         """
         # Checks to make sure the model is filled out, otherwise the following
         # checks will fail unexpectedly
-        for key, val in self.model.items():
-            # Make sure there are values in the model (not empty)
-            assert(val.size != 0), (
-                 f"SPECFEM_{self.flavor} model '{key}' has no values, please "
+        assert(arr.size != 0), (
+                 f"Model has no values, please "
                  f"check your input model `path_model_init` and the chosen "
                  f"`material` which controls the expected parameters"
                  )
-            # Make sure none of the values are NaNs
-            assert(not np.isnan(np.hstack(val).astype(float)).any()), (
-                 f"SPECFEM_{self.flavor} model '{key}' contains NaN values and "
-                 f"should not, please check your model construction"
-                 )
+        # Make sure none of the values are NaNs
+        assert(not np.isnan(arr)), (
+                f"Model contains NaN values and "
+                f"should not, please check your model construction"
+                )
+            
+        # # SPECFEM 2D and 3D parameters
+        # if "vs" in self.parameters and "vp" in self.parameters:
+        #     pr = poissons_ratio(vp=self.merge(parameter="vp"),
+        #                         vs=self.merge(parameter="vs"))
+        #     if pr.min() < 0:
+        #         logger.warning("minimum poisson's ratio is negative")
+        #     if pr.max() < min_pr:
+        #         logger.warning(f"maximum poisson's ratio out of bounds: "
+        #                        f"{pr.max():.2f} > {max_pr}")
+        #     if pr.min() > max_pr:
+        #         logger.warning(f"minimum poisson's ratio out of bounds: "
+        #                        f"{pr.min():.2f} < {min_pr}")
 
-        # Check the physicality of the parameters
-        if self.flavor in ["2D", "3D"]:
-            self._check_2d3d_parameters(min_pr, max_pr)
-        elif self.flavor == "3DGLOBE":
-            self._check_3dglobe_parameters(min_pr, max_pr)
+        # if "vs" in self.model and np.hstack(self.model.vs).min() < 0:
+        #     logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
 
-    def _check_2d3d_parameters(self, min_pr=-1., max_pr=0.5):
-        """
-        Checks parameters for SPECFEM2D and SPECFEM3D derived models
-        """
-        if "vs" in self.parameters and "vp" in self.parameters:
-            pr = poissons_ratio(vp=self.merge(parameter="vp"),
-                                vs=self.merge(parameter="vs"))
-            if pr.min() < 0:
-                logger.warning("minimum poisson's ratio is negative")
-            if pr.max() < min_pr:
-                logger.warning(f"maximum poisson's ratio out of bounds: "
-                               f"{pr.max():.2f} > {max_pr}")
-            if pr.min() > max_pr:
-                logger.warning(f"minimum poisson's ratio out of bounds: "
-                               f"{pr.min():.2f} < {min_pr}")
+        # if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
+        #     logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
 
-        if "vs" in self.model and np.hstack(self.model.vs).min() < 0:
-            logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
 
-        if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
-            logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
+        # # SPECFEM3D_GLOBE: Check Poisson's ratio for all (an)isotropic velocity 
+        # check = True
+        # for par in ["vs", "vsv", "vsh", "vp", "vpv", "vph"]:
+        #     if par not in self.parameters:
+        #         check = False
+        # if check:
+        #     for tag in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
+        #         for reg in self.regions:
+        #             par = f"{reg}_{tag}"
+        #             if par in self.model and \
+        #                     np.hstack(self.model[par]).min() < 0:
+        #                 logger.warning(f"{par} minimum for is negative "
+        #                             f"{self.model['par'].min()}")
+        #     for vs_par in ["vs", "vsv", "vsh"]:
+        #         for vp_par in ["vp", "vpv", "vph"]:
+        #             for reg in self.regions:
+        #                 vs_par = f"{reg}_{vs_par}"  # e.g., 'reg1_vsv'
+        #                 vp_par = f"{reg}_{vp_par}"
+        #                 if vs_par in self.parameters and \
+        #                     vp_par in self.parameters:
+        #                     pr = poissons_ratio(vp=self.merge(parameter=vp_par),
+        #                                         vs=self.merge(parameter=vs_par))
+        #                     if pr.min() < 0:
+        #                         logger.warning(f"minimum {vp_par}, {vs_par} "
+        #                                     f"poisson's ratio is negative")
+        #                     if pr.max() < min_pr:
+        #                         logger.warning(f"maximum {vp_par}, {vs_par} "
+        #                                     f"poisson's ratio out of bounds: "
+        #                                     f"{pr.max():.2f} > {max_pr}")
+        #                     if pr.min() > max_pr:
+        #                         logger.warning(f"minimum {vp_par}, {vs_par} "
+        #                                     f"poisson's ratio out of bounds: "
+        #                                     f"{pr.min():.2f} < {min_pr}")
 
-    def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
-        """
-        Checks parameters for SPECFEM3D_GLOBE derived models
-        """
-        # Check for negative velocities
-        for tag in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
-            for reg in self.regions:
-                par = f"{reg}_{tag}"
-                if par in self.model and \
-                        np.hstack(self.model[par]).min() < 0:
-                    logger.warning(f"{par} minimum for is negative "
-                                   f"{self.model['par'].min()}")
-
-        # Check Poisson's ratio for all (an)isotropic velocity combinations
-        for vs_par in ["vs", "vsv", "vsh"]:
-            for vp_par in ["vp", "vpv", "vph"]:
-                for reg in self.regions:
-                    vs_par = f"{reg}_{vs_par}"  # e.g., 'reg1_vsv'
-                    vp_par = f"{reg}_{vp_par}"
-                    if vs_par in self.parameters and vp_par in self.parameters:
-                        pr = poissons_ratio(vp=self.merge(parameter=vp_par),
-                                            vs=self.merge(parameter=vs_par))
-                        if pr.min() < 0:
-                            logger.warning(f"minimum {vp_par}, {vs_par} "
-                                           f"poisson's ratio is negative")
-                        if pr.max() < min_pr:
-                            logger.warning(f"maximum {vp_par}, {vs_par} "
-                                           f"poisson's ratio out of bounds: "
-                                           f"{pr.max():.2f} > {max_pr}")
-                        if pr.min() > max_pr:
-                            logger.warning(f"minimum {vp_par}, {vs_par} "
-                                           f"poisson's ratio out of bounds: "
-                                           f"{pr.min():.2f} < {min_pr}")
 
     def _read_model_ascii(self, parameter):
         """
