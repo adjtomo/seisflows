@@ -184,8 +184,7 @@ class Model:
         else:
             raise NotImplementedError
 
-    def loop_over(self, multiply_by=None, add_with=None, get_value=None,
-                  export_to=None):
+    def loop_over(self, action, value, export_to=None):
         """
         Loop over the model by processor and parameter in order to: extract
         information, scale by a constant, export the model to disk
@@ -196,20 +195,32 @@ class Model:
             exported to disk
         """
         if self.parallel:
-            raise NotImplementedError
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._update_model, par, iproc, action)
+                    for (par, iproc) in zip(self.parmaeters, self.nproc)
+                    ]
+                wait(futures)                   
         else:
             for par in self.parameters:
                 for iproc in range(self.nproc):
                     fid = self.get_filename(i=iproc, val=par, ext=self.fmt)
                     arr = self.read(filename=os.path.join(self.path, fid))
-                    if multiply_by:  # TODO this might be faster with NumPy?
-                        arr *= multiply_by
-                    if add_with:
-                        arr += add_with                        
-                    if export_to:
-                        self.write(arr=arr, 
-                                   filename=os.path.join(export_to, fid)
-                                   )
+                    arr_out = self.update_model(action, value)
+                        
+    def export_model():
+        """
+        TO DO finish creating this function that will take over all the actions
+        for exporting model and then feed it into the single and parallel tasks
+        """
+        if multiply_by:  # TODO this might be faster with NumPy?
+            arr *= multiply_by
+        if add_with:
+            arr += add_with                        
+        if export_to:
+            self.write(arr=arr, 
+                        filename=os.path.join(export_to, fid)
+                        )
                     
     def loop_with(self, other, action, export_to=None):
         """
