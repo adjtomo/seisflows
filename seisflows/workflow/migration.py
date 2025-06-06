@@ -24,7 +24,7 @@ import numpy as np
 from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 from seisflows.workflow.forward import Forward
 
 

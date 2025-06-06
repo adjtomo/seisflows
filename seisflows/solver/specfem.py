@@ -27,7 +27,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import get_task_id, Dict
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 

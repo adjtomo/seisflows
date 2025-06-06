@@ -35,7 +35,7 @@ from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
 from seisflows.tools.graphics import plot_optim_stats
 from seisflows.tools.math import angle, dot
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 from seisflows.plugins import line_search as line_search_dir
 
 

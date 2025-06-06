@@ -26,7 +26,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.workflow.migration import Migration
 from seisflows.tools import msg, unix
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 
 
 class Inversion(Migration):
