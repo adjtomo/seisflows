@@ -8,6 +8,7 @@ binary models. Processing is done in parallel to keep things efficient
     - Determine if we need a way to filter by parameter, currently we just 
       treat the entire model as a vector of values, which is fine but sometimes
       we may want to only deal with a single parameter?
+    - Determine how to efficiently take a dot product?
 """
 import os
 import numpy as np
@@ -46,8 +47,10 @@ class Model:
     for parameter in acceptable_parameters[:]:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
+    # Define acceptable actions for Model.apply()
+    acceptable_actions = ["*", "/", "+", "-"]
 
-    
+
     def __init__(self, path, fmt="", parameters=None, regions=None, 
                  parallel=True):
         """
@@ -159,9 +162,16 @@ class Model:
         parallel options to speed up the process of searching through large
         model arrays
         """
-        pass                                         
+        pass    
 
-    def apply(self, actions, values, other=None, export_to=None):
+    def dot(self, other):
+        """
+        Dot product of model with `other` model. Performs operations in serial
+        or parallel and returns a scalar output
+        """
+        pass
+
+    def apply(self, actions, values=None, other=None, export_to=None):
         """
         Main model function which manipulates the model with a given list of 
         `actions` and associated `values`. `actions` can also be performed
@@ -176,9 +186,9 @@ class Model:
             the other model, and all other `actions` will be applied to `values`    
             such that len(actions) == len(values) + 1. For example:
 
-            Model.apply(actions=["dot", "add"], values=[1], other=OtherModel)
+            Model.apply(actions=["*", "+"], values=[1], other=OtherModel)
 
-            will dot Model and OtherModel and then add 1 to the result.
+            will multiply Model and OtherModel and then add 1 to the result.
 
         .. note::
 
@@ -203,11 +213,10 @@ class Model:
         :param action: action to perform using the `actions` functions. 
             If using `other` model, then the first action will be applied and 
             can be one of the following:
-            - 'multiply': multiply the model by the other model values
-            - 'divide': divide the model by the `other` model values
-            - 'add': add the `other` model values to the model
-            - 'subtract': subtract the `other` model values from the model
-            - 'dot': dot product of the two models to get a scalar
+            - '*': multiply the model by the other model values
+            - '/': divide the model by the `other` model values
+            - '+': add the `other` model values to the model
+            - '-': subtract the `other` model values from the model
             If not using `other` model, then the actions can only be `multiply` 
             and `add`
         :type values: list of float
@@ -220,8 +229,10 @@ class Model:
             directory as the input model `self.path`, which means it overwrites
             the current model
         """
-        _acceptable_actions = ["multiply", "divide", "add", "subtract", "dot"]
-
+        # Default values is empty list so it can be compared
+        if values is None:
+            values = []
+            
         # If applying with another model, ensure matching Model characteristics
         if other:
             assert(self.fmt == other.fmt), (
@@ -241,8 +252,8 @@ class Model:
         
         # Check that actions are acceptable
         for action in actions:
-            assert(action in _acceptable_actions), (
-                f"action must be in {_acceptable_actions}, not {action}"
+            assert(action in self.acceptable_actions), (
+                f"action must be in {self.acceptable_actions}, not {action}"
             )
 
         # Set export location, defaults to overwriting current model 
@@ -285,6 +296,7 @@ class Model:
         parallelized by a main calling function and not called individually
 
         .. note::
+        
             - Multiplying with NumPy is the same speed as np.multiply
               https://stackoverflow.com/questions/49493482/\
                   numpy-np-multiply-vs-operator
@@ -293,9 +305,9 @@ class Model:
         :param fid: full path to filename to read and maninpulate
         :type action: str
         :param action: action to perform using the `actions` functions
-            - 'multiply': multiply the model by `value`. If you want to divide
+            - '*': multiply the model by `value`. If you want to divide
               then `multiply` by `1/value`
-            - 'add': add `value` to the model. If you want to subtract
+            - '+': add `value` to the model. If you want to subtract
                 then `add` by `-1*value`
             
         :type value: float
@@ -309,9 +321,9 @@ class Model:
         arr = self.read(filename=fid)
 
         for action, value in zip(actions, values):
-            if action == "multiply": 
+            if action == "*": 
                 arr *= value
-            elif action == "add":
+            elif action == "+":
                 arr += value    
             # > ADD ADDITIONAL ACTIONS HERE
 
@@ -340,23 +352,21 @@ class Model:
         other_action, *actions = actions  # first action applied to other model
 
         # Apply the first action to both models 
-        if other_action == "multiply": 
+        if other_action == "*": 
             arr *= other_arr
-        elif other_action == "divide": 
+        elif other_action == "/": 
             arr /= other_arr
-        elif other_action == "add":
+        elif other_action == "+":
             arr += other_arr    
-        elif other_action == "subtract":
+        elif other_action == "-":
             arr -= other_arr
-        elif other_action == "dot":
-            arr = np.dot(arr, other_arr)
 
         # This is repeated from `_apply_single` but it's short enough.
         # This will get skipped if there are no other `actions`` to apply
         for action, value in zip(actions, values):
-            if action == "multiply": 
+            if action == "*": 
                 arr *= value
-            elif action == "add":
+            elif action == "+":
                 arr += value    
             # > ADD ADDITIONAL ACTIONS HERE
 
