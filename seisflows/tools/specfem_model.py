@@ -2,17 +2,18 @@
 """
 A class for interfacing with SPECFEM velocity models, used to manipulate SPECFEM 
 binary models. Processing is done in parallel to keep things efficient
+
+.. TODO::
+    - Add support for SPECFEM2D ASCII models
+    - Determine if we need a way to filter by parameter, currently we just 
+      treat the entire model as a vector of values, which is fine but sometimes
+      we may want to only deal with a single parameter?
 """
-from math import e
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
-from seisflows import logger
 from seisflows.tools import unix
-from seisflows.tools.math import poissons_ratio, dot
-from seisflows.tools.graphics import plot_2d_image
 from seisflows.tools.specfem import read_fortran_binary, write_fortran_binary
 
 
@@ -102,7 +103,7 @@ class Model:
 
         # Check that required files exist within the `path` for each parameter
         for par in self.parameters:
-            assert(glob(os.path.join(path, self.get_filename(val=par, 
+            assert(glob(os.path.join(path, self._get_filename(val=par, 
                                                              ext=self.fmt)))), \
                 f"Model `path` contains no match for parameter {par}"
             
@@ -111,35 +112,8 @@ class Model:
         self.filenames = []
         for par in sorted(self.parameters):
             for iproc in range(self.nproc):
-                filename = self.get_filename(i=iproc, val=par, ext=self.fmt)
+                filename = self._get_filename(i=iproc, val=par, ext=self.fmt)
                 self.filenames.append(os.path.join(self.path, filename))
-
-    def get_filename(self, i="*", val="*", ext="*"):
-        """
-        Expected SPECFEM filename format with some checks to ensure that
-        wildcards and numbers are accepted. An example filename is:
-        'proc000001_vs.bin'
-
-        :type i: int or str
-        :param i: processor number or wildcard. If given as an integer, will be
-            converted to a 6 digit zero-leading value to match SPECFEM format
-        :type val: str
-        :param val: parameter value (e.g., 'vs') or wildcard
-        :type ext: str
-        :param ext: the file format (e.g., '.bin'). If NOT preceded by a '.'
-            will have one prepended
-        :rtype: str
-        :return: filename formatter for use in model manipulation
-        """
-        if not ext.startswith("."):
-            ext = f".{ext}"
-
-        if isinstance(i, int):
-            filename_format = f"proc{i:0>6}_{val}{ext}"
-        else:
-            filename_format = f"proc{i}_{val}{ext}"
-
-        return filename_format
     
     def read(self, filename):
         """
@@ -177,66 +151,43 @@ class Model:
             write_fortran_binary(arr=arr, filename=filename)
         else:
             raise NotImplementedError
-                                             
-    def apply(self, action, value, export_to=None):
-        """
-        Loop over the model by processor and parameter in order to: extract
-        information, scale by a constant, export the model to disk
     
-        :type action: str
-        :param action: action to perform using the `actions` functions
-        :type value: float
-        :param value: value to use in the `action`
-        :type export_to: str
-        :param export_to: path to the directory to export the action'ed file.
-            filename will match the input filename of `fid`
+    def get(self, action, value):
         """
-        if self.parallel:
-            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-                futures = [
-                    executor.submit(self._apply_single, fid, action, 
-                                    value, export_to) for fid in self.filenames
-                                    ]
-                wait(futures)                   
-        else:
-            for fid in self.filenames:
-                self._apply_single(fid, action, value, export_to)
-                    
-    def _apply_single(self, fid, action, value, export_to=None):
+        Find some value in the model based on the `action` and `value`, e.g.,
+        the maximum value, the minimum value, the mean value, etc. Provides
+        parallel options to speed up the process of searching through large
+        model arrays
         """
-        Apply an action to a single parameter and processor, should be 
-        parallelized by a main calling function and not called individually
-    
-        :type fid: str
-        :param fid: full path to filename to read and maninpulate
-        :type action: str
-        :param action: action to perform using the `actions` functions
-        :type value: float
-        :param value: value to use in the `action`
-        :type export_to: str
-        :param export_to: path to the directory to export the action'ed file.
-            filename will match the input filename of `fid`
-        """
-        arr = self.read(filename=fid)
+        pass                                         
 
-        if action == "multiply":  # TODO this might be faster with NumPy?
-            arr *= value
-        elif action == "divide": 
-            arr /= value
-        elif action == "add":
-            arr += value    
-        # ADD ADDITIONAL ACTIONS HERE
-        else:
-            raise NotImplementedError("`action` choice is not valid")
-
-        fid_out = os.path.basename(fid)
-        self.write(arr=arr, filename=os.path.join(export_to, fid_out))
-                    
-    def apply_with(self, other, action, export_to=None):
+    def apply(self, actions, values, other=None, export_to=None):
         """
-        Loop over model with another Model that must have the same vector 
-        length (same number of processors and parameters) in order to 
-        manipulate the two Models together
+        Main model function which manipulates the model with a given list of 
+        `actions` and associated `values`. `actions` can also be performed
+        with `other` Models, such as dot products or element-wise processes. 
+        Lists of actions and values allow chaining of actions in one process
+        so that everything can be done in RAM rather than requiring multiple
+        reads and writes to disk.
+
+        .. note::
+
+            If using `other`, the FIRST action in `actions` will be applied to
+            the other model, and all other `actions` will be applied to `values`    
+            such that len(actions) == len(values) + 1. For example:
+
+            Model.apply(actions=["dot", "add"], values=[1], other=OtherModel)
+
+            will dot Model and OtherModel and then add 1 to the result.
+
+        .. note::
+
+            If NOT using `other`, then `actions` must match `values` in length.
+            For example:
+
+            Model.apply(actions=["multiply", "add"], values=[2, 1])
+
+            Will multiply the model by 2 and then add 1 to the result.
 
         .. note::
 
@@ -248,33 +199,127 @@ class Model:
         :param other: the `other` model to loop over. Can have different 
             parameters (e.g., model and kernel) but must match format and
             nproc in order to loop with model
+        :type action: list of str
+        :param action: action to perform using the `actions` functions. 
+            If using `other` model, then the first action will be applied and 
+            can be one of the following:
+            - 'multiply': multiply the model by the other model values
+            - 'divide': divide the model by the `other` model values
+            - 'add': add the `other` model values to the model
+            - 'subtract': subtract the `other` model values from the model
+            - 'dot': dot product of the two models to get a scalar
+            If not using `other` model, then the actions can only be `multiply` 
+            and `add`
+        :type values: list of float
+        :param values: list of values to use in the `actions`. Must match the
+            length of `actions`. 
         :type export_to: str
         :param export_to: path to export the model values to disk. The filenames
             of the exported files will match the input filenames of this Model,
-            not the `other` model
+            not the `other` model. If not given, will export to the same
+            directory as the input model `self.path`, which means it overwrites
+            the current model
         """
-        # Ensure that Model characteristics match 
-        assert(self.fmt == other.fmt), (
-            f"Model format {self.fmt} does not match other model "
-            f"{other.fmt}")
-        assert(self.nproc == other.nproc), (
-            f"Model nproc {self.nproc} do not match other model "
-            f"{other.nproc}")
-        
-        if self.parallel:
-            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-                futures = [
-                    executor.submit(self._apply_with_single, fid, other_fid, 
-                                    action, export_to) 
-                                    for fid, other_fid in zip(self.filenames, 
-                                                              other.filenames)
-                                    ]
-                wait(futures)                   
+        _acceptable_actions = ["multiply", "divide", "add", "subtract", "dot"]
+
+        # If applying with another model, ensure matching Model characteristics
+        if other:
+            assert(self.fmt == other.fmt), (
+                f"Model format {self.fmt} does not match other model "
+                f"{other.fmt}")
+            assert(self.nproc == other.nproc), (
+                f"Model nproc {self.nproc} do not match other model "
+                f"{other.nproc}")
+            assert(len(actions) == len(values) + 1), (
+                f"actions must be 1 longer than values if using `other` model, "
+                f"because first action is applied to `other` model"
+            )
         else:
-            for fid, other_fid in zip(self.filenames, other.filenames):
-                self._apply_with_single(fid, other_fid, action, export_to)
-                        
-    def _apply_with_single(self, fid, other_fid, action, export_to=None):
+            assert(len(actions) == len(values)), (
+                f"actions must match values in length"
+            )
+        
+        # Check that actions are acceptable
+        for action in actions:
+            assert(action in _acceptable_actions), (
+                f"action must be in {_acceptable_actions}, not {action}"
+            )
+
+        # Set export location, defaults to overwriting current model 
+        if export_to is None:
+            export_to = self.path
+            
+        # If no `other` model is given, then we only deal with the current model
+        if other is None:
+            if self.parallel:
+                with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                    futures = [
+                        executor.submit(self._apply_single, fid, actions, 
+                                        values, export_to) 
+                                        for fid in self.filenames
+                                        ]
+                    wait(futures)                   
+            else:
+                for fid in self.filenames:
+                    self._apply_single(fid, actions, values, export_to)
+                    
+        # If `other` model is given, then we loop over the two models together
+        else:
+            if self.parallel:
+                with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                    futures = [
+                        executor.submit(self._apply_with_single, fid, other_fid, 
+                                        actions, values, export_to) 
+                                        for fid, other_fid in zip(self.filenames, 
+                                                                other.filenames)
+                                        ]
+                    wait(futures)                   
+            else:
+                for fid, other_fid in zip(self.filenames, other.filenames):
+                    self._apply_with_single(fid, other_fid, actions, values, 
+                                            export_to)
+
+    def _apply_single(self, fid, actions, values, export_to):
+        """
+        Apply an action to a single parameter and processor, this should be 
+        parallelized by a main calling function and not called individually
+
+        .. note::
+            - Multiplying with NumPy is the same speed as np.multiply
+              https://stackoverflow.com/questions/49493482/\
+                  numpy-np-multiply-vs-operator
+    
+        :type fid: str
+        :param fid: full path to filename to read and maninpulate
+        :type action: str
+        :param action: action to perform using the `actions` functions
+            - 'multiply': multiply the model by `value`. If you want to divide
+              then `multiply` by `1/value`
+            - 'add': add `value` to the model. If you want to subtract
+                then `add` by `-1*value`
+            
+        :type value: float
+        :param value: value to use in the `action`
+        :type export_to: str
+        :param export_to: path to the directory to export the action'ed file.
+            filename will match the input filename of `fid`. If None then
+            will export to the same path as the input model `self.path`, which
+            is an inplace action
+        """
+        arr = self.read(filename=fid)
+
+        for action, value in zip(actions, values):
+            if action == "multiply": 
+                arr *= value
+            elif action == "add":
+                arr += value    
+            # > ADD ADDITIONAL ACTIONS HERE
+
+        fid_out = os.path.basename(fid)
+        self.write(arr=arr, filename=os.path.join(export_to, fid_out))
+                                           
+    def _apply_with_single(self, fid, other_fid, actions, values, 
+                           export_to=None):
         """
         Apply an action to a single parameter and processor, should be 
         parallelized by a main calling function and not called individually
@@ -292,20 +337,58 @@ class Model:
         arr = self.read(filename=fid)
         other_arr = self.read(filename=other_fid)
 
-        if action == "multiply":  # TODO this might be faster with NumPy?
+        other_action, *actions = actions  # first action applied to other model
+
+        # Apply the first action to both models 
+        if other_action == "multiply": 
             arr *= other_arr
-        elif action == "divide": 
+        elif other_action == "divide": 
             arr /= other_arr
-        elif action == "add":
+        elif other_action == "add":
             arr += other_arr    
-        elif action == "dot":
-            arr = dot(arr, other_arr)
-        # ADD ADDITIONAL ACTIONS HERE
-        else:
-            raise NotImplementedError("`action` choice is not valid")
+        elif other_action == "subtract":
+            arr -= other_arr
+        elif other_action == "dot":
+            arr = np.dot(arr, other_arr)
+
+        # This is repeated from `_apply_single` but it's short enough.
+        # This will get skipped if there are no other `actions`` to apply
+        for action, value in zip(actions, values):
+            if action == "multiply": 
+                arr *= value
+            elif action == "add":
+                arr += value    
+            # > ADD ADDITIONAL ACTIONS HERE
 
         fid_out = os.path.basename(fid)
         self.write(arr=arr, filename=os.path.join(export_to, fid_out))
+
+    def _get_filename(self, i="*", val="*", ext="*"):
+        """
+        Expected SPECFEM filename format with some checks to ensure that
+        wildcards and numbers are accepted. An example filename is:
+        'proc000001_vs.bin'
+
+        :type i: int or str
+        :param i: processor number or wildcard. If given as an integer, will be
+            converted to a 6 digit zero-leading value to match SPECFEM format
+        :type val: str
+        :param val: parameter value (e.g., 'vs') or wildcard
+        :type ext: str
+        :param ext: the file format (e.g., '.bin'). If NOT preceded by a '.'
+            will have one prepended
+        :rtype: str
+        :return: filename formatter for use in model manipulation
+        """
+        if not ext.startswith("."):
+            ext = f".{ext}"
+
+        if isinstance(i, int):
+            filename_format = f"proc{i:0>6}_{val}{ext}"
+        else:
+            filename_format = f"proc{i}_{val}{ext}"
+
+        return filename_format
                         
     def _get_nproc(self):
         """
@@ -320,19 +403,18 @@ class Model:
             # Globe version requires the region number in the wild card
             par = self.parameters[0]
             nproc = len(glob(
-                os.path.join(self.path, self.get_filename(val=par, 
+                os.path.join(self.path, self._get_filename(val=par, 
                                                           ext=self.fmt)))
             )
         elif self.fmt == ".dat":
             # e.g., files contain all parameters e.g., 'proc000000_rho_vp_vs'
             fids = glob(os.path.join(self.path, 
-                                     self.get_filename(val="*", ext=self.fmt))
+                                     self._get_filename(val="*", ext=self.fmt))
                                      )
             nproc = len(fids) + 1  # indexing starts at 0
         else:
             raise NotImplementedError(f"{self.fmt} is not yet supported by "
                                       f"SeisFlows")
-
 
         return nproc
     
@@ -346,7 +428,7 @@ class Model:
             Currently not used, but may be helpful in the future
         """
         fids = glob(os.path.join(self.path, 
-                                 self.get_filename(val="*", ext=self.fmt))
+                                 self._get_filename(val="*", ext=self.fmt))
                                  )
         fids = [os.path.basename(_) for _ in fids]  # drop full path
         fids = [os.path.splitext(_)[0] for _ in fids]  # drop extension
@@ -444,7 +526,7 @@ class Model:
     #         coordinates["z"] = self._read_model_fortran_binary(parameter="z")
     #     elif self.fmt == ".dat":
     #         fids = glob(os.path.join(self.path,
-    #                                  self.get_filename(val="*", ext=".dat")))
+    #                                  self._get_filename(val="*", ext=".dat")))
     #         for fid in sorted(fids):
     #             coordinates["x"].append(np.loadtxt(fid).T[:, 0])
     #             coordinates["z"].append(np.loadtxt(fid).T[:, 0])
@@ -632,7 +714,7 @@ class Model:
         :return: vector of model values for given `parameter`
         """
         fids = glob(os.path.join(self.path, 
-                                 self.get_filename()(val="*", ext=".dat")))
+                                 self._get_filename()(val="*", ext=".dat")))
         _, *available_parameters = fids[0].split("_")
         assert (parameter in available_parameters), (
             f"{parameter} not available for ASCII model"

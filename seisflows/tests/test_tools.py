@@ -22,26 +22,49 @@ def test_model_read():
     """
     parameters = ["c11", "c22", "c33"]
     m = Model(path=TEST_MODEL, parameters=parameters)
-    assert(m.flavor == "3D")
     assert(m.fmt == ".bin")
     assert(m.nproc == 48)
     assert(len(m.filenames) == m.nproc * len(parameters))
 
 
-def test_model_loop_single(tmpdir):
+def test_model_apply_wo_other(tmpdir):
     """
-    Test the core merge and split functions of the Model class to ensure
-    they give the same results
+    Test out the main apply function without involving another model
+    """
+    m = Model(path=TEST_MODEL, parameters=["c11", "c22", "c33"], parallel=False)
+    arr = m.read(m.filenames[0])
+    
+    # Make sure there are values in the model
+    assert(arr.max() != 0.)
+
+    # Multiply the input array by 0 and export, check that this works as expect
+    m.apply(actions=["multiply"], values=[0], export_to=tmpdir)
+
+    # Read the output model and check that the values are all 0
+    m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], parallel=False)
+    arr_out = m_out.read(m_out.filenames[0])
+    assert((arr_out == 0).all())
+
+
+def test_model_apply_chain_wo_other(tmpdir):
+    """
+    Test chaining of multiple actions without other model
     """
     m = Model(path=TEST_MODEL, parameters=["c11", "c22", "c33"], parallel=False)
     arr = m.read(m.filenames[0])
     assert(arr.max() != 0.)
 
-    # Multiply the input array by 0 and export, check that this works as expect
-    m.apply(action="multiply", value=0, export_to=tmpdir)
-    m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], fmt=m.fmt)
+    # Test out the addition/subtraction feature and chaining actions
+    actions = ["multiply", "add", "add"] 
+    values = [0, -1, 3]
+    check_output = sum(values) 
+
+    m_out.apply(actions=actions, values=values, export_to=tmpdir)
+    m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], parallel=False)
     arr_out = m_out.read(m_out.filenames[0])
-    assert(arr_out.max() == 0.)
+
+    assert((arr_out == check_output).all())
+
 
 def test_model_loop_parallel(tmpdir):
     """
@@ -49,12 +72,22 @@ def test_model_loop_parallel(tmpdir):
     """
     m = Model(path=TEST_MODEL, parameters=["c11", "c22", "c33"], parallel=True)
     arr = m.read(m.filenames[0])
+    # Make sure there are values in the model
     assert(arr.max() != 0.)
 
+    # Multiply the input array by 0 and export, check that this works as expect
     m.apply(action="multiply", value=0, export_to=tmpdir)
-    m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], fmt=m.fmt)
+
+    # Read the output model and check that the values are all 0
+    m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], parallel=True)
     arr_out = m_out.read(m_out.filenames[0])
-    assert(arr_out.max() == 0.)
+    assert((arr_out == 0).all())
+
+    # Test out the addition feature 
+    m_out.apply(action="add", value=-1, export_to=tmpdir)
+    m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], parallel=True)
+    arr_out = m_out.read(m_out.filenames[0])
+    assert((arr_out == -1.).all())
 
 # def test_model_io(tmpdir):
 #     """
