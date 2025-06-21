@@ -163,6 +163,8 @@ def test_model_apply_w_other_serial(tmpdir, test_model_serial,
                                     test_model_other_serial):
     """
     Test out the main apply function without involving another model
+
+    TODO: better checks on this test
     """
     # Run through all the actions and check if values changed
     arr = test_model_serial.read(test_model_serial.filenames[0])
@@ -182,12 +184,32 @@ def test_model_apply_w_other_serial(tmpdir, test_model_serial,
         arr_check = m.read(m.filenames[0])
         assert(arr[0] != arr_check[0])
 
-    # # Read the output model and check that the values are all 0
-    # m_out = Model(path=tmpdir, parameters=["c11", "c22", "c33"], parallel=False)
-    # arr_out = m_out.read(m_out.filenames[0])
-    # assert((arr_out == 0).all())
 
+def test_model_apply_w_other_parallel(tmpdir, test_model_parallel, 
+                                      test_model_other_parallel):
+    """
+    Test out the main apply function without involving another model
 
+    TODO: better checks on this test
+    """
+    # Run through all the actions and check if values changed
+    arr = test_model_parallel.read(test_model_parallel.filenames[0])
+    arr_other = test_model_other_parallel.read(
+        test_model_other_parallel.filenames[0])
+    assert(arr != arr_other).all()
+    
+    # To ensure this doesn't interfere with the `other` model which is in tmpdir
+    export_to = os.path.join(tmpdir, "exported_model")
+
+    for action in test_model_parallel.acceptable_actions:
+        print(action)
+        test_model_parallel.apply(actions=[action], 
+                                  other=test_model_other_parallel,
+                                  export_to=export_to)
+        m = Model(path=export_to, parameters=["c11", "c22", "c33"], 
+                  parallel=False)
+        arr_check = m.read(m.filenames[0])
+        assert(arr[0] != arr_check[0])
 
 
 def test_custom_import():

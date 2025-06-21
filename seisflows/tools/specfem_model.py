@@ -155,14 +155,52 @@ class Model:
         else:
             raise NotImplementedError
     
-    def get(self, action, value):
+    def get(self, what):
         """
-        Find some value in the model based on the `action` and `value`, e.g.,
-        the maximum value, the minimum value, the mean value, etc. Provides
-        parallel options to speed up the process of searching through large
-        model arrays
+        Find some value in the model based on `what` you want
+
+        :type what: str
+        :param what: the value to find in the model, one of:
+            - 'max': maximum value in the model
+            - 'min': minimum value in the model
+            - 'sum': sum of all values in the model
         """
-        pass    
+        if self.parallel:
+            # !!! CHECK THIS I don't think it preserves order or even works
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._get_single, fid, what)
+                                    for fid in self.filenames
+                                    ]
+                wait(futures)     
+            vals = [f.result() for f in futures]              
+        else:
+            vals = []
+            for fid in self.filenames:
+                vals.append(self._get_single(fid, what))
+
+        # Combine all the values returned from the indvidual files
+        if what == "max":
+            return np.max(vals)
+        elif what == "min":
+            return np.min(vals)
+        elif what == "sum":  # !!! CHECK THIS
+            return np.sum(vals)
+
+    def _get_single(self, filename, what):
+        """
+        Get a single value from a single file in the model, used by `get` to
+        """    
+        if what == "max":
+            return np.max(self.read(filename))
+        elif what == "min":
+            return np.min(self.read(filename))
+        elif what == "mean":
+            return np.mean(self.read(filename))
+        elif what == "sum":
+            return np.sum(self.read(filename))
+        else:
+            raise ValueError(f"Unknown action {what} for Model.get()")
 
     def dot(self, other):
         """
