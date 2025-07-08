@@ -50,7 +50,7 @@ class Chinook(Slurm):
         self.submit_to = submit_to or self.partition
 
         self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,
-                            "t1standard": 40, "t2standard": 40, "analysis": 28
+                            "t1standard": 28, "t2standard": 28, "analysis": 28
                             }
 
     @property
@@ -116,6 +116,7 @@ class Chinook(Slurm):
              f"sbatch",
              f"{self.slurm_args or ''}",
              f"--job-name={self.title}",
+             f"--nodes={self.nodes}",
              f"--ntasks={self.nproc:d}",
              f"--partition={self.partition}",
              f"--time={tasktime}",
