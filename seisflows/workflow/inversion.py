@@ -409,12 +409,6 @@ class Inversion(Migration):
             super().evaluate_initial_misfit(save_residuals=save_residuals,
                                             **kwargs)
 
-            # Expose the initial model to the optimization library
-            model = Model(path=self.path.model_init,
-                          parameters=self.solver._parameters,
-                          regions=self.solver._regions  # req. for 3D_GLOBE only
-                          )
-            self.optimize.save_vector(name="m_new", m=model)
         else:
             # Thrifty inversion SKIPS initial misfit evaluation, re-using final
             # model from previous line search. This can only happen mid-workflow
@@ -427,12 +421,6 @@ class Inversion(Migration):
             # Non-Thrifty, run forward simulation with previous model.
             else:
                 logger.info(msg.mnr("EVALUATING MISFIT FOR MODEL `m_new`"))
-
-                # Previous line search will have saved `m_new` as the initial
-                # model, export in SPECFEM format to be discoverable by solver
-                path_model = os.path.join(self.path.eval_grad, "model")
-                m_new = self.optimize.load_vector("m_new")
-                m_new.write(path=path_model)
 
                 super().evaluate_initial_misfit(path_model=path_model,
                                                 save_residuals=save_residuals,
@@ -492,6 +480,7 @@ class Inversion(Migration):
         """
         super().evaluate_gradient_from_kernels()
 
+        # Rename OUTPUT directories to honor iteration number
         for tag in ["gradient", "kernels"]:
             # e.g., 'gradient' -> 'GRADIENT_01'
             src = os.path.join(self.path.output, tag)
@@ -502,13 +491,6 @@ class Inversion(Migration):
                     unix.rm(dst)
                 logger.debug(f"{src} -> {dst}")
                 unix.mv(src, dst)
-
-        # Expose the gradient to the optimization library
-        logger.info("exposing gradient `g_new` to optimization library")
-        gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"),
-                         regions=self.solver._regions
-                         )
-        self.optimize.save_vector(name="g_new", m=gradient)
 
         # Compute search direction `p_new`: P is used to perturb starting model
         # and is required for the line search 

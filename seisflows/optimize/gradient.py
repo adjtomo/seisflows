@@ -130,10 +130,6 @@ class Gradient:
 
         # Internally used parameters for keeping track of optimization
         self._restarted = False
-        self._acceptable_vectors = ["m_new", "m_old", "m_try",
-                                    "g_new", "g_old", "g_try",
-                                    "p_new", "p_old", "alpha",
-                                    "f_new", "f_old", "f_try"]
         self._acceptable_preconditioners = ["diagonal"]
 
         # .title() ensures we grab the class and not the module
@@ -141,6 +137,11 @@ class Gradient:
             line_search_dir, line_search_method.title())(
                                         step_count_max=step_count_max
                                         )
+        
+        # Set internal paths to storage locations of models, gradients, etc.
+        for tag in ["m_new", "m_old", "m_try", "g_new", "g_old", "g_try",
+                    "p_new", "p_old", "alpha", "f_new", "f_old", "f_try"]:
+            self.path[f"_{tag}"] = os.path.join(self.path.scratch, tag)
 
     def __str__(self):
         """Quickly access underlying line search search history, mostly for
@@ -194,78 +195,6 @@ class Gradient:
         # Load checkpoint (if resuming) or save current checkpoint
         self.load_checkpoint()
         self.checkpoint()  # will be empty
-
-    # def load_vector(self, name):
-    #     """
-    #     Convenience function to access the full paths of model and gradient
-    #     vectors that are saved to disk. Corresponding `save_vector` function
-    #     saves vectors into the correct location and format that can be loaded
-    #     by this function.
-
-    #     .. note::
-
-    #         Model, gradient and misfit vectors are named as follows:
-    #         m_new: current model
-    #         m_old: previous model
-    #         m_try: line search model
-    #         f_new: current objective function value
-    #         f_old: previous objective function value
-    #         f_try: line search function value
-    #         g_new: current gradient direction
-    #         g_old: previous gradient direction
-    #         p_new: current search direction
-    #         p_old: previous search direction
-    #         alpha: trial search direction (aka p_try)
-
-    #     :type name: str
-    #     :param name: name of the vector, acceptable: m, g, p, f, alpha
-    #     :rtype: Model, vector or float
-    #     :return: loaded vector corresponding to `name` that may take on 
-    #         different type based on which vector it is
-    #     """
-    #     assert(name in self._acceptable_vectors)
-
-    #     model = os.path.join(self.path.scratch, f"{name}")
-    #     model_npy = os.path.join(self.path.scratch, f"{name}.npy")
-    #     model_txt = os.path.join(self.path.scratch, f"{name}.txt")
-
-    #     if os.path.exists(model):
-    #         model = Model(path=model)
-    #     elif os.path.exists(model_npy):
-    #         model = np.load(model_npy)
-    #     elif os.path.exists(model_txt):
-    #         model = float(np.loadtxt(model_txt))
-    #     else:
-    #         raise FileNotFoundError(f"no optimization file found for '{name}'")
-
-    #     return model
-
-    # def save_vector(self, name, m):
-    #     """
-    #     Convenience function to save/overwrite vectors on disk. Corresponding
-    #     function `load_vector` loads in vectors that have been saved with
-    #     this function
-
-    #     :type name: str
-    #     :param name: name of the vector to save or overwrite
-    #     :type m: seisflows.tools.specfem.Model or float
-    #     :param m: Model, vector, or value to save to disk 
-    #     """
-    #     assert(name in self._acceptable_vectors)
-
-    #     if isinstance(m, Model):
-    #         path = os.path.join(self.path.scratch, f"{name}")
-    #         unix.rm(path)  # ensure that no old files are stored here
-    #         unix.mkdir(path)
-    #         m.write(path=path)  # write in the same format as SPECFEM uses
-    #     elif isinstance(m, np.ndarray):
-    #         path = os.path.join(self.path.scratch, f"{name}.npy")
-    #         np.save(path=path)
-    #     elif isinstance(m, (float, int)):
-    #         path = os.path.join(self.path.scratch, f"{name}.txt")
-    #         np.savetxt(path, [m])
-    #     else:
-    #         raise TypeError(f"optimize.save unrecognized type error {type(m)}")
 
     def checkpoint(self):
         """
@@ -347,11 +276,18 @@ class Gradient:
         :raises SystemError: if the search direction is 0, signifying a zero
             gradient which will not do anything in an update
         """
-        p_new = Model(path=os.path.join(self.path.scratch, "g_new"))
-        # p_new = g_new.copy()
-        p_new.update(vector=-1 * self._precondition(p_new.vector))
-
-        if sum(p_new.vector) == 0:
+        g_new = Model(path=self.path._g_new)
+        if self.preonditioner:
+            precon = Model(path=self.path.preconditioner) 
+            g_new.apply(actions=["*", "*"], other=precon, values=[-1.0], 
+                        export_to=self.path._p_new)
+        else:
+            g_new.apply(actions=["*"], values=[-1.0], 
+                        export_to=self.path._p_new)
+            
+        # Check the newly created search direction vector 
+        p_new = Model(path=self.path._p_new)
+        if p_new.get("sum") == 0:
             logger.critical(msg.cli(
                 "Search direction vector 'p' is 0, meaning no model update can "
                 "take place. Please check your gradient and waveform misfits. "
@@ -360,21 +296,20 @@ class Gradient:
             )
             sys.exit(-1)
 
-        return p_new
-
     def initialize_search(self):
         """
         Setup a the line search machinery by inputting values for the initial
         model. Also contains a check to see if the line search has been 
         restarted.
         """
+        # !!! How to deal with f which is just a float?
         f = self.load_vector("f_new")  # current misfit value from preprocess
-        g = self.load_vector("g_new")  # current gradient from scaled kernels
-        p = self.load_vector("p_new")  # current search direction
+        g = Model(path=self.path._g_new)  # current gradient
+        p = Model(path=self.path._p_new)  # current search direction
         
         logger.info("calculating gradient dot products GTG and GTP")
-        gtg = dot(g.vector, g.vector)
-        gtp = dot(g.vector, p.vector)
+        gtg = g.dot(g)
+        gtp = g.dot(p)
 
         # Restart plugin line search if the optimization library restarts, 
         # restart conditions are determined in `Optimize.compute_direction()`
@@ -432,6 +367,7 @@ class Gradient:
             'PASS': line search was successful, you can terminate the search
             'FAIL': line search has failed for one or more reasons.
         """
+        # !!! BCBC 6-20-25 LEFT OFF HERE
         # Used as checks to determine where we are in the inversion
         first_iteration = bool(self._line_search.step_lens.count(0) == 1)
         first_step = bool(self.step_count == 1)
