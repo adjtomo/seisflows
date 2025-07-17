@@ -3,6 +3,7 @@ channels:
     - conda-forge
 dependencies:
     - pip
+    - numpy<2.0.0  # requires PyASDF update
     - obspy
     - cartopy
     - pyyaml
