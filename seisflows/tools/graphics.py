@@ -263,11 +263,11 @@ def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
     return f, p, cbar
 
 
-def plot_2d_image(x, z, data, cmap="viridis", zero_midpoint=False,
-                  resX=1000, resZ=1000):
+def plot_2d_image(x, z, data, cmap="viridis", res_x=1000, res_z=1000, 
+                  vmin=None, vmax=None):
     """
     Plots values of a SPECEFM2D model/gradient by interpolating onto a regular 
-    grid
+    grid. Used for the SeisFlows command `seisflows plot2d`
 
     :type x: np.array
     :param x: x values of GLL mesh
@@ -296,14 +296,6 @@ def plot_2d_image(x, z, data, cmap="viridis", zero_midpoint=False,
     rx = r/np.sqrt(1 + r**2)
     ry = 1/np.sqrt(1 + r**2)
 
-    # Assign zero as the midpoint for things like gradients
-    if zero_midpoint:
-        abs_max_val = max(abs(data))
-        vmin = -1 * abs_max_val
-        vmax = abs_max_val
-    else:
-        vmin, vmax = None, None
-
     f = plt.figure(figsize=(10 * rx, 10 * ry))
 
     # trick interpolation using the maximum values of z in case of concave 
@@ -314,14 +306,14 @@ def plot_2d_image(x, z, data, cmap="viridis", zero_midpoint=False,
     z = np.append(z, [max(z), max(z)])
     data = np.append(data, [np.nan, np.nan])
 
-    xi = np.linspace(min(x), max(x), resX)
-    zi = np.linspace(min(z), max(z), resZ)
+    xi = np.linspace(min(x), max(x), res_x)
+    zi = np.linspace(min(z), max(z), res_z)
     X, Z = np.meshgrid(xi, zi)
-    V = griddata((x, z), data, (X, Z), method='linear')
+    V = griddata((x, z), data, (X, Z), method="linear")
     im = plt.imshow(V, vmax=vmax, vmin=vmin,
                     extent=[x.min(), x.max(), z.min(), z.max()],
                     cmap=cmap,
-                    origin='lower')
+                    origin="lower")
 
     cbar = plt.colorbar(im, shrink=0.8, pad=0.025)
     plt.axis("image")
