@@ -516,7 +516,8 @@ class Model:
         elif vector is not None:
             self.model = self.split(vector=vector)
 
-    def plot2d(self, parameter, cmap=None, show=True, title="", save=None):
+    def plot2d(self, parameter, vmin=None, vmax=None, cmap=None, levels=None, 
+               center_cmap=False, title="", show=True, save=None):
         """
         Plot internal model parameters as a 2D image plot.
 
@@ -551,10 +552,9 @@ class Model:
         if cmap is None:
             if "kernel" in parameter:
                 cmap = "seismic_r"
-                zero_midpoint = True
+                center_cmap = True
             else:
                 cmap = "Spectral"
-                zero_midpoint = False
 
         # 'Merge' the coordinate matrices to get a vector representation
         x, z = np.array([]), np.array([])
@@ -563,17 +563,31 @@ class Model:
             z = np.append(z, self.coordinates["z"][iproc])
         data = self.merge(parameter=parameter)
 
-        f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap,
-                                   zero_midpoint=zero_midpoint)
+        # Select min and max values of the data range
+        if vmin is None:
+            vmin = data.min()
+        if vmax is None:
+            vmax = data.max()
+
+        # Get min and max values for colormap bounds. 
+        if center_cmap:
+            vmax = max(abs(vmin), abs(vmax))
+            vmin = -1 * vmax
+
+        # Plot the actual image
+        f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap, 
+                                   levels=levels, vmin=vmin, vmax=vmax
+                                   )
 
         # Set some figure labels based on information we know here
         ax = plt.gca()
         ax.set_xlabel("X [m]")
         ax.set_ylabel("Z [m]")
+
         # Allow User to title the figure, e.g., with iteration, step count etc.
-        _title = (f"{parameter.title()}_min = {data.min()};\n"
-                  f"{parameter.title()}_max = {data.max()};\n"
-                  f"{parameter.title()}_mean = {data.mean()}")
+        _title = (f"{parameter.title()}_min = {data.min():.3E};\n"
+                  f"{parameter.title()}_max = {data.max():.3E};\n"
+                  f"{parameter.title()}_mean = {data.mean():.3E}")
         if title:
             _title = f"{title}\n{_title}"
         ax.set_title(_title)
