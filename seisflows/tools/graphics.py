@@ -263,8 +263,8 @@ def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
     return f, p, cbar
 
 
-def plot_2d_image(x, z, data, cmap="viridis", res_x=1000, res_z=1000, 
-                  vmin=None, vmax=None):
+def plot_2d_image(x, z, data, res_x=1000, res_z=1000, cmap="viridis",
+                  vmin=None, vmax=None, levels=101):
     """
     Plots values of a SPECEFM2D model/gradient by interpolating onto a regular 
     grid. Used for the SeisFlows command `seisflows plot2d`
@@ -310,10 +310,13 @@ def plot_2d_image(x, z, data, cmap="viridis", res_x=1000, res_z=1000,
     zi = np.linspace(min(z), max(z), res_z)
     X, Z = np.meshgrid(xi, zi)
     V = griddata((x, z), data, (X, Z), method="linear")
-    im = plt.imshow(V, vmax=vmax, vmin=vmin,
-                    extent=[x.min(), x.max(), z.min(), z.max()],
-                    cmap=cmap,
-                    origin="lower")
+
+    # Get a colormap with discretized color levels
+    cmap = plt.get_cmap(cmap, levels)
+    im = plt.imshow(V, vmax=vmax, vmin=vmin, 
+                    extent=[x.min(), x.max(), z.min(), z.max()], cmap=cmap,
+                    origin="lower"
+                    )
 
     cbar = plt.colorbar(im, shrink=0.8, pad=0.025)
     plt.axis("image")

@@ -222,12 +222,26 @@ def sfparser():
     plot2d.add_argument("name", type=str, nargs="?",
                         help="Name of directory in the output/ directory")
     plot2d.add_argument("parameter", type=str, nargs="?",
-                        help="Name of parameter to plot from `name`. E.g., 'vs', "
-                             "'vp' etc.")
+                        help="Name of parameter to plot from `name`. " 
+                             "E.g., 'vs', 'vp' etc.")
     plot2d.add_argument("-c", "--cmap", type=str, nargs="?",
-                        help="colormap to be passed to PyPlot")
+                        help="optional colormap otherwise default based on " 
+                             "quantity plotted")
+    plot2d.add_argument("--vmin", type=float, nargs="?",
+                        help="optional minimum colorbar bound")
+    plot2d.add_argument("--vmax", type=float, nargs="?",
+                        help="optional maximum colorbar bound")
+    plot2d.add_argument("-l", "--levels", type=int, nargs="?", default=101,
+                        help="discretization for colormap, default 101")
+    plot2d.add_argument("-C", "--center_cmap", action="store_true", 
+                        default=None,
+                        help="Center colormap around 0 using absmax value for "
+                             "bounds, useful for kernels. If not provided, "
+                             "will be auto applied for kernels only")
     plot2d.add_argument("-s", "--savefig", type=str, nargs="?", default=None,
                         help="optional name and path to save figure")
+    plot2d.add_argument("-n", "--noshow", action="store_true", default=False,
+                        help="Figure is shown by default, use `noshow` to not")
     # =========================================================================
     plotst = subparser.add_parser(
         "plotst", formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1181,7 +1195,8 @@ class SeisFlows:
 
         st.plot(outfile=savefig, **kwargs)
 
-    def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
+    def plot2d(self, name=None, parameter=None, vmin=None, vmax=None, cmap=None, 
+               center_cmap=False, levels=101, savefig=None, noshow=False, 
                **kwargs):
         """
         Plot model, gradient or kernels in the PATH.OUTPUT
@@ -1196,6 +1211,10 @@ class SeisFlows:
         :type savefig: str
         :param savefig: optional name and path of filename to save figure
             to disk
+        :type noshow: bool
+        :param noshow: Figure is shown by default, use `noshow` to not show 
+            figure after generation. Useful for scripting when you only want
+            to save figures
         """
         from seisflows.tools.model import Model
 
@@ -1225,9 +1244,12 @@ class SeisFlows:
         # Now read in the actual updated values and update the model
         plot_model = Model(path=os.path.join(output_dir, name))
         plot_model.coordinates = base_model.coordinates
+
         # plot2d has internal check for acceptable parameter value
-        plot_model.plot2d(parameter=parameter, cmap=cmap, show=True,
-                          title=f"{name} // {parameter}", save=savefig)
+        plot_model.plot2d(parameter=parameter, cmap=cmap, levels=levels, 
+                          center_cmap=center_cmap, vmin=vmin, vmax=vmax,
+                          title=f"{name} // {parameter}", show=not noshow, 
+                          save=savefig)
 
     def reset(self, choice=None, **kwargs):
         """
