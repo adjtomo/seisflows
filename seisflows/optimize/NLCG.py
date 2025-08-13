@@ -176,7 +176,7 @@ class NLCG(Gradient):
         :return: beta, the scale factor to apply to the old search direction to
             determine the new search direction
         """
-        num = dot(self._precondition(g_new), g_new)
+        num = dot(self.precondition(g_new), g_new)
         den = dot(g_old, g_old)
         beta = num / den
         return beta
@@ -194,7 +194,7 @@ class NLCG(Gradient):
         :return: beta, the scale factor to apply to the old search direction to
             determine the new search direction
         """
-        num = dot(self._precondition(g_new), g_new - g_old)
+        num = dot(self.precondition(g_new), g_new - g_old)
         den = dot(g_old, g_old)
         beta = num / den
         return beta

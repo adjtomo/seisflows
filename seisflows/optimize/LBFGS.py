@@ -309,7 +309,7 @@ class LBFGS(Gradient):
             q = q - al[ii] * y[:, ii]
 
         # Apply an optional preconditioner. Otherwise r==q
-        r = self._precondition(q)
+        r = self.precondition(q)
 
         # Use scaling M3 proposed by Liu and Nocedal 1989
         sty = np.dot(y[:, 0], s[:, 0])

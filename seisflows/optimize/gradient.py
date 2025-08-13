@@ -242,7 +242,7 @@ class Gradient:
             logger.info("no optimization checkpoint file, assume 1st iteration")
             self.checkpoint()
 
-    def _precondition(self, q):
+    def precondition(self, q):
         """
         Apply available preconditioner to a given gradient
 
@@ -277,11 +277,13 @@ class Gradient:
             gradient which will not do anything in an update
         """
         g_new = Model(path=self.path._g_new)
-        if self.preonditioner:
+        if self.preconditioner is not None:
             precon = Model(path=self.path.preconditioner) 
+            # Multiply by the preconditioner and then by -1 to get search dir.
             g_new.apply(actions=["*", "*"], other=precon, values=[-1.0], 
                         export_to=self.path._p_new)
         else:
+            # Only multiply by -1 to get the search direction
             g_new.apply(actions=["*"], values=[-1.0], 
                         export_to=self.path._p_new)
             
