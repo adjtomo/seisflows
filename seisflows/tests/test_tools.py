@@ -7,9 +7,11 @@ Test any of the utility functions defined in the Tools directory
 """
 import os
 import pytest
+import numpy as np
 from seisflows import ROOT_DIR
 from seisflows.tools.specfem_model import Model
 from seisflows.tools.config import custom_import
+from seisflows.tools.specfem import read_fortran_binary
 
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -210,6 +212,30 @@ def test_model_apply_w_other_parallel(tmpdir, test_model_parallel,
         arr_check = m.read(m.filenames[0])
         assert(arr[0] != arr_check[0])
 
+def test_model_dot_serial(tmpdir, test_model_serial, test_model_other_serial):
+    """
+    Test out the main apply function without involving another model
+    """
+    # To ensure this doesn't interfere with the `other` model which is in tmpdir
+    export_to = os.path.join(tmpdir, "exported_model")
+
+    # Brute force compute the dot product manually so we know what the right
+    # answer is to compare to
+    model_vector, other_model_vector = np.array([]), np.array([])
+    for fid in test_model_serial.filenames:
+        model_vector = np.append(model_vector, read_fortran_binary(fid))
+    for fid in test_model_other_serial.filenames:
+        other_model_vector = np.append(other_model_vector, 
+                                       read_fortran_binary(fid))
+    dot_product_to_check = np.dot(model_vector, other_model_vector)
+
+    # Generate dot product with Model
+    dot_product = test_model_serial.dot(test_model_other_serial)
+
+    # There will be some floating point rounding issues but they should be 
+    # more or less the same
+    assert(dot_product == pytest.approx(dot_product_to_check, 1E-4))
+    pytest.set_trace()
 
 def test_custom_import():
     """

@@ -117,6 +117,7 @@ class Model:
             for iproc in range(self.nproc):
                 filename = self._get_filename(i=iproc, val=par, ext=self.fmt)
                 self.filenames.append(os.path.join(self.path, filename))
+        self.filenames = sorted(self.filenames)
     
     def read(self, filename):
         """
@@ -206,8 +207,32 @@ class Model:
         """
         Dot product of model with `other` model. Performs operations in serial
         or parallel and returns a scalar output
+
+        :type other: seisflows.tools.specfem_model.Model
+        :param other: other model to dot with this model
+        :rtype: float
+        :return: dot product of this model and the `other` model
         """
-        pass
+        def _dot_product(a, b):
+            """Read individual proc files and return the dot product"""
+            return np.dot(self.read(a), self.read(b))
+        
+        dot_procs = []
+        if self.parallel:
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(_dot_product, fid, other_fid) 
+                                    for fid, other_fid in zip(self.filenames, 
+                                                              other.filenames)
+                                    ]
+                wait(futures)       
+            for future in futures:
+                dot_procs.append(future.result)            
+        else:
+            for fid, other_fid in zip(self.filenames, other.filenames):
+                dot_procs.append(_dot_product(fid, other_fid))
+
+        return np.sum(dot_procs)
 
     def apply(self, actions, values=None, other=None, export_to=None):
         """

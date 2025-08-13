@@ -242,26 +242,48 @@ class Gradient:
             logger.info("no optimization checkpoint file, assume 1st iteration")
             self.checkpoint()
 
-    def precondition(self, q):
+    def precondition(self, q, actions=[], values=[], export_to=None):
         """
-        Apply available preconditioner to a given gradient
+        Apply available preconditioner to a given gradient. For efficiency,
+        additional `actions` and `values` can be applied while the 
+        preconditioner is being applied. This can be called like
+
+        > Gradient.precondition(q=g_new, actions=["*"], values=[-1])
+
+        which would not only apply the preconditioner, but also multiply the
+        resulting vector by -1. Multiple actions can be strung together.
 
         :type q: np.array
         :param q: Vector to precondition, typically gradient contained in: g_new
-        :rtype: np.array
-        :return: preconditioned vector
+        :type actions: list of str
+        :param actions: additional actions to apply on top of the preconditioner
+            such as multiplying by another value
+        :type values: list of float
+        :param values: values associated with `actions`. Length of values must 
+            match actions
+        :type export_to: str
+        :param export_to: path to export the model values to disk. The filenames
+            of the exported files will match the input filenames of this Model,
+            not the `other` model. If not given, will export to the same
+            directory as the input model `self.path`, which means it overwrites
+            the current model
         """
-        if self.preconditioner is not None:
-            p = Model(path=self.path.preconditioner)
-            if self.preconditioner.upper() == "DIAGONAL":
-                logger.info("applying diagonal preconditioner")
-                return p.vector * q
-            else:
-                raise NotImplementedError(
-                    f"preconditioner {self.preconditioner} not supported"
-                )
-        else:
-            return q
+        precon = Model(path=self.path.preconditioner)  # preconditioner
+
+        assert(len(actions) == len(values)), \
+            f"number of actions do not match number ofvalues"
+
+        # Apply a diagonal preconditioner, as well as any other user-defined
+        # actions ontop of the preconditioner
+        if self.preconditioner.upper() == "DIAGONAL":
+            logger.info(f"applying diagonal preconditioner and {actions} "
+                        f"to {values}")
+            q.apply(actions=["*"] + actions, values=values, other=precon,
+                    export_to=export_to)
+
+        # > ADD OTHER PRECONDITIONERS HERE, FOLLOW TEMPLATE FOR DIAGONAL
+        # if self.preconditioner.upper() == "NAME":
+        #   ...
 
     def compute_direction(self):
         """
@@ -271,20 +293,18 @@ class Gradient:
         .. note::
             Other optimization algorithms must overload this method
 
-        :rtype: seisflows.tools.specfem.Model
-        :return: search direction as a Model instance
+        :rtype: seisflows.tools.specfem_model.Model
+        :return: p_new, search direction as a Model instance
         :raises SystemError: if the search direction is 0, signifying a zero
             gradient which will not do anything in an update
         """
-        g_new = Model(path=self.path._g_new)
+        p_new = Model(path=self.path._g_new)
         if self.preconditioner is not None:
-            precon = Model(path=self.path.preconditioner) 
-            # Multiply by the preconditioner and then by -1 to get search dir.
-            g_new.apply(actions=["*", "*"], other=precon, values=[-1.0], 
-                        export_to=self.path._p_new)
+            self.precondition(q=p_new, actions=["*"], values=[-1],
+                              export_to=self.path._p_new)
         else:
             # Only multiply by -1 to get the search direction
-            g_new.apply(actions=["*"], values=[-1.0], 
+            p_new.apply(actions=["*"], values=[-1.0], 
                         export_to=self.path._p_new)
             
         # Check the newly created search direction vector 
