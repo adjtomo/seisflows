@@ -495,7 +495,10 @@ class Gradient:
         logger.info("setting current model as previous model (?_new -> ?_old)")
         # e.g., f_new.txt -> f_old.txt
         for src in glob(os.path.join(self.path.scratch, "?_new*")):
-            dst = src.replace("_new", "_old")
+            # Change 'new' to 'old' in ONLY the filename (#259)
+            fid = os.path.basename(src)
+            fid_new = fid.replace("_new", "_old")
+            dst = src.replace(fid, fid_new)
             unix.mv(src, dst)
 
         logger.info("setting trial model as starting model (m_try -> m_new)")
