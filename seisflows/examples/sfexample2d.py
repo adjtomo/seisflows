@@ -208,7 +208,7 @@ class SFExample2D:
     def define_dir_structures(cwd, specfem2d_repo, ex="Tape2007"):
         """
         Define the example directory structure, which will contain abridged
-        versions of the SPECFEM2D working directory
+        versions of the SPECFEM2D working directory. 
 
         :type cwd: str
         :param cwd: current working directory
@@ -226,9 +226,19 @@ class SFExample2D:
             "repo": specfem2d_repo,
             "bin": os.path.join(specfem2d_repo, "bin"),
             "data": os.path.join(specfem2d_repo, "DATA"),
-            "example": os.path.join(specfem2d_repo, "EXAMPLES", ex),
-            "example_data": os.path.join(specfem2d_repo, "EXAMPLES", ex, "DATA")
-        }
+            }
+       
+        # Examples directory structure changed at SPECFEM2D update 9eed386
+        examples_dir = os.path.join(specfem2d_repo, "EXAMPLES", ex)
+        if not os.path.exists(examples_dir):
+            examples_dir = os.path.join(specfem2d_repo, "EXAMPLES", 
+                                        "reproducible_study", ex)
+            assert(os.path.exists(examples_dir), f"cannot find {ex} example")
+
+        # Point to the corect examples
+        sem2d["example"] = examples_dir
+        sem2d["example_data"] = os.path.join(examples_dir, "DATA")
+
         # This defines a working directory structure which we will create
         working_directory = os.path.join(cwd, "specfem2d_workdir")
         workdir = {

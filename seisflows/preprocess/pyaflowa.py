@@ -38,7 +38,20 @@ class Pyaflowa:
     :type min_period: float
     :param min_period: Minimum filter corner in unit seconds. Bandpass
         filter if set with `max_period`, highpass filter if set without
-    `max_period`, no filtering if not set and `max_period also not set
+        `max_period`, no filtering if not set and `max_period also not set
+    :type preproc_toggles: dict
+    :param preproc_toggles: A dictionary with keys that represent toggles that
+        allow the User to turn on/off the default preprocessing steps. 
+        Corresponding values should be 'True' to toggle on, and 'False' for off.
+        All toggles are set 'True' by default.
+        - 'standardize': resamples and trims time series to match. Turn off if 
+          your 'obs' and 'syn' data are already the same length. See 
+          `Pyatoa.manager.standardize()`
+        - 'preprocess': Detrend, taper, filter and normalize (optional). Turn 
+          off if your data are synthetics that do not need filtering, or if
+          your data are already preprocessed
+        - 'window': misfit windowing using PyFlex. Turn off if you want to 
+          compute adjoint sources on the entire trace.
     :type pyflex_parameters: dict
     :param pyflex_parameters: overwrite for Pyflex parameters defined
         in the Pyflex.Config object. Incorrectly defined argument names
@@ -54,13 +67,13 @@ class Pyaflowa:
     :param fix_windows: How to address misfit window evaluation at each
         evaluation. Options to re-use misfit windows collected during an
         inversion, available options:
-        [True, False, 'ITER', 'ONCE']
-        True: Re-use windows after first evaluation (i01s00);
-        False: Calculate new windows each evaluation;
-        'ITER': Calculate new windows at first evaluation of
-        each iteration (e.g., i01s00... i02s00...
-        'ONCE': Calculate new windows at first evaluation of
-        the workflow, i.e., at self.par.BEGIN
+        [True, False, 'ITER', 'ONCE', 'OFF']
+        - True: Re-use windows after first evaluation (i01s00);
+        - False: Calculate new windows each evaluation;
+        - 'ITER': Calculate new windows at first evaluation of
+          each iteration (e.g., i01s00... i02s00...
+        - 'ONCE': Calculate new windows at first evaluation of
+          the workflow, i.e., at self.par.BEGIN
     :type revalidate: bool
     :param revalidate: Only used if `fix_windows` is True, ITER or ONCE. Windows
         that are retrieved from datasets will be revalidated against parameters
@@ -85,10 +98,6 @@ class Pyaflowa:
     :param preprocess_log_level: Log level to set Pyatoa, Pyflex, Pyadjoint.
         Available: ['null': no logging, 'warning': warnings only,
         'info': task tracking, 'debug': log all small details (recommended)]
-    :type unit_output: str
-    :param unit_output: Data units. Must match the synthetic output of
-        external solver. Available: ['DISP': displacement, 'VEL': velocity,
-        'ACC': acceleration]. Requires metadata.
     :type export_datasets: bool
     :param export_datasets: periodically save the output ASDFDataSets which
         contain data, metadata and results collected during the
@@ -105,7 +114,7 @@ class Pyaflowa:
     :param path_preprocess: scratch path for preprocessing related steps
     ***
     """
-    def __init__(self, min_period=1., max_period=10.,
+    def __init__(self, min_period=1., max_period=10., preproc_toggles=None,
                  pyflex_parameters=None, pyadjoint_parameters=None,
                  fix_windows=False, revalidate=False, 
                  adj_src_type="cc_traveltime", plot_waveforms=True, 
@@ -158,6 +167,10 @@ class Pyaflowa:
         self.adj_src_type = adj_src_type
         self.plot_waveforms = plot_waveforms
         self.preprocess_log_level = preprocess_log_level
+        if preproc_toggles is None: 
+            self.preproc_toggles = Dict(standardize=True, preprocess=True, window=True)
+        else:
+            self.preproc_toggles = Dict(preproc_toggles)
 
         # Set the Pyflex and Pyadjoint external parameters
         _cfg = Config(adj_src_type=adj_src_type,
@@ -214,7 +227,6 @@ class Pyaflowa:
         self._acceptable_source_prefixes = ["SOURCE", "FORCESOLUTION",
                                             "CMTSOLUTION"]
         self._acceptable_fix_windows = ["ITER", "ONCE", True, False]
-        self._acceptable_unit_outputs = ["VEL", "DISP", "ACC"]
 
         # Internal bookkeeping attributes to be filled in by self.setup()
         self._inv = None
@@ -227,14 +239,18 @@ class Pyaflowa:
         workflow to ensure that things are set appropriately.
         """
         assert(self.syn_data_format.upper() == "ASCII"), \
-            "Pyatoa preprocess requires `syn_data_format`=='ASCII'"
+            "Pyaflowa preprocess requires `syn_data_format`=='ASCII'"
 
         assert(self._source_prefix in self._acceptable_source_prefixes), (
-            f"Pyatoa can only accept `source_prefix` in " 
+            f"Pyaflowa can only accept `source_prefix` in " 
             f"{self._acceptable_source_prefixes}, not '{self._source_prefix}'"
         )
         assert(self._fix_windows in self._acceptable_fix_windows), \
-            f"Pyatoa `fix_windows` must be in {self._acceptable_fix_windows}"
+            f"Pyaflowa `fix_windows` must be in {self._acceptable_fix_windows}"
+        
+        for key in ["standardize", "preprocess", "window"]:
+            assert(key in self.preproc_toggles), \
+                f"Pyaflowa `preproc_toggles` missing key {key}"
 
     def setup(self):
         """
@@ -517,7 +533,8 @@ class Pyaflowa:
         # If any part of this processing fails for whatever reason, move on to 
         # plotting and don't let it affect the other tasks
         try:
-            mgmt.standardize()
+            if self.preproc_toggles.standardize:
+                mgmt.standardize()
 
             # Copy the standardized version of the waveform to save into the
             # ASDFDataSet because we don't want to save processed versions
@@ -525,33 +542,39 @@ class Pyaflowa:
             st_syn_raw = mgmt.st_syn.copy()
 
             # Filter waveforms
-            mgmt.preprocess(remove_response=False)
-            if fix_windows:
-                # Determine components from waveforms on the fly so that we can
-                # use that information to only select windows we need
-                components = [tr.stats.component for tr in mgmt.st_syn]
+            if self.preproc_toggles.preprocess:
+                mgmt.preprocess(remove_response=False)
 
-                # Retrieve windows from the last available evaluation. Wrap in
-                # try-except block incase file lock is in place by other procs.
-                while True:
-                    try:
-                        with ASDFDataSet(
-                                os.path.join(self.path["_datasets"],
-                                             f"{config.event_id}.h5"),
-                                mode="r") as ds:
-                            mgmt.retrieve_windows_from_dataset(
-                                    ds=ds, components=components,
-                                    revalidate=self.revalidate
-                                    )
-                        break
-                    except (BlockingIOError, FileExistsError):
-                        # Random sleep time [0,1]s to decrease chances of two
-                        # processes attempting to access at exactly the same
-                        # time
-                        time.sleep(random.random())
-                del ds
-            else:
-                mgmt.window()
+            if self.preproc_toggles.window:
+                if not fix_windows:
+                    mgmt.window()  
+                else:
+                    # Determine components from waveforms on the fly so that we 
+                    # can use that information to only select windows we need
+                    components = [tr.stats.component for tr in mgmt.st_syn]
+
+                    # Retrieve windows from the last available evaluation. Wrap 
+                    # in try-except block incase file lock is in place by other 
+                    # procs.
+                    while True:
+                        try:
+                            with ASDFDataSet(
+                                    os.path.join(self.path["_datasets"],
+                                                f"{config.event_id}.h5"),
+                                    mode="r") as ds:
+                                mgmt.retrieve_windows_from_dataset(
+                                        ds=ds, components=components,
+                                        revalidate=self.revalidate
+                                        )
+                            break
+                        except (BlockingIOError, FileExistsError):
+                            # Random sleep time [0,1]s to decrease chances of 
+                            # two processes attempting to access at exactly the 
+                            # same time
+                            time.sleep(random.random())
+                    del ds
+                    
+            # Calculate adjoint source
             mgmt.measure()
         except Exception as e:
             station_logger.critical(f"FLOW FAILED:")
@@ -707,9 +730,10 @@ class Pyaflowa:
         :param step_count: Current line search step count within the SeisFlows3
             workflow. Within SeisFlows3 this is defined by
             `optimize.line_search.step_count`
-        :rtype: tuple (bool, str)
-        :return: (bool on whether to use windows from the previous step,
-            and a message that can be sent to the logger)
+        :rtype: tuple (bool or None, str)
+        :return: (bool on whether to use windows from the previous step or None 
+                  if fix window turned off, a message that can be sent to the 
+                  logger)
         """
         fix_windows = False
         msg = ""
