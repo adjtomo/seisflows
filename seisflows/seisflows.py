@@ -1195,7 +1195,6 @@ class SeisFlows:
 
         st.plot(outfile=savefig, **kwargs)
 
-<<<<<<< HEAD
     # TO DO
     # def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
     #            **kwargs):
@@ -1214,30 +1213,6 @@ class SeisFlows:
     #         to disk
     #     """
     #     from seisflows.tools.model import Model
-=======
-    def plot2d(self, name=None, parameter=None, vmin=None, vmax=None, cmap=None, 
-               center_cmap=False, levels=101, savefig=None, noshow=False, 
-               **kwargs):
-        """
-        Plot model, gradient or kernels in the PATH.OUTPUT
-
-        :type name: str
-        :param name: Name of directory in the output/ directory
-        :type parameter: str
-        :param parameter: Name of parameter to plot from `name`, e.g., 'vs',
-            'vp' etc.
-        :type cmap: str
-        :param cmap: optional colormap parameter to be passed to Pyplot
-        :type savefig: str
-        :param savefig: optional name and path of filename to save figure
-            to disk
-        :type noshow: bool
-        :param noshow: Figure is shown by default, use `noshow` to not show 
-            figure after generation. Useful for scripting when you only want
-            to save figures
-        """
-        from seisflows.tools.model import Model
->>>>>>> devel
 
     #     # Figure out which models/gradients/kernels we can actually plot
     #     _, output_dir, _ = getpar(key="path_output",
@@ -1262,24 +1237,12 @@ class SeisFlows:
     #     assert(base_model.coordinates is not None), \
     #         f"`MODEL_INIT` does not have any available 2D coordinates"
 
-<<<<<<< HEAD
     #     # Now read in the actual updated values and update the model
     #     plot_model = Model(path=os.path.join(output_dir, name))
     #     plot_model.coordinates = base_model.coordinates
     #     # plot2d has internal check for acceptable parameter value
     #     plot_model.plot2d(parameter=parameter, cmap=cmap, show=True,
     #                       title=f"{name} // {parameter}", save=savefig)
-=======
-        # Now read in the actual updated values and update the model
-        plot_model = Model(path=os.path.join(output_dir, name))
-        plot_model.coordinates = base_model.coordinates
-
-        # plot2d has internal check for acceptable parameter value
-        plot_model.plot2d(parameter=parameter, cmap=cmap, levels=levels, 
-                          center_cmap=center_cmap, vmin=vmin, vmax=vmax,
-                          title=f"{name} // {parameter}", show=not noshow, 
-                          save=savefig)
->>>>>>> devel
 
     def reset(self, choice=None, **kwargs):
         """
