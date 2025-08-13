@@ -7,7 +7,6 @@ Test any of the utility functions defined in the Tools directory
 """
 import os
 import pytest
-import time
 from seisflows import ROOT_DIR
 from seisflows.tools.specfem_model import Model
 from seisflows.tools.config import custom_import
@@ -76,7 +75,7 @@ def test_model_read(test_model_serial):
     """
     parameters = ["c11", "c22", "c33"]
     assert(test_model_serial.fmt == ".bin")
-    assert(test_model_serial.nproc == 48)
+    assert(test_model_serial.nproc == 3)
     assert(len(test_model_serial.filenames) == \
            test_model_serial.nproc * len(parameters))
 
