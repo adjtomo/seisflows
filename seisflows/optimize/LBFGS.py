@@ -82,8 +82,17 @@ class LBFGS(Gradient):
 
         # Set new L-BFGS dependent paths for storing previous gradients
         self.path["_LBFGS"] = os.path.join(self.path.scratch, "LBFGS")
-        self.path["_y_file"] = os.path.join(self.path["_LBFGS"], "Y.dat")
-        self.path["_s_file"] = os.path.join(self.path["_LBFGS"], "S.dat")
+        # self.path["_y_file"] = os.path.join(self.path["_LBFGS"], "Y.dat")
+        # self.path["_s_file"] = os.path.join(self.path["_LBFGS"], "S.dat")
+
+        # These are used to store LBFGS memory which include model and gradient
+        # differences
+        for i in self.LBFGS_mem:
+            y = f"_y{i}"  # `y` = model difference (m_i+1 - m_i)
+            self.path[y] = os.path.join(self.path._LBFGS, y)
+
+            s = f"_s{i}"  # `s` = gradient difference (g_i+1 - g_i)
+            self.path[s] = os.path.join(self.path._LBFGS, s)
 
         # Internally used memory parameters for the L-BFGS optimization algo.
         self._LBFGS_iter = 0
@@ -151,12 +160,12 @@ class LBFGS(Gradient):
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
         g = Model(path=self.path._g_new)
-        p_new = g.copy()
 
         if self._LBFGS_iter == 1:
             logger.info("first L-BFGS iteration, default to gradient descent "
                         "(P = -G)")
-            p_new.update(vector=-1 * g.vector)
+            # Search direction `p_new` is negative gradient 
+            g.apply(actions=["*"], values=[-1], export_to=self.path._p_new)
             restarted = False
         # Restart condition or first iteration lead to setting search direction
         # as the inverse gradient (i.e., default to steepest descent)
@@ -164,8 +173,10 @@ class LBFGS(Gradient):
             logger.info("restarting L-BFGS due to periodic restart condition. "
                         "setting search direction as inverse gradient (P = -G)")
             self.restart()
-            p_new.update(vector=-1 * g.vector)
             restarted = True
+
+            # New search direction `p_new` is negative gradient
+            g.apply(actions=["*"], values=[-1], export_to=self.path._p_new)
         # Normal LBFGS direction computation
         else:
             # Update the search direction, apply the inverse Hessian such that
@@ -173,7 +184,7 @@ class LBFGS(Gradient):
             logger.info("applying inverse Hessian to gradient")
             s, y = self._update_search_history()
             q = g.copy()
-            q.update(vector=self._apply_inverse_hessian(g.vector, s, y))
+            q. update(vector=self._apply_inverse_hessian(g.vector, s, y))
 
             # Determine if the new search direction is appropriate by checking
             # its angle to the previous search direction
@@ -217,6 +228,53 @@ class LBFGS(Gradient):
         if os.path.exists(self.path._y_file):
             y = np.memmap(filename=self.path._y_file, mode="r+")
             y[:] = 0.
+
+    def _update_search_history(self):
+        """
+        Updates L-BFGS algorithm history by removing old memory
+
+        .. note::
+            This algorithm is notated in Modrak & Tromp 2016 Appendix A
+        
+        .. note::
+            Notation for s and y taken from Liu & Nocedal 1989
+            iterate notation: sk = x_k+1 - x_k and yk = g_k+1 - gk
+        """
+        # If we have memory assigned, we need to make space for the latest entry
+        # Essentially were shifting every index down by one (i -> i+1) and 
+        # removing the last index to make way for new 0th index memory. In 
+        # practice we're just renaming directories
+        if self._memory_used > 0:
+            if self._memory_used == self.LBFGS_mem:
+                # Remove the oldest memory if we exceed the memory threshold
+                unix.rm(self.path._LBFGS[f"_y{self._memory_used - 1}"])
+                unix.rm(self.path._LBFGS[f"_s{self._memory_used - 1}"])
+
+            # Iterate backwards, so for mem==3 we go: 2, 1 (ignore 0)
+            for i in np.arange(self._memory_used - 1, 0, -1):
+                # Reassigning the next index to the current. E.g., if mem==3 we
+                # start at i==2 which we don't need anymore, and move i==1 into 
+                # the 2 spot.
+                unix.rename(old=self.path.LBFGS[f"_y{i-1}"], 
+                            new=self.path.LBFGS[f"_y{i}"])
+                unix.rename(old=self.path.LBFGS[f"_s{i-1}"],
+                            new=self.path.LBFGS[f"_s{i}"])
+        
+        # Assign the current model and gradient differences to 0th index
+        # s_k = m_new - m_old
+        Model(self.path._m_new).apply(
+            actions=["-"], other=Model(self.path._m_old),
+            export_to=self.path.LBFGS._s0
+            )
+        # y_k = g_new - g_old
+        Model(self.path._g_new).apply(
+            actions=["-"], other=Model(self.path._g_old),
+            export_to=self.path.LBFGS._y0
+            )
+
+        # Increment memory up to LBFGS memory threshold
+        if self._memory_used < self.LBFGS_mem:
+            self._memory_used += 1
 
     def _update_search_history(self):
         """

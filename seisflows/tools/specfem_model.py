@@ -155,7 +155,15 @@ class Model:
             write_fortran_binary(arr=arr, filename=filename)
         else:
             raise NotImplementedError
-    
+        
+    def clear(self):
+        """
+        Convenience function to delete all the files stored in `path`, this
+        operation cannot be reversed. 
+        """
+        unix.rm(self.path)
+        unix.mkdir(self.path)
+
     def get(self, what):
         """
         Find some value in the model based on `what` you want
