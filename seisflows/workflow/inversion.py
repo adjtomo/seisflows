@@ -520,16 +520,13 @@ class Inversion(Migration):
         alpha, _ = self.optimize.calculate_step_length()
 
         logger.info("computing line search trial model `m_try`")
-        m_try = self.optimize.compute_trial_model(alpha=alpha)
-        
-        # Save the current state of the optimization module to disk
-        self.optimize.save_vector(name="m_try", m=m_try)
-        self.optimize.save_vector(name="alpha", m=alpha)
+        self.optimize.compute_trial_model(alpha=alpha)
         self.optimize.checkpoint()
 
         # Expose model `m_try` to the solvers by placing it in eval_func dir.
-        _path_m_try = os.path.join(self.path.eval_func, "model")
-        m_try.write(path=_path_m_try)
+        # !!! HOW DO WE DO THIS WITH NEW MODEL PARADIGM?
+        # _path_m_try = os.path.join(self.path.eval_func, "model")
+        # m_try.write(path=_path_m_try)
 
     def evaluate_line_search_misfit(self):
         """
@@ -587,13 +584,6 @@ class Inversion(Migration):
         # and incremement the step count
         self.optimize.update_search()
         alpha, status = self.optimize.calculate_step_length()
-        m_try = self.optimize.compute_trial_model(alpha=alpha)
-
-        # Save new model (m_try) and step length (alpha) for new trial step
-        if alpha is not None:
-            self.optimize.save_vector("alpha", alpha)
-        if m_try is not None:
-            self.optimize.save_vector("m_try", m_try)
 
         # Proceed based on the outcome of the line search
         if status.upper() == "PASS":
@@ -601,6 +591,7 @@ class Inversion(Migration):
             logger.info("trial step successful. finalizing line search")
 
             # Finalizing line search sets `m_try` -> `m_new` for later iters
+            self.optimize.compute_trial_model(alpha=alpha)
             self.optimize.finalize_search()
             self.optimize.checkpoint()
             return
@@ -608,8 +599,11 @@ class Inversion(Migration):
             logger.info("trial step unsuccessful. re-attempting line search")
 
             # Expose the new model to the solver directories for the next step
-            _path_m_try = os.path.join(self.path.eval_func, "model")
-            m_try.write(path=_path_m_try)
+            self.optimize.compute_trial_model(alpha=alpha)
+
+            # !!! HOW DO WE EXPOSE
+            # _path_m_try = os.path.join(self.path.eval_func, "model")
+            # m_try.write(path=_path_m_try)
 
             # Re-set state file to ensure that job failure will recover
             self._states["evaluate_line_search_misfit"] = 0

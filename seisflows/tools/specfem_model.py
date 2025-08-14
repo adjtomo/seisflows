@@ -47,8 +47,10 @@ class Model:
     for parameter in acceptable_parameters[:]:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
-    # Define acceptable actions for Model.apply()
+
+    # Define acceptable actions for Model.apply() and Model.get()
     acceptable_actions = ["*", "/", "+", "-"]
+    acceptable_gets = ["min", "max", "absmax", "mean", "sum"]
 
 
     def __init__(self, path, fmt="", parameters=None, regions=None, 
@@ -130,8 +132,6 @@ class Model:
         """
         if self.fmt == ".bin":
             arr = read_fortran_binary(filename)
-        elif self.fmt == ".dat":
-            raise NotImplementedError
         else:
             raise NotImplementedError
 
@@ -163,9 +163,13 @@ class Model:
         :type what: str
         :param what: the value to find in the model, one of:
             - 'max': maximum value in the model
+            - 'absmax': maximum absolute value in the model
             - 'min': minimum value in the model
+            - 'mean': mean value of the model
             - 'sum': sum of all values in the model
         """
+        assert what in self.acceptable_gets  
+
         if self.parallel:
             # !!! CHECK THIS I don't think it preserves order or even works
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
@@ -183,25 +187,30 @@ class Model:
         # Combine all the values returned from the indvidual files
         if what == "max":
             return np.max(vals)
+        elif what == "absmax":
+            return np.max(np.abs(vals))
         elif what == "min":
             return np.min(vals)
+        elif what == "mean":  # !!! CHECK THIS
+            return(np.mean(vals))
         elif what == "sum":  # !!! CHECK THIS
             return np.sum(vals)
-
+            
     def _get_single(self, filename, what):
         """
-        Get a single value from a single file in the model, used by `get` to
+        Get a single value from a single file in the model, used by `get()` in
+        a parallel manner
         """    
         if what == "max":
             return np.max(self.read(filename))
+        elif what == "absmax":
+            return np.max(np.abs(self.read(filename)))
         elif what == "min":
             return np.min(self.read(filename))
         elif what == "mean":
             return np.mean(self.read(filename))
         elif what == "sum":
             return np.sum(self.read(filename))
-        else:
-            raise ValueError(f"Unknown action {what} for Model.get()")
 
     def dot(self, other):
         """
@@ -233,6 +242,22 @@ class Model:
                 dot_procs.append(_dot_product(fid, other_fid))
 
         return np.sum(dot_procs)
+    
+    def angle(self, other):
+        """
+        Calculate the angle between two model vectors efficiently. This 
+        operation is effectively
+
+        :type other: seisflows.tools.specfem_model.Model
+        :param other: the `other` model to take angle with
+        :rtype: float
+        :return: angle between the two vectors
+        """
+        xy = self.dot(other=other)
+        xx = self.dot(other=self)
+        yy = other.dot(other=other)
+
+        return np.arccos(xy / (xx * yy) ** 0.5)
 
     def apply(self, actions, values=None, other=None, export_to=None):
         """
@@ -258,7 +283,7 @@ class Model:
             If NOT using `other`, then `actions` must match `values` in length.
             For example:
 
-            Model.apply(actions=["multiply", "add"], values=[2, 1])
+            Model.apply(actions=["*", "+"], values=[2, 1])
 
             Will multiply the model by 2 and then add 1 to the result.
 
@@ -283,7 +308,7 @@ class Model:
             If not using `other` model, then the actions can only be `multiply` 
             and `add`
         :type values: list of float
-        :param values: list of values to use in the `actions`. Must match the
+        :param values: list of va`lues to use in the `actions`. Must match the
             length of `actions`. 
         :type export_to: str
         :param export_to: path to export the model values to disk. The filenames
@@ -292,10 +317,13 @@ class Model:
             directory as the input model `self.path`, which means it overwrites
             the current model
         """
-        # Default values is empty list so it can be compared
+        # SET DEFAULT VALUES
         if values is None:
-            values = []
+            values = []  # Empty list allows comparisons
+        if export_to is None:
+            export_to = self.path  # Default is to overwrite input
             
+        # RUN BASIC CHECKS
         # If applying with another model, ensure matching Model characteristics
         if other:
             assert(self.fmt == other.fmt), (
@@ -318,11 +346,8 @@ class Model:
             assert(action in self.acceptable_actions), (
                 f"action must be in {self.acceptable_actions}, not {action}"
             )
-
-        # Set export location, defaults to overwriting current model 
-        if export_to is None:
-            export_to = self.path
             
+        # BEGIN APPLY
         # If no `other` model is given, then we only deal with the current model
         if other is None:
             if self.parallel:
@@ -336,7 +361,7 @@ class Model:
             else:
                 for fid in self.filenames:
                     self._apply_single(fid, actions, values, export_to)
-                    
+                
         # If `other` model is given, then we loop over the two models together
         else:
             if self.parallel:

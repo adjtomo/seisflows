@@ -212,13 +212,10 @@ def test_model_apply_w_other_parallel(tmpdir, test_model_parallel,
         arr_check = m.read(m.filenames[0])
         assert(arr[0] != arr_check[0])
 
-def test_model_dot_serial(tmpdir, test_model_serial, test_model_other_serial):
+def test_model_dot_serial(test_model_serial, test_model_other_serial):
     """
     Test out the main apply function without involving another model
     """
-    # To ensure this doesn't interfere with the `other` model which is in tmpdir
-    export_to = os.path.join(tmpdir, "exported_model")
-
     # Brute force compute the dot product manually so we know what the right
     # answer is to compare to
     model_vector, other_model_vector = np.array([]), np.array([])
@@ -235,7 +232,6 @@ def test_model_dot_serial(tmpdir, test_model_serial, test_model_other_serial):
     # There will be some floating point rounding issues but they should be 
     # more or less the same
     assert(dot_product == pytest.approx(dot_product_to_check, 1E-4))
-    pytest.set_trace()
 
 def test_custom_import():
     """

@@ -36,6 +36,7 @@ from seisflows.optimize.gradient import Gradient
 from seisflows.tools import unix
 from seisflows.tools.msg import DEG
 from seisflows.tools.math import angle
+from seisflows.tools.specfem_model import Model
 from seisflows.plugins import line_search as line_search_dir
 
 
@@ -149,7 +150,7 @@ class LBFGS(Gradient):
 
         # Load the current gradient direction, which is the L-BFGS search
         # direction if this is the first iteration
-        g = self.load_vector("g_new")
+        g = Model(path=self.path._g_new)
         p_new = g.copy()
 
         if self._LBFGS_iter == 1:
