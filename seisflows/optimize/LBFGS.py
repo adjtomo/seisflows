@@ -182,7 +182,7 @@ class LBFGS(Gradient):
             # Update the search direction, apply the inverse Hessian such that
             # 'q' becomes the new search direction 'g'
             logger.info("applying inverse Hessian to gradient")
-            s, y = self._update_search_history()
+            self.update_search_history()
             q = g.copy()
             q. update(vector=self._apply_inverse_hessian(g.vector, s, y))
 
@@ -229,9 +229,9 @@ class LBFGS(Gradient):
             y = np.memmap(filename=self.path._y_file, mode="r+")
             y[:] = 0.
 
-    def _update_search_history(self):
+    def update_search_history(self):
         """
-        Updates L-BFGS algorithm history by removing old memory
+        Updates L-BFGS algorithm history by removing old memory and 
 
         .. note::
             This algorithm is notated in Modrak & Tromp 2016 Appendix A
@@ -276,63 +276,103 @@ class LBFGS(Gradient):
         if self._memory_used < self.LBFGS_mem:
             self._memory_used += 1
 
-    def _update_search_history(self):
+    def apply_inverse_hessian(self):
         """
-        Updates L-BFGS algorithm history
+        Applies L-BFGS inverse Hessian to given vector following Appendix A
+        Recursion from Modrak and Tromp (2016)
 
-        .. note::
-            Because models are large, and multiple iterations of models need to
-            be stored in memory, previous models are stored as `memmaps`,
-            which allow for access of small segments of large files on disk,
-            without reading the entire file. Memmaps are array like objects.
-
-        .. note::
-            Notation for s and y taken from Liu & Nocedal 1989
-            iterate notation: sk = x_k+1 - x_k and yk = g_k+1 - gk
-
-        :rtype s: np.memmap
-        :return s: memory of the model differences `m_new - m_old`
-        :rtype y: np.memmap
-        :return y: memory of the gradient differences `g_new - g_old`
+        In words the Recursion step is as follows:
+        (1) Set q = gk
+            i = k− 1
+            j= min (k, l) 
+        (2) Perform j times: 
+            lambda_i = s_i^T * q / y_i^T * s_i, 
+            q -= lambda_i * y_i
+            i -= 1
+        (3) Set gamma = s^T_(k-1) * y_(k-1) / y^T_(k-1) * y_k-1
+            r = gamma * D * q
+            i = k - j
+        (4) Perform j times
+            mu = y_i^T * r / y_i^T
+            r += s_i(lambda_i - mu)
+            i += 1
+        (5) End with result: p_k = -r
         """
-        # Determine the iterates for model m and gradient g
-        s_k = \
-            self.load_vector("m_new").vector - self.load_vector("m_old").vector
-        y_k = \
-            self.load_vector("g_new").vector - self.load_vector("g_old").vector
+        # Step 1: Set q=g_k, i=k-1, j=min(k,l)
+        q = Model(path=self.path._g_new)
+        k = self._memory_used
+        j = min(k, self.LBFGS_mem)
+        
+        # Step 2: Perform j times
+        for i in range(j):
+            y_i = Model(self.path.LBFGS[f"_y_{i}"])
+            s_i = Model(self.path.LBFGS[f"_s_{i}"])
 
-        # Determine the shape of the memory map (length of model, length of mem)
-        m = len(s_k)
-        n = self.LBFGS_mem
+            # lambda_i = s_i^T * q / y_i^T * s_i
+            lambda_i = s_i.dot(q) / y_i.dot(s_i)
 
-        # Initial iteration, need to create the memory map
-        if self._memory_used == 0:
-            s = np.memmap(filename=self.path._s_file, mode="w+",
-                          dtype="float32", shape=(m, n))
-            y = np.memmap(filename=self.path._y_file, mode="w+",
-                          dtype="float32", shape=(m, n))
-            # Store the model and gradient differences in memmaps
-            s[:, 0] = s_k
-            y[:, 0] = y_k
-            self._memory_used = 1
-        # Subsequent iterations will append to memory maps
-        else:
-            s = np.memmap(filename=self.path._s_file, mode="r+",
-                          dtype="float32", shape=(m, n))
-            y = np.memmap(filename=self.path._y_file, mode="r+",
-                          dtype="float32", shape=(m, n))
-            # Shift all stored memory by one index to make room for latest mem
-            s[:, 1:] = s[:, :-1]
-            y[:, 1:] = y[:, :-1]
-            # Store the latest model and gradient in first index
-            s[:, 0] = s_k
-            y[:, 0] = y_k
+            # q -= lambda_i * y_i
+            q.apply(actions=["-"], values=[al])
 
-            # Keep track of the memory used
-            if self._memory_used < self.LBFGS_mem:
-                self._memory_used += 1
 
-        return s, y
+
+    # def _update_search_history(self):
+    #     """
+    #     Updates L-BFGS algorithm history
+
+    #     .. note::
+    #         Because models are large, and multiple iterations of models need to
+    #         be stored in memory, previous models are stored as `memmaps`,
+    #         which allow for access of small segments of large files on disk,
+    #         without reading the entire file. Memmaps are array like objects.
+
+    #     .. note::
+    #         Notation for s and y taken from Liu & Nocedal 1989
+    #         iterate notation: sk = x_k+1 - x_k and yk = g_k+1 - gk
+
+    #     :rtype s: np.memmap
+    #     :return s: memory of the model differences `m_new - m_old`
+    #     :rtype y: np.memmap
+    #     :return y: memory of the gradient differences `g_new - g_old`
+    #     """
+    #     # Determine the iterates for model m and gradient g
+    #     s_k = \
+    #         self.load_vector("m_new").vector - self.load_vector("m_old").vector
+    #     y_k = \
+    #         self.load_vector("g_new").vector - self.load_vector("g_old").vector
+
+    #     # Determine the shape of the memory map (length of model, length of mem)
+    #     m = len(s_k)
+    #     n = self.LBFGS_mem
+
+    #     # Initial iteration, need to create the memory map
+    #     if self._memory_used == 0:
+    #         s = np.memmap(filename=self.path._s_file, mode="w+",
+    #                       dtype="float32", shape=(m, n))
+    #         y = np.memmap(filename=self.path._y_file, mode="w+",
+    #                       dtype="float32", shape=(m, n))
+    #         # Store the model and gradient differences in memmaps
+    #         s[:, 0] = s_k
+    #         y[:, 0] = y_k
+    #         self._memory_used = 1
+    #     # Subsequent iterations will append to memory maps
+    #     else:
+    #         s = np.memmap(filename=self.path._s_file, mode="r+",
+    #                       dtype="float32", shape=(m, n))
+    #         y = np.memmap(filename=self.path._y_file, mode="r+",
+    #                       dtype="float32", shape=(m, n))
+    #         # Shift all stored memory by one index to make room for latest mem
+    #         s[:, 1:] = s[:, :-1]
+    #         y[:, 1:] = y[:, :-1]
+    #         # Store the latest model and gradient in first index
+    #         s[:, 0] = s_k
+    #         y[:, 0] = y_k
+
+    #         # Keep track of the memory used
+    #         if self._memory_used < self.LBFGS_mem:
+    #             self._memory_used += 1
+
+    #     return s, y
 
     def _apply_inverse_hessian(self, q, s=None, y=None):
         """

@@ -267,7 +267,7 @@ class Model:
 
         return np.arccos(xy / (xx * yy) ** 0.5)
 
-    def apply(self, actions, values=None, other=None, export_to=None):
+    def apply(self, actions, values, export_to=None):
         """
         Main model function which manipulates the model with a given list of 
         `actions` and associated `values`. `actions` can also be performed
@@ -278,22 +278,13 @@ class Model:
 
         .. note::
 
-            If using `other`, the FIRST action in `actions` will be applied to
-            the other model, and all other `actions` will be applied to `values`    
-            such that len(actions) == len(values) + 1. For example:
+            Entries in `values` can be other models, and the operation from
+            the corresponding action will be applied:
 
-            Model.apply(actions=["*", "+"], values=[1], other=OtherModel)
+            Model.apply(actions=["*", "+"], values=[2, OtherModel])
 
-            will multiply Model and OtherModel and then add 1 to the result.
-
-        .. note::
-
-            If NOT using `other`, then `actions` must match `values` in length.
-            For example:
-
-            Model.apply(actions=["*", "+"], values=[2, 1])
-
-            Will multiply the model by 2 and then add 1 to the result.
+            will multiply Model by 2 and then element-wise add values from 
+            OtherModel to that result
 
         .. note::
 
@@ -301,23 +292,17 @@ class Model:
             you want to go the other way, then call this function with the 
             other Model object.
 
-        :type other: seisflows.tools.specfem_model.SpecfemModel
-        :param other: the `other` model to loop over. Can have different 
-            parameters (e.g., model and kernel) but must match format and
-            nproc in order to loop with model
-        :type action: list of str
-        :param action: action to perform using the `actions` functions. 
-            If using `other` model, then the first action will be applied and 
-            can be one of the following:
+        :type actions: list of str
+        :param actions: action to perform using the `actions` functions. 
             - '*': multiply the model by the other model values
             - '/': divide the model by the `other` model values
             - '+': add the `other` model values to the model
             - '-': subtract the `other` model values from the model
-            If not using `other` model, then the actions can only be `multiply` 
-            and `add`
-        :type values: list of float
-        :param values: list of va`lues to use in the `actions`. Must match the
-            length of `actions`. 
+        :type values: list of float or seisflows.tools.specfem_model.Model
+        :param values: list of values to use in the `actions`. Must match the
+            length of `actions`. Can either be a float if you are e.g., adding
+            or multiplying, or it can be another model, if you want to do 
+            element-wise operations between two models.
         :type export_to: str
         :param export_to: path to export the model values to disk. The filenames
             of the exported files will match the input filenames of this Model,
@@ -325,30 +310,25 @@ class Model:
             directory as the input model `self.path`, which means it overwrites
             the current model
         """
+        assert(len(actions) == len(values)), (
+            f"actions must match values in length"
+            )
         # SET DEFAULT VALUES
-        if values is None:
-            values = []  # Empty list allows comparisons
         if export_to is None:
             export_to = self.path  # Default is to overwrite input
             
         # RUN BASIC CHECKS
         # If applying with another model, ensure matching Model characteristics
-        if other:
-            assert(self.fmt == other.fmt), (
-                f"Model format {self.fmt} does not match other model "
-                f"{other.fmt}")
-            assert(self.nproc == other.nproc), (
-                f"Model nproc {self.nproc} do not match other model "
-                f"{other.nproc}")
-            assert(len(actions) == len(values) + 1), (
-                f"actions must be 1 longer than values if using `other` model, "
-                f"because first action is applied to `other` model"
-            )
-        else:
-            assert(len(actions) == len(values)), (
-                f"actions must match values in length"
-            )
-        
+        for value in values:
+            if isinstance(value, self.__name__):
+                assert(self.fmt == value.fmt), (
+                    f"Model format {self.fmt} does not match other model "
+                    f"{value.fmt}")
+                assert(self.nproc == value.nproc), (
+                    f"Model nproc {self.nproc} do not match other model "
+                    f"{value.nproc}")
+                assert(len(self.filenames) == len(value.filenames))
+
         # Check that actions are acceptable
         for action in actions:
             assert(action in self.acceptable_actions), (
@@ -356,39 +336,22 @@ class Model:
             )
             
         # BEGIN APPLY
-        # If no `other` model is given, then we only deal with the current model
-        if other is None:
-            if self.parallel:
-                with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-                    futures = [
-                        executor.submit(self._apply_single, fid, actions, 
-                                        values, export_to) 
-                                        for fid in self.filenames
-                                        ]
-                    wait(futures)                   
-            else:
-                for fid in self.filenames:
-                    self._apply_single(fid, actions, values, export_to)
-                
-        # If `other` model is given, then we loop over the two models together
+        if self.parallel:
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._apply_single, idx, actions, 
+                                    values, export_to) 
+                                    for idx in range(self.filenames)
+                                    ]
+                wait(futures)                   
         else:
-            if self.parallel:
-                with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
-                    futures = [
-                        executor.submit(self._apply_with_single, fid, other_fid, 
-                                        actions, values, export_to) 
-                                        for fid, other_fid in zip(self.filenames, 
-                                                                other.filenames)
-                                        ]
-                    wait(futures)                   
-            else:
-                for fid, other_fid in zip(self.filenames, other.filenames):
-                    self._apply_with_single(fid, other_fid, actions, values, 
-                                            export_to)
+            for idx in range(self.filenames):
+                self._apply_single(idx, actions, values, export_to)
 
-    def _apply_single(self, fid, actions, values, export_to):
+    def _apply_single(self, idx, actions, values, export_to):
         """
-        Apply an action to a single parameter and processor, this should be 
+        Apply an action to a single SPECFEM Fortran binary parameter 
+        and processor file (e.g., proc000000_vs.bin), this should be 
         parallelized by a main calling function and not called individually
 
         .. note::
@@ -397,76 +360,45 @@ class Model:
               https://stackoverflow.com/questions/49493482/\
                   numpy-np-multiply-vs-operator
     
-        :type fid: str
-        :param fid: full path to filename to read and maninpulate
-        :type action: str
-        :param action: action to perform using the `actions` functions
-            - '*': multiply the model by `value`. If you want to divide
-              then `multiply` by `1/value`
-            - '+': add `value` to the model. If you want to subtract
-                then `add` by `-1*value`
-            
-        :type value: float
-        :param value: value to use in the `action`
+        :type idx: int
+        :param idx: index of the filename to access. Will also be used to match
+            the index of any other models that should be manipulated alongside.
+        :type actions: str
+        :param actions: action to perform using the `actions` functions. Either
+            performed on a single value, or element-wise with another Model
+            - '*': multiply
+            - '/': divide
+            - '+': add 
+            - '-': subtract 
+        :type values: float
+        :param values: value to use in the `action`
         :type export_to: str
         :param export_to: path to the directory to export the action'ed file.
             filename will match the input filename of `fid`. If None then
             will export to the same path as the input model `self.path`, which
             is an inplace action
         """
-        arr = self.read(filename=fid)
+        arr = self.read(filename=self.filenames[idx])
 
         for action, value in zip(actions, values):
+            # If the value given is another Model, then overwrite with the 
+            # actual array data value so we can do element-wise operations.
+            # !!! ASSUMING that the indexing is the same for both
+            if isinstance(value, self.__name__):
+                value = self.read(value.filenames[idx])
+
+            # Apply actions
             if action == "*": 
                 arr *= value
+            elif action == "/": 
+                arr /= value
             elif action == "+":
                 arr += value    
+            elif action == "-":
+                arr -= value
             # > ADD ADDITIONAL ACTIONS HERE
 
-        fid_out = os.path.basename(fid)
-        self.write(arr=arr, filename=os.path.join(export_to, fid_out))
-                                           
-    def _apply_with_single(self, fid, other_fid, actions, values, 
-                           export_to=None):
-        """
-        Apply an action to a single parameter and processor, should be 
-        parallelized by a main calling function and not called individually
-    
-        :type fid: str
-        :param fid: full path to filename to read and maninpulate
-        :type action: str
-        :param action: action to perform using the `actions` functions
-        :type value: float
-        :param value: value to use in the `action`
-        :type export_to: str
-        :param export_to: path to the directory to export the action'ed file.
-            filename will match the input filename of `fid`
-        """
-        arr = self.read(filename=fid)
-        other_arr = self.read(filename=other_fid)
-
-        other_action, *actions = actions  # first action applied to other model
-
-        # Apply the first action to both models 
-        if other_action == "*": 
-            arr *= other_arr
-        elif other_action == "/": 
-            arr /= other_arr
-        elif other_action == "+":
-            arr += other_arr    
-        elif other_action == "-":
-            arr -= other_arr
-
-        # This is repeated from `_apply_single` but it's short enough.
-        # This will get skipped if there are no other `actions`` to apply
-        for action, value in zip(actions, values):
-            if action == "*": 
-                arr *= value
-            elif action == "+":
-                arr += value    
-            # > ADD ADDITIONAL ACTIONS HERE
-
-        fid_out = os.path.basename(fid)
+        fid_out = os.path.basename(self.filenames[idx])
         self.write(arr=arr, filename=os.path.join(export_to, fid_out))
 
     def _get_filename(self, i="*", val="*", ext="*"):
