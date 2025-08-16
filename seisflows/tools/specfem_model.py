@@ -50,7 +50,7 @@ class Model:
 
     # Define acceptable actions for Model.apply() and Model.get()
     acceptable_actions = ["*", "/", "+", "-"]
-    acceptable_gets = ["min", "max", "absmax", "mean", "sum"]
+    acceptable_gets = ["min", "max", "absmax", "mean", "sum", "vector"]
 
 
     def __init__(self, path, fmt="", parameters=None, regions=None, 
@@ -175,6 +175,11 @@ class Model:
             - 'min': minimum value in the model
             - 'mean': mean value of the model
             - 'sum': sum of all values in the model
+            - 'vector': returns the entire Model vector as a NumPy array, can
+                be very big
+        :rtype: float or np.array
+        :return: dependending on `what` you return, output can be a single value
+            as a float, or a whole numpy array (if what=='vector')
         """
         assert what in self.acceptable_gets  
 
@@ -233,27 +238,28 @@ class Model:
         :param other: other model to dot with this model
         :rtype: float
         :return: dot product of this model and the `other` model
-        """
-        def _dot_product(a, b):
-            """Read individual proc files and return the dot product"""
-            return np.dot(self.read(a), self.read(b))
-        
+        """ 
         dot_procs = []
+        # !!! This is not working
         if self.parallel:
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
                 futures = [
-                    executor.submit(_dot_product, fid, other_fid) 
+                    executor.submit(self._dot_single, fid, other_fid) 
                                     for fid, other_fid in zip(self.filenames, 
                                                               other.filenames)
                                     ]
                 wait(futures)       
             for future in futures:
-                dot_procs.append(future.result)            
+                dot_procs.append(future.result())            
         else:
             for fid, other_fid in zip(self.filenames, other.filenames):
-                dot_procs.append(_dot_product(fid, other_fid))
+                dot_procs.append(self._dot_single(fid, other_fid))
 
         return np.sum(dot_procs)
+    
+    def _dot_single(self, fid, other_fid):
+        """Dot product function to be passed to parallel dot product"""
+        return np.dot(self.read(fid), self.read(other_fid))
     
     def mag(self):
         """
@@ -261,26 +267,27 @@ class Model:
 
         :return: dot product of this model and the `other` model
         """
-        def _magnitude(fid):
-            """Read individual proc files and return sum of squares"""
-            return np.sum(self.read(fid) ** 2)
-        
         mags = []
         if self.parallel:
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
                 futures = [
-                    executor.submit(_magnitude, fid) for fid in self.filenames
+                    executor.submit(self._mag_single, fid) 
+                    for fid in self.filenames
                 ]
                 wait(futures)       
             for future in futures:
-                mags.append(future.result)            
+                mags.append(future.result())            
         else:
             for fid in self.filenames:
-                mags.append(_magnitude(fid))
+                mags.append(self._mag_single(fid))
 
         # Finally sum all the procs and square root
         return np.sum(mags) ** 0.5
     
+    def _mag_single(self, fid):
+        """Single intermediate magnitude calculation for parallel run"""
+        return np.sum(self.read(fid) ** 2)
+        
     def angle(self, other):
         """
         Calculate the angle between two model vectors where the angle between
@@ -297,9 +304,10 @@ class Model:
         mag_a = self.mag()
         mag_b = other.mag()
 
-        import pdb;pdb.set_trace()
-
-        return np.arccos(a_dot_b / (mag_a * mag_b))
+        # Rounding off floating point precision incase the angle is just above
+        # 1 or -1, for which np.arccos will throw a NaN return and a runtime
+        # warning
+        return np.arccos(round(a_dot_b / (mag_a * mag_b), 2))
 
     def apply(self, actions, values, export_to=None):
         """
