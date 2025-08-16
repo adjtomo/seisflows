@@ -285,7 +285,7 @@ class Gradient:
         if self.preconditioner.upper() == "DIAGONAL":
             logger.info(f"applying diagonal preconditioner and {actions} "
                         f"to {values}")
-            q.apply(actions=["*"] + actions, values=values, other=precon,
+            q.apply(actions=["*"] + actions, values=[precon] + values,
                     export_to=export_to)
 
         # > ADD OTHER PRECONDITIONERS HERE, FOLLOW TEMPLATE FOR DIAGONAL
@@ -491,7 +491,7 @@ class Gradient:
         # The new model is the current model `m_new` plus a perturbation `dm`
         # defined as the search direction `p_new` scaled by step length `alpha`
         m_try = Model(path=self.path._m_new)  # This will be overwritten
-        m_try.apply(actions=["+"], other=dm, export_to=self.path._m_try)
+        m_try.apply(actions=["+"], values=[dm], export_to=self.path._m_try)
 
         # Export `alpha` which is now tied to the current trial model `m_try`
         np.savetxt(self.path._alpha, alpha)

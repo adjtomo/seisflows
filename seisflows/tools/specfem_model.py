@@ -320,7 +320,7 @@ class Model:
         # RUN BASIC CHECKS
         # If applying with another model, ensure matching Model characteristics
         for value in values:
-            if isinstance(value, self.__name__):
+            if isinstance(value, type(self)):
                 assert(self.fmt == value.fmt), (
                     f"Model format {self.fmt} does not match other model "
                     f"{value.fmt}")
@@ -341,11 +341,11 @@ class Model:
                 futures = [
                     executor.submit(self._apply_single, idx, actions, 
                                     values, export_to) 
-                                    for idx in range(self.filenames)
+                                    for idx in range(len(self.filenames))
                                     ]
                 wait(futures)                   
         else:
-            for idx in range(self.filenames):
+            for idx in range(len(self.filenames)):
                 self._apply_single(idx, actions, values, export_to)
 
     def _apply_single(self, idx, actions, values, export_to):
@@ -384,7 +384,7 @@ class Model:
             # If the value given is another Model, then overwrite with the 
             # actual array data value so we can do element-wise operations.
             # !!! ASSUMING that the indexing is the same for both
-            if isinstance(value, self.__name__):
+            if isinstance(value, type(self)):
                 value = self.read(value.filenames[idx])
 
             # Apply actions

@@ -178,7 +178,8 @@ def test_model_apply_w_other_serial(tmpdir, test_model_serial,
 
     for action in test_model_serial.acceptable_actions:
         print(action)
-        test_model_serial.apply(actions=[action], other=test_model_other_serial,
+        test_model_serial.apply(actions=[action], 
+                                values=[test_model_other_serial],
                                 export_to=export_to)
         m = Model(path=export_to, parameters=["c11", "c22", "c33"], 
                   parallel=False)
@@ -205,7 +206,7 @@ def test_model_apply_w_other_parallel(tmpdir, test_model_parallel,
     for action in test_model_parallel.acceptable_actions:
         print(action)
         test_model_parallel.apply(actions=[action], 
-                                  other=test_model_other_parallel,
+                                  values=[test_model_other_parallel],
                                   export_to=export_to)
         m = Model(path=export_to, parameters=["c11", "c22", "c33"], 
                   parallel=False)
