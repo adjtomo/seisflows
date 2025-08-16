@@ -177,6 +177,12 @@ def test_model_dot(test_model_serial):
     # more or less the same
     assert(dot_product == pytest.approx(dot_product_to_check, 1E-4))
 
+def test_model_angle(test_model_serial):
+    """
+    Check that the angle function works as expected
+    """
+    pytest.set_trace()
+    assert(test_model_serial.angle(test_model_serial) == 1.)
 
 #
 # MISCELLANEOUS TEST FUNCTIONS

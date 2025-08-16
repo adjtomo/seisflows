@@ -186,7 +186,7 @@ class Model:
                                     for fid in self.filenames
                                     ]
                 wait(futures)     
-            vals = [f.result() for f in futures]              
+            vals = np.array([f.result() for f in futures])
         else:
             vals = []
             for fid in self.filenames:
@@ -203,6 +203,8 @@ class Model:
             return(np.mean(vals))
         elif what == "sum":  # !!! CHECK THIS
             return np.sum(vals)
+        elif what == "vector":
+            return np.concatenate(vals)
             
     def _get_single(self, filename, what):
         """
@@ -219,6 +221,8 @@ class Model:
             return np.mean(self.read(filename))
         elif what == "sum":
             return np.sum(self.read(filename))
+        elif what == "vector":
+            return self.read_filename
 
     def dot(self, other):
         """
@@ -251,21 +255,51 @@ class Model:
 
         return np.sum(dot_procs)
     
+    def mag(self):
+        """
+        Determine the magnitude of the Model vector 
+
+        :return: dot product of this model and the `other` model
+        """
+        def _magnitude(fid):
+            """Read individual proc files and return sum of squares"""
+            return np.sum(self.read(fid) ** 2)
+        
+        mags = []
+        if self.parallel:
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(_magnitude, fid) for fid in self.filenames
+                ]
+                wait(futures)       
+            for future in futures:
+                mags.append(future.result)            
+        else:
+            for fid in self.filenames:
+                mags.append(_magnitude(fid))
+
+        # Finally sum all the procs and square root
+        return np.sum(mags) ** 0.5
+    
     def angle(self, other):
         """
-        Calculate the angle between two model vectors efficiently. This 
-        operation is effectively
+        Calculate the angle between two model vectors where the angle between
+        two vectors is expressed as 
+
+        theta = arccos(a * b / (|a| |b|) )  # where * is the dot product
 
         :type other: seisflows.tools.specfem_model.Model
         :param other: the `other` model to take angle with
         :rtype: float
         :return: angle between the two vectors
         """
-        xy = self.dot(other=other)
-        xx = self.dot(other=self)
-        yy = other.dot(other=other)
+        a_dot_b = self.dot(other=other)
+        mag_a = self.mag()
+        mag_b = other.mag()
 
-        return np.arccos(xy / (xx * yy) ** 0.5)
+        import pdb;pdb.set_trace()
+
+        return np.arccos(a_dot_b / (mag_a * mag_b))
 
     def apply(self, actions, values, export_to=None):
         """
