@@ -309,6 +309,9 @@ class Model:
             not the `other` model. If not given, will export to the same
             directory as the input model `self.path`, which means it overwrites
             the current model
+        :rtype: seisflows.tools.specfem_model.Model
+        :return: a revised model object that now points to the new path and has
+            updated filenames
         """
         assert(len(actions) == len(values)), (
             f"actions must match values in length"
@@ -347,6 +350,13 @@ class Model:
         else:
             for idx in range(len(self.filenames)):
                 self._apply_single(idx, actions, values, export_to)
+
+        # Return a new instance of the Model class with an optionally updated
+        # path. Filenames and nproc will be recalcualted but that is fast.
+        # this is lightweight. All other variables remain the same.
+        return self.__class__(path=export_to, fmt=self.fmt, 
+                              parameters=self.parameters, regions=self.regions,
+                              parallel=self.parallel)
 
     def _apply_single(self, idx, actions, values, export_to):
         """
