@@ -285,12 +285,16 @@ class Gradient:
         if self.preconditioner.upper() == "DIAGONAL":
             logger.info(f"applying diagonal preconditioner and {actions} "
                         f"to {values}")
-            q.apply(actions=["*"] + actions, values=[precon] + values,
-                    export_to=export_to)
+            preconditioned_q = q.apply(actions=["*"] + actions, 
+                                       values=[precon] + values,
+                                       export_to=export_to
+                                       )
 
         # > ADD OTHER PRECONDITIONERS HERE, FOLLOW TEMPLATE FOR DIAGONAL
         # if self.preconditioner.upper() == "NAME":
         #   ...
+
+        return preconditioned_q
 
     def compute_direction(self):
         """
@@ -305,17 +309,16 @@ class Gradient:
         :raises SystemError: if the search direction is 0, signifying a zero
             gradient which will not do anything in an update
         """
-        p_new = Model(path=self.path._g_new)
+        g_new = Model(path=self.path._g_new)
         if self.preconditioner is not None:
-            self.precondition(q=p_new, actions=["*"], values=[-1],
-                              export_to=self.path._p_new)
+            p_new = self.precondition(q=g_new, actions=["*"], values=[-1],
+                                      export_to=self.path._p_new)
         else:
             # Only multiply by -1 to get the search direction
-            p_new.apply(actions=["*"], values=[-1.0], 
-                        export_to=self.path._p_new)
+            p_new = g_new.apply(actions=["*"], values=[-1.0], 
+                                export_to=self.path._p_new)
             
         # Check the newly created search direction vector 
-        p_new = Model(path=self.path._p_new)
         if p_new.get("sum") == 0:
             logger.critical(msg.cli(
                 "Search direction vector 'p' is 0, meaning no model update can "
