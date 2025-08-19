@@ -87,6 +87,8 @@ class Inversion(Migration):
         self.path["eval_func"] = path_eval_func or \
                                  os.path.join(self.path.workdir, "scratch",
                                               "eval_func")
+                                              
+        self.path["_model"] = os.path.join(self.path.eval_func, "model")
 
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
@@ -353,7 +355,9 @@ class Inversion(Migration):
         total_misfit = np.sum(event_misfits) / len(event_misfits)
 
         # Sum newly calc'd residuals into the optimization library
-        self.optimize.save_vector(name=save_to, m=total_misfit)
+        # Assuming the optimization path structure here
+        path_misfit = self.optimize.path[f"_{save_to}"]  # e.g., 'f_new'
+        np.savetxt(path_misfit, total_misfit)  # f_new
         logger.info(f"misfit {save_to} ({self.evaluation}) = "
                     f"{total_misfit:.3E}")
 
@@ -495,11 +499,8 @@ class Inversion(Migration):
         # Compute search direction `p_new`: P is used to perturb starting model
         # and is required for the line search 
         logger.info("calculating search direction `p_new` from gradient")
-        p_new = self.optimize.compute_direction()
-
-        # Save optimization updates to disk for restarts/checkpoint
+        self.optimize.compute_direction()
         self.optimize.checkpoint()
-        self.optimize.save_vector(name="p_new", m=p_new)
 
     def initialize_line_search(self):
         """
@@ -520,13 +521,12 @@ class Inversion(Migration):
         alpha, _ = self.optimize.calculate_step_length()
 
         logger.info("computing line search trial model `m_try`")
-        self.optimize.compute_trial_model(alpha=alpha)
+        m_try = self.optimize.compute_trial_model(alpha=alpha)
         self.optimize.checkpoint()
 
-        # Expose model `m_try` to the solvers by placing it in eval_func dir.
-        # !!! HOW DO WE DO THIS WITH NEW MODEL PARADIGM?
-        # _path_m_try = os.path.join(self.path.eval_func, "model")
-        # m_try.write(path=_path_m_try)
+        # Empty apply is used as an export function to save the trial model in
+        # a more accessible location
+        m_try.apply(actions=[], values=[], export_to=self.path._model)
 
     def evaluate_line_search_misfit(self):
         """
@@ -540,13 +540,12 @@ class Inversion(Migration):
                             f"{self.optimize.step_count:0>2}"))
         
         logger.info(f"`m_try` model parameters for line search evaluation:")
-        self.solver.check_model_values(path=os.path.join(self.path.eval_func, 
-                                                         "model"))
+        self.solver.check_model_values(path=self.path._model)
 
         self.system.run(
             [self.run_forward_simulations,
              self.evaluate_objective_function],
-            path_model=os.path.join(self.path.eval_func, "model"),
+            path_model=self.path._model,
             save_residuals=os.path.join(
                 self.path.eval_func, "residuals",
                 f"residuals_{{src}}_{self.evaluation}.txt")
@@ -591,7 +590,7 @@ class Inversion(Migration):
             logger.info("trial step successful. finalizing line search")
 
             # Finalizing line search sets `m_try` -> `m_new` for later iters
-            self.optimize.compute_trial_model(alpha=alpha)
+            m_try = self.optimize.compute_trial_model(alpha=alpha)
             self.optimize.finalize_search()
             self.optimize.checkpoint()
             return
@@ -599,11 +598,8 @@ class Inversion(Migration):
             logger.info("trial step unsuccessful. re-attempting line search")
 
             # Expose the new model to the solver directories for the next step
-            self.optimize.compute_trial_model(alpha=alpha)
-
-            # !!! HOW DO WE EXPOSE
-            # _path_m_try = os.path.join(self.path.eval_func, "model")
-            # m_try.write(path=_path_m_try)
+            m_try = self.optimize.compute_trial_model(alpha=alpha)
+            m_try.apply(actions=[], values=[], export_to=self.path._model)
 
             # Re-set state file to ensure that job failure will recover
             self._states["evaluate_line_search_misfit"] = 0
@@ -647,11 +643,11 @@ class Inversion(Migration):
         # Export scratch files to output if requested. Do this before super()
         # so that solver can find the new model for VTK generation
         if self.export_model:
-            model = self.optimize.load_vector("m_new")
-            m_fid = os.path.join(self.path.output, 
-                                 f"MODEL_{self.iteration:0>2}")
-            logger.info(f"writing model `m_new` to {m_fid}")
-            model.write(path=m_fid)
+            m_new = Model(self.optimize.path._m_new)
+            path_m = os.path.join(self.path.output, 
+                                  f"MODEL_{self.iteration:0>2}")
+            logger.info(f"writing model `m_new` to {path_m}")
+            m_new.apply(actions=[], values=[], path=path_m)
 
         super().finalize_iteration()
 

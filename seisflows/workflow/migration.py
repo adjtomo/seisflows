@@ -184,48 +184,42 @@ class Migration(Forward):
             function for multiplying files (only for adding/subtracting)
             """
             # Only trigger this function if the Solver saved source mask files
-            mask_path = os.path.join(self.path.eval_grad, "mask_source", 
-                                     self.solver.source_names[0])
-            if not glob(os.path.join(mask_path, "*")):
+            mask_file_check = glob(os.path.join(self.path.eval_grad, 
+                                                "mask_source", 
+                                                self.solver.source_names[0]))[0]
+            if not mask_file_check:
                 logger.debug("no source mask files found, skipping source mask")
                 return
             
             logger.info("masking source region in event kernels")
             for src in self.solver.source_names:
                 logger.debug(f"mask source {src}")
-                path = os.path.join(self.path.eval_grad, "mask_source", src)
+
+                # Set paths for input and output files
+                path_mask = os.path.join(
+                    self.path.eval_grad, "mask_source", src
+                    )
+                path_event_kernels = os.path.join(
+                    self.path.eval_grad, "kernels", src
+                    )
 
                 # Mask vector [0, 1], where values <1 are near source
-                mask_model = Model(path=path, parameters=["mask_source"],
+                mask_model = Model(path=path_mask, parameters=["mask_source"],
                                    regions=self.solver._regions)
+                event_kernels = Model(path=path_event_kernels, 
+                                      parameters=[f"{par}_kernel" for par 
+                                                  in self.solver._parameters],
+                                      regions=self.solver._regions
+                                      )
                 
-                # Gaussian mask sometimes does not sufficiently suppress source 
-                # region so we modify the amplitude 
-                maskv = mask_model.vector
-                if self.solver.scale_mask_region:
-                    logger.info(f"scaling source mask by "
-                                f"{self.solver.scale_mask_region}")
-                    maskv[maskv < 1] *= self.solver.scale_mask_region  
+                # Tile the source_mask vector to match the lenght of the model
+                # vectors
+                n = len(event_kernels.parameters)
+                mask_model.filenames = n * mask_model.filenames
 
-                # Need to expand vector the length of the event kernel vector
-                maskv = np.tile(maskv, len(self.solver._parameters))
-                
-                # Now we apply the mask to the event kernel which contains all
-                # parameters we are updating in our inversion
-                event_kernel = Model(
-                    path=os.path.join(self.path.eval_grad, "kernels", src), 
-                    parameters=[f"{par}_kernel" for par in 
-                                self.solver._parameters],
-                    regions=self.solver._regions
-                    )
-                event_kernel.apply(actions["*"], other=mask)
-                event_kernel.update(vector=event_kernel.vector * maskv)
-
-                # Overwrite existing event kernel files with the masked version
-                event_kernel.write(
-                    path=os.path.join(self.path.eval_grad, "kernels", src)
-                    )
-
+                # Now we apply the mask to the event kernels and write in place
+                event_kernels.apply(actions=["*"], values=[mask_model])
+                                    
         def combine_event_kernels(**kwargs):
             """
             Combine individual event kernels into a misfit kernel for each
@@ -314,23 +308,19 @@ class Migration(Forward):
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
         logger.info("scaling kernel to absolute model perturbations (gradient)")
-        model.apply(actions=["*"], other=kernel, export_to=gradient_path)
-
-        # Set up the gradient which will be modified
-        gradient = Model(path=gradient_path, regions=self.solver._regions,
-                         parameters=self.solver._parameters)
+        gradient = model.apply(actions=["*"], values=[kernel], 
+                               export_to=gradient_path)
         
         # Apply an optional mask to the gradient. Occurs in-place
         if self.path.mask:
             logger.warning("MASKING IS UNTESTED. USE WITH CAUTION!")
-
+            
             logger.info("applying mask function to gradient")
-
             mask = Model(path=self.path.mask, 
                          regions=self.solver._regions,
                          parameters=["mask"])
             # Mask the gradient in place
-            gradient.apply(actions=["*"], other=mask)
+            gradient = gradient.apply(actions=["*"], values=[mask])
 
         # Export gradient to disk
         if self.export_gradient:
@@ -341,7 +331,6 @@ class Migration(Forward):
         # Last minute check to see if the gradient is 0. If so then the adjoint
         # simulations returned no kernels and that probably means something 
         # went wrong
-        # !!! TODO cant sum anymore so we need to check (max?)
         if gradient.get("sum") == 0:
             logger.critical(msg.cli(
                 "Gradient vector 'g' is 0, meaning none of the kernels from "

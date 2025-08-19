@@ -328,6 +328,8 @@ class Gradient:
             )
             sys.exit(-1)
 
+        return p_new
+
     def initialize_search(self):
         """
         Setup a the line search machinery by inputting values for the initial
@@ -500,6 +502,8 @@ class Gradient:
 
         # Export `alpha` which is now tied to the current trial model `m_try`
         np.savetxt(self.path._alpha, alpha)
+
+        return m_try
 
     def finalize_search(self):
         """

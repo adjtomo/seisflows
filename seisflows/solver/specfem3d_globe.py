@@ -286,6 +286,14 @@ class Specfem3DGlobe(Specfem):
                 logger.warning("no source mask files found despite parameter "
                                "`mask_source`=True")
                 return
+            
+            # BCBC TO DO: implement a mask scaling here
+            # Gaussian mask sometimes does not sufficiently suppress source 
+            # region so we modify the amplitude 
+            # if self.solver.scale_mask_region:
+            #     logger.info(f"scaling source mask by "
+            #                 f"{self.solver.scale_mask_region}")
+            #     maskv[maskv < 1] *= self.solver.scale_mask_region  
 
             logger.debug(f"moving source mask files to {dst}")
             unix.mv(src=mask_files, dst=dst)
