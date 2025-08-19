@@ -227,15 +227,11 @@ class LBFGS(Gradient):
         self._LBFGS_iter = 0  # will be incremented to 1 by `compute_direction`
         self._memory_used = 0
 
-        # Clear out previous gradient information. Check file existence first
-        # because the first iteration will not have generated S and Y yet, but
-        # we may want to run restart for manual line search restart
-        if os.path.exists(self.path._s_file):
-            s = np.memmap(filename=self.path._s_file, mode="r+")
-            s[:] = 0.
-        if os.path.exists(self.path._y_file):
-            y = np.memmap(filename=self.path._y_file, mode="r+")
-            y[:] = 0.
+        # Clear out previous model difference (s_k) and 
+        # gradient difference (y_k) information 
+        for i in self.LBFGS_mem:
+            Model(os.path.join(self.path._LBFGS, f"_y{i}")).clear()
+            Model(os.path.join(self.path._LBFGS, f"_s{i}")).clear()
 
     def _apply_inverse_hessian_to_gradient(self, q):
         """
@@ -290,29 +286,31 @@ class LBFGS(Gradient):
             # q -= lambda_i * y_i
             # Note the math is rearranged so we can make this slightly more
             # efficient but it's solving the same operation. Export to scratch
-            y_i.apply(actions=["*", "*", "+"], values=[lambda_i, -1, q],
+            q = y_i.apply(actions=["*", "*", "+"], values=[lambda_i, -1, q],
                       export_to=self.path._scratch)
-            q = Model(self.path._scratch)
 
         # Optional step, apply preconditioner in place on the scratch path
         if self.preconditioner:
-            self.precondition(q=q, export_to=self.path._scratch)
+            r = self.precondition(q=q)
+        else:
+            r = q
             
         # Step 3: Use scaling M3 proposed by Liu & Nocedal 1989
-        r = Model(self.path._scratch)  # `r` is either (preconditioned) `q`
         y_0 = Model(self.path._y0)
         s_0 = Model(self.path._s0)
         sty_over_yty = s_0.dot(y_0) / y_0.dot(y_0)
 
         # We now use the actual `r` path that will provide the final quantity
         # `r` which defines the scaled gradient
-        r.apply(actions=["*"], values=[sty_over_yty], 
-                export_to=self.path.LBFGS._r)
+        r = r.apply(actions=["*"], values=[sty_over_yty], 
+                    export_to=self.path.LBFGS._r)
+        
+        # Clear out the scratch directory now that we don't need it anymore
+        q.clear()
 
         # Step 4: Second matrix product, calculate scaled gradient `r`
         for i in range(k - 1, -1 ,-1):  
             # Load vectors from disk
-            r = Model(self.path.LBFGS._r)
             y_i = Model(self.path.LBFGS[f"_y_{i}"])
             s_i = Model(self.path.LBFGS[f"_s_{i}"])
 
@@ -323,9 +321,8 @@ class LBFGS(Gradient):
             # r += s_i(lambda_i - mu)
             # Again we slightly rearrange the math to make the operation more
             # efficient but in the end we update the `r` model vector
-            s_i.apply(actions=["*", "+"], values=[lambda_i - mu, r],
-                      export_to=self.path.LBFGS._r
-                      )
+            r = s_i.apply(actions=["*", "+"], values=[lambda_i - mu, r],
+                          export_to=self.path.LBFGS._r)
             
         return Model(self.path.LBFGS._r)
 

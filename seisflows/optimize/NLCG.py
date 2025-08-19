@@ -72,7 +72,7 @@ class NLCG(Gradient):
         checkpoint_dict = np.load(self.path._checkpoint)
         checkpoint_dict["NLCG_iter"] = self._NLCG_iter
 
-        np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
+        np.savez(file=self.path._checkpoint, **checkpoint_dict)  # NOQA
 
     def compute_direction(self):
         """
@@ -176,6 +176,8 @@ class NLCG(Gradient):
         :return: beta, the scale factor to apply to the old search direction to
             determine the new search direction
         """
+        if self.preconditioner:
+            
         num = dot(self.precondition(g_new), g_new)
         den = dot(g_old, g_old)
         beta = num / den
