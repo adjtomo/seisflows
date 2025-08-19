@@ -709,7 +709,7 @@ class Model:
     #         plt.show()
 
  
-    def check(self, arr, min_pr=-1., max_pr=0.5):
+    def check(self, min_pr=-1., max_pr=0.5):
         """
         Checks parameters in the model. If Vs and Vp present, checks poissons
         ratio. Checks for negative velocity values. 
@@ -735,21 +735,9 @@ class Model:
                 f"should not, please check your model construction"
                 )
             
-        # # SPECFEM 2D and 3D parameters
-        # if "vs" in self.parameters and "vp" in self.parameters:
-        #     pr = poissons_ratio(vp=self.merge(parameter="vp"),
-        #                         vs=self.merge(parameter="vs"))
-        #     if pr.min() < 0:
-        #         logger.warning("minimum poisson's ratio is negative")
-        #     if pr.max() < min_pr:
-        #         logger.warning(f"maximum poisson's ratio out of bounds: "
-        #                        f"{pr.max():.2f} > {max_pr}")
-        #     if pr.min() > max_pr:
-        #         logger.warning(f"minimum poisson's ratio out of bounds: "
-        #                        f"{pr.min():.2f} < {min_pr}")
 
-        # if "vs" in self.model and np.hstack(self.model.vs).min() < 0:
-        #     logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
+        if "vs" in self.model and np.hstack(self.model.vs).min() < 0:
+            logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
 
         # if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
         #     logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
