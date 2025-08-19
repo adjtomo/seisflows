@@ -407,10 +407,13 @@ class Gradient:
         # Manually set the step length as some percentage of the model vector.
         # Only do this at the very first model update
         if self.step_len_init and first_iteration and first_step:  
+            # We find an initial estimate for step lenght by scaling by the 
+            # model divided by the 
             norm_m = m.get(what="absmax")
             norm_p = p.get(what="absmax")
-
             alpha = self.step_len_init * norm_m / norm_p
+
+
             status = None
             logger.debug(f"setting first step length with user-requested "
                          f"`step_len_init`={self.step_len_init}")
@@ -419,7 +422,7 @@ class Gradient:
         else:
             alpha, status = self._line_search.calculate_step_length()
 
-        # Apply optional step length safeguard to prevent step length from 
+        # Apply optional step length safeguards to prevent step length from 
         # getting too large w.r.t model values
         if status == "TRY" and (self.step_len_max or self.step_len_min):
             # These parameters may have been initiated so we don't do it again
@@ -450,9 +453,8 @@ class Gradient:
                     logger.warning(f"`alpha` has exceeded maximum value "
                                    f"{self.step_len_max * 100}%")
                     if first_step:
-                        # If this is the first step, pull back slightly so that 
-                        # line search can safely increase step length later
-                        # TODO: Where does this value come from?
+                        # Scale back by Golden Ratio so that line search can 
+                        # safely increase step length in future steps
                         alpha = 0.618034 * max_allowable_alpha
                         logger.info("reducing step length for first step")
                     else:
@@ -479,10 +481,7 @@ class Gradient:
         p_new = Model(path=self.path._p_new)
 
         # Get Model Update = step length (a) * step direction (p)
-        p_new.apply(actions=["*"], values=[alpha], export_to=self.path._dm)
-
-        # Model Update
-        dm = Model(path=self.path._dm)
+        dm = p_new.apply(actions=["*"], values=[alpha], export_to=self.path._dm)
         logger.info(f"updating model with `dm` "
                     f"(dm_min={dm.get('min'):.2E}, "
                     f"dm_max = {dm.get('max'):.2E})"
@@ -490,8 +489,11 @@ class Gradient:
         
         # The new model is the current model `m_new` plus a perturbation `dm`
         # defined as the search direction `p_new` scaled by step length `alpha`
-        m_try = Model(path=self.path._m_new)  # This will be overwritten
-        m_try.apply(actions=["+"], values=[dm], export_to=self.path._m_try)
+        m_new = Model(path=self.path._m_new)  # This will be overwritten
+
+        # m_i+1 = m_i + a * dm
+        m_try = m_new.apply(actions=["+"], values=[dm], 
+                            export_to=self.path._m_try)
 
         # Export `alpha` which is now tied to the current trial model `m_try`
         np.savetxt(self.path._alpha, alpha)
@@ -500,8 +502,11 @@ class Gradient:
         """
         Prepares algorithm machinery and scratch directory for next model update
 
-        Removes old model/search parameters, moves current parameters to old,
-        sets up new current parameters and writes statistic outputs
+        - Irretrievably removes `old` model and search parameters
+        - Moves current `try` parameters to `old` for reference in next iter.
+        - Sets up `new` current parameters
+        - Writes and plots statistic output
+        - Resets line serach machinery
         """
         unix.cd(self.path.scratch)
 
@@ -534,7 +539,9 @@ class Gradient:
         logger.info("setting trial model as starting model (m_try -> m_new)")
         unix.mv(src=self.path._m_try, dst=self.path._m_new)
 
-        # Choose minimum misfit value as final misfit/model. index 0 is initial
+        # Choose minimum misfit value as final misfit/model, this is the 
+        # best accepted model, and does not necessarily correspond to the last
+        # line search step
         x, f, idx = self._line_search.get_search_history()
 
         # Figure out what step length and step count that corresponds to
@@ -553,7 +560,7 @@ class Gradient:
         Essentially checking if this is a steepest-descent optimization, which
         cannot and should not be restarted. If the search direction is calc'ed
         by another optimization schema, the search direction and gradient should
-        differ
+        differ and would allow us to restart by falling back to grad. descent.
 
         :type threshold: float
         :param threshold: angle threshold for the angle between the search
@@ -562,25 +569,28 @@ class Gradient:
         :return: pass (True) fail (False) status for retrying line search
         """
         g = Model(path=self.path._g_new)  # Gradient
-        # Take the negative gradient and store in scratch vector
-        g.apply(actions=["*"], values=[-1], export_to=self.path._scratch)
-
-        neg_g = Model(self.path._scratch)
         p = Model(path=self.path._p_new)  # Search Direction
+
+        # Take the negative gradient and store in scratch vector because we only
+        # need it for a short time
+        neg_g = g.apply(actions=["*"], values=[-1], 
+                        export_to=self.path._scratch)
 
         # Calculate the angle between the search direction and the neg. gradient
         theta = neg_g.angle(other=p)
-
         logger.debug(f"checking gradient/search direction angle, "
                      f"theta: {theta:6.3f}")
+        
+        # Free up scratch
+        neg_g.clear()
 
         if abs(theta) < threshold:
-            logger.info(f"search direction below threshold {threshold}, will "
-                        f"not attempt restart")
+            logger.debug(f"search direction theta={abs(theta):.2E} is below "
+                         f"threshold {threshold}, will not attempt restart")
             return False  # Do not restart
         else:
-            logger.info(f"search direction above threshold {threshold}, "
-                        f"attempting restart")
+            logger.debug(f"search direction theta={abs(theta):.2E} is above "
+                         f"threshold {threshold}, attempting restart")
             return True  # Go for restart
 
     def restart(self):
@@ -691,12 +701,15 @@ class Gradient:
 
         # Deviation of the search direction from the gradient direction
         # Take the negative gradient and store in scratch vector
-        g.apply(actions=["*"], values=[-1], export_to=self.path._scratch)
-        neg_g = Model(self.path._scratch)
+        neg_g = g.apply(actions=["*"], values=[-1], 
+                        export_to=self.path._scratch)
         theta = 180. * np.pi ** -1 * p.angle(neg_g) 
 
         dict_out = Dict(step_count=step_count, step_length=step_length,
                         misfit=misfit, if_restarted=if_restarted,
                         slope=slope, theta=theta)
+        
+        # Clear out disk space
+        neg_g.clear()
     
         return dict_out
