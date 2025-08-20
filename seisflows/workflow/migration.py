@@ -69,17 +69,12 @@ class Migration(Forward):
 
         self.path["mask"] = path_mask
 
-        # Set re-used internal paths where migration files are stored
-        _paths = {
-            "_model_grad": os.path.join(self.path.eval_grad, "model"),
-            "_gradient": os.path.join(self.path.eval_grad, "gradient"),
-            "_kernels":  os.path.join(self.path.eval_grad, "kernels"),
-            "_misfit_kernel": os.path.join(self.path.eval_grad, 
-                                           "misfit_kernel"),
-            "_mk_nosmooth": os.path.join(self.path.eval_grad, "mk_nosmooth"),
-            "_mask_source": os.path.join(self.path.eval_grad, "mask_source")
-        }
-        self.paths.update(_paths) 
+        # Set re-used internal paths where migration files are stored.
+        # Dictionary entries have leading underscore so they are no populated in
+        # the parameter file
+        for tag in ["model_grad", "gradient", "kernels", "misfit_kernel",
+                    "mk_nosmooth", "mask_source"]:
+            self.path[f"_{tag}"] = os.path.join(self.path.eval_grad, tag)
 
         # Overwriting base class required modules list
         self._required_modules = ["system", "solver", "preprocess"]
@@ -258,22 +253,15 @@ class Migration(Forward):
                     f"H={self.solver.smooth_h}; V={self.solver.smooth_v}"
                 )
                 # Make a distinction that we have a pre- and post-smoothed kern.
-                unix.mv(
-                    src=os.path.join(self.path.eval_grad, "misfit_kernel"),
-                    dst=os.path.join(self.path.eval_grad, "mk_nosmooth")
-                )
-                self.solver.smooth(
-                    input_path=os.path.join(self.path.eval_grad, "mk_nosmooth"),
-                    output_path=os.path.join(self.path.eval_grad,
-                                             "misfit_kernel")
-                )
+                unix.mv(src=self.path._misfit_kernel, 
+                        dst=self.path._mk_nosmooth)
+                self.solver.smooth(input_path=self.path._mk_nosmooth,
+                                   output_path=self.path._misfit_kernel)
 
         # Make sure were in a clean scratch eval_grad directory
-        tags = ["misfit_kernel", "mk_nosmooth"]
-        for tag in tags:
-            scratch_path = os.path.join(self.path.eval_grad, tag)
-            if os.path.exists(scratch_path):
-                shutil.rmtree(scratch_path)
+        for _path in [self.path._mk_nosmooth, self.path._misfit_kernel]:
+            if os.path.exists(_path):
+                shutil.rmtree(_path)
 
         # NOTE: May need to increase the tasktime by a factor of n because the
         # smoothing operation is computational expensive; add the following:
@@ -291,12 +279,8 @@ class Migration(Forward):
         :raises SystemError: if the gradient vector is zero, which means that
             none of the kernels returned usable values.
         """
-        # Set paths
-        misfit_kernel_path = os.path.join(self.path.eval_grad, "misfit_kernel")
-        gradient_path = os.path.join(self.path.eval_grad, "gradient")
-
         # Check that kernel files exist before attempting to manipulate
-        if not glob(os.path.join(misfit_kernel_path, "*")):
+        if not glob(os.path.join(self.path._misfit_kernel, "*")):
             logger.critical(msg.cli(
                 "directory 'scratch/eval_grad/misfit_kernel' is empty but "
                 "should contain summed kernels. Please check "
@@ -308,19 +292,23 @@ class Migration(Forward):
 
         # Set up for model manipulation, only parameters to be modified 
         # should be in these paths
-        kernel = Model(path=misfit_kernel_path, regions=self.solver._regions)
+        kernel = Model(path=self.path._misfit_kernel, 
+                       regions=self.solver._regions)
 
         # Take the model that is currently being used by the solver and export 
         # it to the `eval_grad` directory so it is accessible to all
+        if os.path.exists(self.path._model_grad):
+            shutil.rmtree(self.path._model_grad)
+            unix.mkdir(self.path._model_grad)
         for fid in self.solver.model_files:
-            unix.ln(src=fid, dst=self.path._model_grad)
+            unix.cp(src=fid, dst=self.path._model_grad)
         model = Model(self.path._model_grad)
 
         # Merge to vector and convert to absolute perturbations:
         # log dm --> dm (see Eq.13 Tromp et al 2005)
         logger.info("scaling kernel to absolute model perturbations (gradient)")
         gradient = model.apply(actions=["*"], values=[kernel], 
-                               export_to=gradient_path)
+                               export_to=self.path._gradient)
         
         # Apply an optional mask to the gradient. Occurs in-place
         if self.path.mask:
@@ -337,7 +325,7 @@ class Migration(Forward):
         if self.export_gradient:
             logger.info("exporting gradient to disk")
             dst = os.path.join(self.solver.path.output, "gradient")
-            unix.cp(gradient_path, dst)
+            unix.cp(self.path._gradient, dst)
 
         # Last minute check to see if the gradient is 0. If so then the adjoint
         # simulations returned no kernels and that probably means something 

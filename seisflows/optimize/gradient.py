@@ -143,11 +143,12 @@ class Gradient:
                     "p_new", "p_old",           # Search Directions (vector)
                     "f_new", "f_old", "f_try",  # Misfits (scalar)
                     "alpha",                    # Step Length (scalar)
-                    "dm"                        # Perturbation (vector)
+                    "dm",                       # Perturbation (vector)
                     "scratch"                   # Scratch array (vector)
                     ]:
             # Make the paths 'hidden' so they don't show up in the parameter 
-            # file when we run `seisflows configure`
+            # file when we run `seisflows configure`. Create empty directories
+            # so we don't run into an empty directory issues
             self.path[f"_{tag}"] = os.path.join(self.path.scratch, tag)
 
     def __str__(self):
@@ -417,7 +418,6 @@ class Gradient:
             norm_m = m.get(what="absmax")
             norm_p = p.get(what="absmax")
             alpha = self.step_len_init * norm_m / norm_p
-
 
             status = None
             logger.debug(f"setting first step length with user-requested "
