@@ -87,8 +87,7 @@ class Inversion(Migration):
         self.path["eval_func"] = path_eval_func or \
                                  os.path.join(self.path.workdir, "scratch",
                                               "eval_func")
-                                              
-        self.path["_model"] = os.path.join(self.path.eval_func, "model")
+        self.path["_model_func"] = os.path.join(self.path.eval_func, "model")
 
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
@@ -357,7 +356,7 @@ class Inversion(Migration):
         # Sum newly calc'd residuals into the optimization library
         # Assuming the optimization path structure here
         path_misfit = self.optimize.path[f"_{save_to}"]  # e.g., 'f_new'
-        np.savetxt(path_misfit, total_misfit)  # f_new
+        np.savetxt(path_misfit, [total_misfit])  # f_new
         logger.info(f"misfit {save_to} ({self.evaluation}) = "
                     f"{total_misfit:.3E}")
 
@@ -496,6 +495,8 @@ class Inversion(Migration):
                 logger.debug(f"{src} -> {dst}")
                 unix.mv(src, dst)
 
+        # Exposing gradient to the optimization library
+
         # Compute search direction `p_new`: P is used to perturb starting model
         # and is required for the line search 
         logger.info("calculating search direction `p_new` from gradient")
@@ -526,7 +527,7 @@ class Inversion(Migration):
 
         # Empty apply is used as an export function to save the trial model in
         # a more accessible location
-        m_try.apply(actions=[], values=[], export_to=self.path._model)
+        m_try.apply(actions=[], values=[], export_to=self.path._model_func)
 
     def evaluate_line_search_misfit(self):
         """
@@ -540,12 +541,12 @@ class Inversion(Migration):
                             f"{self.optimize.step_count:0>2}"))
         
         logger.info(f"`m_try` model parameters for line search evaluation:")
-        self.solver.check_model_values(path=self.path._model)
+        self.solver.check_model_values(path=self.path._model_func)
 
         self.system.run(
             [self.run_forward_simulations,
              self.evaluate_objective_function],
-            path_model=self.path._model,
+            path_model=self.path._model_func,
             save_residuals=os.path.join(
                 self.path.eval_func, "residuals",
                 f"residuals_{{src}}_{self.evaluation}.txt")
@@ -599,7 +600,7 @@ class Inversion(Migration):
 
             # Expose the new model to the solver directories for the next step
             m_try = self.optimize.compute_trial_model(alpha=alpha)
-            m_try.apply(actions=[], values=[], export_to=self.path._model)
+            m_try.apply(actions=[], values=[], export_to=self.path._model_func)
 
             # Re-set state file to ensure that job failure will recover
             self._states["evaluate_line_search_misfit"] = 0

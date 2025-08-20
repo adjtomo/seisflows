@@ -88,17 +88,19 @@ class Model:
             f"Model `path` does not exist, cannot init model: '{path}'"
         
         self.path = os.path.abspath(path)
-        self.parameters = parameters
         self.parallel = parallel
-        self.regions = regions
+
         # Used to build filenames for Globe which requires 'reg' prefix
-        if self.regions is not None:
+        if regions:
             self.regions = sorted([f"reg{i}" for i in regions])
+        else:
+            self.regions = None
 
-        # Guess model format and flavor or have User define it
+        # Guess model format and flavor or have User define it. 
+        # Note that each subsequent function requires definition of the previous
+        # so ensure that order is maintained (fmt -> parameters -> nproc)
         self.fmt = fmt or self._guess_file_format()
-
-        # Requires that `fmt` be defined before running
+        self.parameters = parameters or self._get_available_parameters()            
         self.nproc = self._get_nproc()
 
         # A few checks to make sure things are acceptable
@@ -265,7 +267,8 @@ class Model:
         """
         Determine the magnitude of the Model vector 
 
-        :return: dot product of this model and the `other` model
+        :rtype: float
+        :return: magnitude of the vector
         """
         mags = []
         if self.parallel:
@@ -707,75 +710,6 @@ class Model:
     #         plt.savefig(save)
     #     if show:
     #         plt.show()
-
- 
-    def check(self, min_pr=-1., max_pr=0.5):
-        """
-        Checks parameters in the model. If Vs and Vp present, checks poissons
-        ratio. Checks for negative velocity values. 
-
-        :type min_pr: float
-        :para min_pr: minimum allowable Poisson's ratio, if applicable
-        :type max_pr: float
-        :param max_pr: maximum allowable Poisson's ratio, if applicable
-        :raises AssertionError: 
-            - if the input model has no values for any of its parameters
-            - if the model contains any NaN values 
-        """
-        # Checks to make sure the model is filled out, otherwise the following
-        # checks will fail unexpectedly
-        assert(arr.size != 0), (
-                 f"Model has no values, please "
-                 f"check your input model `path_model_init` and the chosen "
-                 f"`material` which controls the expected parameters"
-                 )
-        # Make sure none of the values are NaNs
-        assert(not np.isnan(arr)), (
-                f"Model contains NaN values and "
-                f"should not, please check your model construction"
-                )
-            
-
-        if "vs" in self.model and np.hstack(self.model.vs).min() < 0:
-            logger.warning(f"Vs minimum is negative {self.model.vs.min()}")
-
-        # if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
-        #     logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
-
-
-        # # SPECFEM3D_GLOBE: Check Poisson's ratio for all (an)isotropic velocity 
-        # check = True
-        # for par in ["vs", "vsv", "vsh", "vp", "vpv", "vph"]:
-        #     if par not in self.parameters:
-        #         check = False
-        # if check:
-        #     for tag in ["vsv", "vsh", "vph", "vpv", "vp", "vs"]:
-        #         for reg in self.regions:
-        #             par = f"{reg}_{tag}"
-        #             if par in self.model and \
-        #                     np.hstack(self.model[par]).min() < 0:
-        #                 logger.warning(f"{par} minimum for is negative "
-        #                             f"{self.model['par'].min()}")
-        #     for vs_par in ["vs", "vsv", "vsh"]:
-        #         for vp_par in ["vp", "vpv", "vph"]:
-        #             for reg in self.regions:
-        #                 vs_par = f"{reg}_{vs_par}"  # e.g., 'reg1_vsv'
-        #                 vp_par = f"{reg}_{vp_par}"
-        #                 if vs_par in self.parameters and \
-        #                     vp_par in self.parameters:
-        #                     pr = poissons_ratio(vp=self.merge(parameter=vp_par),
-        #                                         vs=self.merge(parameter=vs_par))
-        #                     if pr.min() < 0:
-        #                         logger.warning(f"minimum {vp_par}, {vs_par} "
-        #                                     f"poisson's ratio is negative")
-        #                     if pr.max() < min_pr:
-        #                         logger.warning(f"maximum {vp_par}, {vs_par} "
-        #                                     f"poisson's ratio out of bounds: "
-        #                                     f"{pr.max():.2f} > {max_pr}")
-        #                     if pr.min() > max_pr:
-        #                         logger.warning(f"minimum {vp_par}, {vs_par} "
-        #                                     f"poisson's ratio out of bounds: "
-        #                                     f"{pr.min():.2f} < {min_pr}")
 
 
     def _read_model_ascii(self, parameter):

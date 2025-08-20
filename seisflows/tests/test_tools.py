@@ -183,8 +183,7 @@ def test_model_angle(test_model_parallel):
     """
     m = test_model_parallel
     assert(m.angle(m) == 0)
-    pytest.set_trace()
-
+    # BCBC FINISH
 #
 # MISCELLANEOUS TEST FUNCTIONS
 #

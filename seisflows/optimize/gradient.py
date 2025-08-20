@@ -501,7 +501,7 @@ class Gradient:
                             export_to=self.path._m_try)
 
         # Export `alpha` which is now tied to the current trial model `m_try`
-        np.savetxt(self.path._alpha, alpha)
+        np.savetxt(self.path._alpha, [alpha])
 
         return m_try
 
@@ -552,7 +552,7 @@ class Gradient:
         x, f, idx = self._line_search.get_search_history()
 
         # Figure out what step length and step count that corresponds to
-        np.savetxt(self.path._f_new, f.min())
+        np.savetxt(self.path._f_new, [f.min()])
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
         logger.info("resetting line search step count to 0")
