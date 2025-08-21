@@ -347,9 +347,13 @@ class LBFGS(Gradient):
                 # Remove the oldest memory if we exceed the memory threshold
                 unix.rm(self.path[f"_y{self._memory_used - 1}"])
                 unix.rm(self.path[f"_s{self._memory_used - 1}"])
-
             # Iterate backwards, so for mem==3 we go: 2, 1 (ignore 0)
             for i in np.arange(self._memory_used, 0, -1):
+                # Don't go past the memory requirement (I couldnt seem to find 
+                # a clean way to run the range so that I didn't need this extra 
+                # catch but oh well, it works.)
+                if i >= self.LBFGS_mem:
+                    continue
                 # Reassigning the next index to the current. E.g., if mem==3 we
                 # start at i==2 which we don't need anymore, and move i==1 into 
                 # the 2 spot.
