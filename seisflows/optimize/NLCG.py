@@ -148,7 +148,7 @@ class NLCG(Gradient):
             p_new = p_new.apply(actions=["+"], values=[p_old])
 
             # Check restart conditions, return search direction and statusa
-            if check_descent(p_new.vector, g_new.vector) > 0.:
+            if check_descent(p_new.get("vector"), g_new.get("vector")) > 0.:
                 logger.info("restarting NLCG, not a descent direction")
                 self.restart()
                 # p_new = -g

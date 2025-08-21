@@ -8,6 +8,7 @@ Test any of the utility functions defined in the Tools directory
 import os
 import pytest
 import numpy as np
+from numpy.testing import assert_almost_equal
 from seisflows import ROOT_DIR
 from seisflows.tools.specfem_model import Model
 from seisflows.tools.config import custom_import
@@ -191,18 +192,19 @@ def test_model_get(test_model_serial, test_model_parallel):
     """
     ms = test_model_serial
     mp = test_model_parallel
+
     # Calculated these values manually
-    assert(ms.get("max") == pytest.approx(160983860000.0))
-    assert(mp.get("max") == pytest.approx(160983860000.0))
+    assert(ms.get("max").astype("float") == pytest.approx(160983859200.0, 1E-11))
+    assert(mp.get("max").astype("float") == pytest.approx(160983859200.0, 1E-11))
 
-    assert(ms.get("min") == pytest.approx(24041525000.0))
-    assert(mp.get("min") == pytest.approx(24041525000.0))
+    assert(ms.get("min").astype("float") == pytest.approx(24041525248.0, 1E-10))
+    assert(mp.get("min").astype("float") == pytest.approx(24041525248.0, 1E-10))
 
-    assert(ms.get("mean") == pytest.approx(113692615000.0))
-    assert(mp.get("mean") == pytest.approx(113692615000.0))
+    assert(ms.get("mean").astype("float") == pytest.approx(113692614920.5, 1E-11))
+    assert(mp.get("mean").astype("float") == pytest.approx(113692614920.0, 1E-11))
 
-    assert(ms.get("sum") == pytest.approx(3.6836405e+16))
-    assert(mp.get("sum") == pytest.approx(3.6836405e+16))
+    assert(ms.get("sum").astype("float") == pytest.approx(3.683640548943462e+16, 1E-16))
+    assert(mp.get("sum").astype("float") == pytest.approx(3.683640548943462e+16, 1E-16))
 
     mpv = mp.get("vector")
     msv = ms.get("vector")

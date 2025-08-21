@@ -121,6 +121,7 @@ class Model:
             for iproc in range(self.nproc):
                 filename = self._get_filename(i=iproc, val=par, ext=self.fmt)
                 self.filenames.append(os.path.join(self.path, filename))
+
         self.filenames = sorted(self.filenames)
     
     def read(self, filename):
@@ -186,7 +187,6 @@ class Model:
         assert what in self.acceptable_gets  
 
         if self.parallel:
-            # !!! CHECK THIS I don't think it preserves order or even works
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
                 futures = [
                     executor.submit(self._get_single, fid, what)
@@ -198,6 +198,7 @@ class Model:
             vals = []
             for fid in self.filenames:
                 vals.append(self._get_single(fid, what))
+            vals = np.array(vals)
 
         # Combine all the values returned from the indvidual files
         if what == "max":
@@ -206,9 +207,11 @@ class Model:
             return np.max(np.abs(vals))
         elif what == "min":
             return np.min(vals)
-        elif what == "mean":  # !!! CHECK THIS
-            return(np.mean(vals))
-        elif what == "sum":  # !!! CHECK THIS
+        elif what == "mean":  
+            # Mean contains both summation and length of values
+            # e.g., [[sum_0, len_0], [sum_1, len_1], ... [sum_n, len_n]]
+            return np.sum(vals[:,0]) / np.sum(vals[:,1])
+        elif what == "sum": 
             return np.sum(vals)
         elif what == "vector":
             return np.concatenate(vals)
@@ -225,7 +228,8 @@ class Model:
         elif what == "min":
             return np.min(self.read(filename))
         elif what == "mean":
-            return np.mean(self.read(filename))
+            arr = self.read(filename)
+            return np.array([np.sum(arr), len(arr)])
         elif what == "sum":
             return np.sum(self.read(filename))
         elif what == "vector":
@@ -242,7 +246,6 @@ class Model:
         :return: dot product of this model and the `other` model
         """ 
         dot_procs = []
-        # !!! This is not working
         if self.parallel:
             with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
                 futures = [
