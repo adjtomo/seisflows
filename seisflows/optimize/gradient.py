@@ -523,7 +523,7 @@ class Gradient:
         old_files = glob(os.path.join(self.path.scratch, "?_old*"))
         if old_files:
             logger.info(f"removing previous iteration model files: "
-                        f"{old_files}")
+                        f"{[os.path.basename(_) for _ in old_files]}")
             for old_file in old_files:
                 unix.rm(old_file)
 

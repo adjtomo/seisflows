@@ -421,7 +421,6 @@ class Inversion(Migration):
                              parameters=self.solver._parameters,
                              regions=self.solver._regions).filenames:
                 unix.cp(src, dst)  # copy avoids overwriting static model file
-
         else:
             # Thrifty inversion SKIPS initial misfit evaluation, re-using final
             # model from previous line search. This can only happen mid-workflow

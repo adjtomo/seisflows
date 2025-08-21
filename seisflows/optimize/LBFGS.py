@@ -90,11 +90,11 @@ class LBFGS(Gradient):
         # These are used to store LBFGS memory which include model and gradient
         # differences
         for i in range(self.LBFGS_mem):
-            y = f"_y{i}"  # `y` = model difference (m_i+1 - m_i)
-            self.path[y] = os.path.join(self.path._LBFGS, y)
+            # `y` = model difference (m_i+1 - m_i)
+            self.path[f"_y{i}"] = os.path.join(self.path._LBFGS, f"y{i}")
 
-            s = f"_s{i}"  # `s` = gradient difference (g_i+1 - g_i)
-            self.path[s] = os.path.join(self.path._LBFGS, s)
+            # `s` = gradient difference (g_i+1 - g_i)
+            self.path[f"_s{i}"] = os.path.join(self.path._LBFGS, f"s{i}")
 
         # Internally used memory parameters for the L-BFGS optimization algo.
         self._LBFGS_iter = 0

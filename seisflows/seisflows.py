@@ -1231,6 +1231,7 @@ class SeisFlows:
         plot_specfem2d_model(path=path_model_name, coord_path=path_model_init,
                              par=parameter, cmap=cmap, show=True,
                              title=f"{name} // {parameter}", save=savefig,
+                             **kwargs
                              )
 
     def reset(self, choice=None, **kwargs):
