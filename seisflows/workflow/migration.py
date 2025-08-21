@@ -19,7 +19,6 @@ model
 """
 import os
 import sys
-import shutil
 import numpy as np
 from glob import glob
 from seisflows import logger
@@ -261,7 +260,7 @@ class Migration(Forward):
         # Make sure were in a clean scratch eval_grad directory
         for _path in [self.path._mk_nosmooth, self.path._misfit_kernel]:
             if os.path.exists(_path):
-                shutil.rmtree(_path)
+                unix.rm(_path)
 
         # NOTE: May need to increase the tasktime by a factor of n because the
         # smoothing operation is computational expensive; add the following:
@@ -298,7 +297,7 @@ class Migration(Forward):
         # Take the model that is currently being used by the solver and export 
         # it to the `eval_grad` directory so it is accessible to all
         if os.path.exists(self.path._model_grad):
-            shutil.rmtree(self.path._model_grad)
+            unix.rm(self.path._model_grad)
             unix.mkdir(self.path._model_grad)
         for fid in self.solver.model_files:
             unix.cp(src=fid, dst=self.path._model_grad)

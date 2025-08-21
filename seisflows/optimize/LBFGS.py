@@ -89,7 +89,7 @@ class LBFGS(Gradient):
 
         # These are used to store LBFGS memory which include model and gradient
         # differences
-        for i in self.LBFGS_mem:
+        for i in range(self.LBFGS_mem):
             y = f"_y{i}"  # `y` = model difference (m_i+1 - m_i)
             self.path[y] = os.path.join(self.path._LBFGS, y)
 
