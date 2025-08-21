@@ -437,6 +437,9 @@ class Inversion(Migration):
 
                 # Exposing Model stored in the optimization library to workflow
                 m_new = Model(self.optimize.path._m_new)
+                # There should not be a directory here, but clear incase
+                unix.rm(self.path._model_grad)
+                unix.mkdir(self.path._model_grad)
                 for fid in m_new.filenames:
                     unix.cp(src=fid, dst=self.path._model_grad)
 

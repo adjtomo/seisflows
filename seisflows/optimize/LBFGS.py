@@ -81,11 +81,11 @@ class LBFGS(Gradient):
         self.LBFGS_thresh = lbfgs_thresh
 
         # Set new L-BFGS dependent paths for storing previous gradients
-        self.path["_LBFGS"] = os.path.join(self.path.scratch, "LBFGS")
+        self.path._LBFGS = os.path.join(self.path.scratch, "LBFGS")
 
         # `r` defines the inverse Hessian used for search direction compute
         # in `compute_direction()`
-        self.path["_r"] = os.path.join(self.path.scratch, "LBFGS", "r")
+        self.path["_r"] = os.path.join(self.path._LBFGS, "r")
 
         # These are used to store LBFGS memory which include model and gradient
         # differences
@@ -230,8 +230,8 @@ class LBFGS(Gradient):
         # Clear out previous model difference (s_k) and 
         # gradient difference (y_k) information 
         for i in self.LBFGS_mem:
-            Model(os.path.join(self.path._LBFGS, f"_y{i}")).clear()
-            Model(os.path.join(self.path._LBFGS, f"_s{i}")).clear()
+            Model(os.path.join(self.path[f"_y{i}"])).clear()
+            Model(os.path.join(self.path[f"_s{i}"])).clear()
 
     def _apply_inverse_hessian_to_gradient(self, q):
         """
@@ -275,8 +275,8 @@ class LBFGS(Gradient):
         # Note that we are storing intermediate variables in the `scratch` path
         # because they do not need to be retained
         for i in range(j):
-            y_i = Model(self.path.LBFGS[f"_y_{i}"])
-            s_i = Model(self.path.LBFGS[f"_s_{i}"])
+            y_i = Model(self.path[f"_y{i}"])
+            s_i = Model(self.path[f"_s{i}"])
 
             # lambda_i = s_i^T * q / y_i^T * s_i
             s_dot_q[i] = s_i.dot(q)    
@@ -287,7 +287,7 @@ class LBFGS(Gradient):
             # Note the math is rearranged so we can make this slightly more
             # efficient but it's solving the same operation. Export to scratch
             q = y_i.apply(actions=["*", "*", "+"], values=[lambda_i, -1, q],
-                      export_to=self.path._scratch)
+                          export_to=self.path._scratch)
 
         # Optional step, apply preconditioner in place on the scratch path
         if self.preconditioner:
@@ -303,7 +303,7 @@ class LBFGS(Gradient):
         # We now use the actual `r` path that will provide the final quantity
         # `r` which defines the scaled gradient
         r = r.apply(actions=["*"], values=[sty_over_yty], 
-                    export_to=self.path.LBFGS._r)
+                    export_to=self.path._r)
         
         # Clear out the scratch directory now that we don't need it anymore
         q.clear()
@@ -311,8 +311,8 @@ class LBFGS(Gradient):
         # Step 4: Second matrix product, calculate scaled gradient `r`
         for i in range(k - 1, -1 ,-1):  
             # Load vectors from disk
-            y_i = Model(self.path.LBFGS[f"_y_{i}"])
-            s_i = Model(self.path.LBFGS[f"_s_{i}"])
+            y_i = Model(self.path[f"_y{i}"])
+            s_i = Model(self.path[f"_s{i}"])
 
             # mu = y_i^T * r / y_i^T * s_i
             mu = y_i.dot(r) / y_dot_s[i]  # previously defined as `be`
@@ -322,9 +322,9 @@ class LBFGS(Gradient):
             # Again we slightly rearrange the math to make the operation more
             # efficient but in the end we update the `r` model vector
             r = s_i.apply(actions=["*", "+"], values=[lambda_i - mu, r],
-                          export_to=self.path.LBFGS._r)
+                          export_to=self.path._r)
             
-        return Model(self.path.LBFGS._r)
+        return Model(self.path._r)
 
     def _update_search_history(self):
         """
@@ -345,29 +345,27 @@ class LBFGS(Gradient):
         if self._memory_used > 0:
             if self._memory_used == self.LBFGS_mem:
                 # Remove the oldest memory if we exceed the memory threshold
-                unix.rm(self.path._LBFGS[f"_y{self._memory_used - 1}"])
-                unix.rm(self.path._LBFGS[f"_s{self._memory_used - 1}"])
+                unix.rm(self.path[f"_y{self._memory_used - 1}"])
+                unix.rm(self.path[f"_s{self._memory_used - 1}"])
 
             # Iterate backwards, so for mem==3 we go: 2, 1 (ignore 0)
             for i in np.arange(self._memory_used - 1, 0, -1):
                 # Reassigning the next index to the current. E.g., if mem==3 we
                 # start at i==2 which we don't need anymore, and move i==1 into 
                 # the 2 spot.
-                unix.rename(old=self.path.LBFGS[f"_y{i-1}"], 
-                            new=self.path.LBFGS[f"_y{i}"])
-                unix.rename(old=self.path.LBFGS[f"_s{i-1}"],
-                            new=self.path.LBFGS[f"_s{i}"])
+                unix.rename(old=self.path[f"_y{i-1}"], new=self.path[f"_y{i}"])
+                unix.rename(old=self.path[f"_s{i-1}"], new=self.path[f"_s{i}"])
         
         # Assign the current model and gradient differences to 0th index
         # s_k = m_new - m_old
         Model(self.path._m_new).apply(
             actions=["-"], values=[Model(self.path._m_old)],
-            export_to=self.path.LBFGS._s0
+            export_to=self.path._s0
             )
         # y_k = g_new - g_old
         Model(self.path._g_new).apply(
             actions=["-"], values=[Model(self.path._g_old)],
-            export_to=self.path.LBFGS._y0
+            export_to=self.path._y0
             )
 
         # Increment memory up to LBFGS memory threshold
