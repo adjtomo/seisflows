@@ -229,7 +229,7 @@ class Model:
         elif what == "sum":
             return np.sum(self.read(filename))
         elif what == "vector":
-            return self.read_filename
+            return self.read(filename)
 
     def dot(self, other):
         """

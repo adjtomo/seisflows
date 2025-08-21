@@ -177,13 +177,38 @@ def test_model_dot(test_model_serial):
     # more or less the same
     assert(dot_product == pytest.approx(dot_product_to_check, 1E-4))
 
-def test_model_angle(test_model_parallel):
+# def test_model_angle(test_model_parallel):
+#     """
+#     Check that the angle function works as expected
+#     """
+#     m = test_model_parallel
+#     assert(m.angle(m) == 0)
+#     # BCBC FINISH
+
+def test_model_get(test_model_serial, test_model_parallel):
     """
-    Check that the angle function works as expected
+    Test getting values in serial and parallel
     """
-    m = test_model_parallel
-    assert(m.angle(m) == 0)
-    # BCBC FINISH
+    ms = test_model_serial
+    mp = test_model_parallel
+    # Calculated these values manually
+    assert(ms.get("max") == pytest.approx(160983860000.0))
+    assert(mp.get("max") == pytest.approx(160983860000.0))
+
+    assert(ms.get("min") == pytest.approx(24041525000.0))
+    assert(mp.get("min") == pytest.approx(24041525000.0))
+
+    assert(ms.get("mean") == pytest.approx(113692615000.0))
+    assert(mp.get("mean") == pytest.approx(113692615000.0))
+
+    assert(ms.get("sum") == pytest.approx(3.6836405e+16))
+    assert(mp.get("sum") == pytest.approx(3.6836405e+16))
+
+    mpv = mp.get("vector")
+    msv = ms.get("vector")
+    assert(np.all(msv == mpv))
+    assert(len(mpv) == 324000)
+
 #
 # MISCELLANEOUS TEST FUNCTIONS
 #
