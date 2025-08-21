@@ -349,12 +349,12 @@ class LBFGS(Gradient):
                 unix.rm(self.path[f"_s{self._memory_used - 1}"])
 
             # Iterate backwards, so for mem==3 we go: 2, 1 (ignore 0)
-            for i in np.arange(self._memory_used - 1, 0, -1):
+            for i in np.arange(self._memory_used, 0, -1):
                 # Reassigning the next index to the current. E.g., if mem==3 we
                 # start at i==2 which we don't need anymore, and move i==1 into 
                 # the 2 spot.
-                unix.rename(old=self.path[f"_y{i-1}"], new=self.path[f"_y{i}"])
-                unix.rename(old=self.path[f"_s{i-1}"], new=self.path[f"_s{i}"])
+                unix.mv(src=self.path[f"_y{i-1}"], dst=self.path[f"_y{i}"])
+                unix.mv(src=self.path[f"_s{i-1}"], dst=self.path[f"_s{i}"])
         
         # Assign the current model and gradient differences to 0th index
         # s_k = m_new - m_old
