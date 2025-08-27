@@ -496,6 +496,7 @@ class Gradient:
         # defined as the search direction `p_new` scaled by step length `alpha`
         m_new = Model(path=self.path._m_new)  # This will be overwritten
 
+        # Export this model to the internal optimization library
         # m_i+1 = m_i + a * dm
         m_try = m_new.apply(actions=["+"], values=[dm], 
                             export_to=self.path._m_try)

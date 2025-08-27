@@ -602,10 +602,12 @@ class Inversion(Migration):
             Line search starts on step_count == 1 because step_count == 0 is
             considered the misfit of the starting model
         """
-        # Update line search history with the step length (alpha) and misfit (f)
-        # and incremement the step count
+        # Update line search history with the step length (alpha), misfit (f),
+        # incremement the step count, and compute and expose trial model `m_try` 
+        # to the optimization library
         self.optimize.update_search()
         alpha, status = self.optimize.calculate_step_length()
+        m_try = self.optimize.compute_trial_model(alpha=alpha)
 
         # Proceed based on the outcome of the line search
         if status.upper() == "PASS":
@@ -620,7 +622,6 @@ class Inversion(Migration):
             logger.info("trial step unsuccessful. re-attempting line search")
 
             # Expose the new model to the solver directories for the next step
-            m_try = self.optimize.compute_trial_model(alpha=alpha)
             m_try.apply(actions=[], values=[], export_to=self.path._model_func)
 
             # Re-set state file to ensure that job failure will recover
