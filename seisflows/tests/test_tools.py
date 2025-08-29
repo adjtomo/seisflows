@@ -1,72 +1,219 @@
 """
 Test any of the utility functions defined in the Tools directory
+
+.. note::
+
+    The Model files in ./tests/
 """
 import os
 import pytest
 import numpy as np
-from glob import glob
+from numpy.testing import assert_almost_equal
 from seisflows import ROOT_DIR
-from seisflows.tools.config import Dict
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 from seisflows.tools.config import custom_import
+from seisflows.tools.specfem import read_fortran_binary
 
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 TEST_MODEL = os.path.join(TEST_DIR, "test_data", "test_tools", 
-                          "test_file_formats")
+                          "test_specfem_model")
 
 
-def test_model_attributes():
+@pytest.fixture
+def test_model_serial():
+    """
+    Provide a Model object to be manipulated in serial
+
+    :rtype: seisflows.specfem_model.Model
+    :return: Model object
+    """
+    m = Model(path=TEST_MODEL, parameters=["c11", "c22", "c33"], parallel=False)
+    return m
+
+
+@pytest.fixture
+def test_model_parallel():
+    """
+    Provide a Model object to be manipulated in prallel
+
+    :rtype: seisflows.specfem_model.Model
+    :return: Model object
+    """
+    m = Model(path=TEST_MODEL, parameters=["c11", "c22", "c33"], parallel=True)
+    return m
+
+
+def test_model_read(test_model_serial):
     """
     Check that model values are read in correctly and accessible in a way we 
     expect
     """
-    m = Model(path=TEST_MODEL, fmt=".bin")
-
-    assert(m.ngll[0] == 40000)
-    assert(m.nproc == 1)
-    assert("vp" in m.model.keys())
-    assert("vs" in m.model.keys())
-    assert(m.model.vp[0][0] == 5800.)
-    assert(m.model.vs[0][0] == 3500.)
+    parameters = ["c11", "c22", "c33"]
+    assert(test_model_serial.fmt == ".bin")
+    assert(test_model_serial.nproc == 3)
+    assert(len(test_model_serial.filenames) == \
+           test_model_serial.nproc * len(parameters))
 
 
-def test_model_functions():
+def test_model_apply(tmpdir, test_model_serial):
     """
-    Test the core merge and split functions of the Model class to ensure
-    they give the same results
+    Test out the main apply function without involving another model
     """
-    m = Model(path=TEST_MODEL, fmt=".bin")
+    m = test_model_serial
+    arr = m.read(m.filenames[0])
+    assert(arr.max() != 0.)
 
-    assert(len(m.merge() == len(m.model.vs[0]) + len(m.model.vp[0])))
-    assert(len(m.split()) == len(m.parameters))
+    # Multiply the input array by 0 and export, check that this works as expect
+    m_out = m.apply(actions=["*"], values=[0], export_to=tmpdir)
+
+    # Read the output model and check that the values are all 0
+    arr_out = m_out.read(m_out.filenames[0])
+    assert((arr_out == 0).all())
 
 
-def test_model_io(tmpdir):
+def test_model_apply_parallel(tmpdir, test_model_parallel):
     """
-    Check that saving and loading npz file works
+    Same as above but for parallel
     """
-    m = Model(path=TEST_MODEL, fmt=".bin")
+    m = test_model_parallel
+    arr = m.read(m.filenames[0])
+    assert(arr.max() != 0.)
 
-    m.save(path=os.path.join(tmpdir, "test.npz"))
-    m_new = Model(path=os.path.join(tmpdir, "test.npz"))
-    assert(m_new.ngll[0] == m.ngll[0])
-    assert(m_new.fmt == m.fmt)
+    # Multiply the input array by 0 and export, check that this works as expect
+    m_out = m.apply(actions=["*"], values=[0], export_to=tmpdir)
 
-    # Check that writing fortran binary works
-    m.write(path=tmpdir)
-    assert(len(glob(os.path.join(tmpdir, f"*{m.fmt}"))) == 2)
-
-
-def test_model_from_input_vector():
-    """Check that we can instantiate a model from an input vector"""
-    m = Model(path=None)
-    m.model = Dict(x=[np.array([-1.2, 1.])])
-    assert(m.nproc == 1)
-    assert(m.ngll == [2])
-    assert(m.parameters == ["x"])
+    # Read the output model and check that the values are all 0
+    arr_out = m_out.read(m_out.filenames[0])
+    assert((arr_out == 0).all())
 
 
+def test_model_apply_chain(tmpdir, test_model_serial):
+    """
+    Test chaining of multiple actions without other model
+    """
+    m = test_model_serial
+    arr = m.read(m.filenames[0])
+    assert(arr.max() != 0.)
+
+    # Test out the addition/subtraction feature and chaining actions
+    actions = ["*", "+", "+"] 
+    values = [0, -1, 3]
+    check_output = sum(values) 
+
+    m_out = m.apply(actions=actions, values=values, export_to=tmpdir)
+    arr_out = m_out.read(m_out.filenames[0])
+
+    assert((arr_out == check_output).all())
+
+
+def test_model_apply_chain_parallel(tmpdir, test_model_parallel):
+    """
+    Same as above but in parallel
+    """
+    m = test_model_parallel
+    arr = m.read(m.filenames[0])
+    assert(arr.max() != 0.)
+
+    # Test out the addition/subtraction feature and chaining actions
+    actions = ["*", "+", "+"] 
+    values = [0, -1, 3]
+    check_output = sum(values) 
+
+    m_out = m.apply(actions=actions, values=values, export_to=tmpdir)
+    arr_out = m_out.read(m_out.filenames[0])
+
+    assert((arr_out == check_output).all())
+
+
+def test_model_apply_w_model(tmpdir, test_model_serial):
+    """
+    Test out the main apply function while involving another model.
+    We use the same model to apply with to cut down on redundancy
+    """    
+    m = test_model_serial
+    arr = m.read(m.filenames[0])
+
+    # To ensure this doesn't interfere with the `other` model which is in tmpdir
+    export_to = os.path.join(tmpdir, "exported_model")
+
+    for action in m.acceptable_actions:
+        print(action)
+        m_out = m.apply(actions=[action], values=[m], export_to=export_to)
+        arr_check = m_out.read(m_out.filenames[0])
+        assert(arr[0] != arr_check[0])
+
+
+def test_model_apply_w_model(tmpdir, test_model_parallel):
+    """
+    Same as above but in parallel
+    """    
+    m = test_model_parallel
+    arr = m.read(m.filenames[0])
+
+    # To ensure this doesn't interfere with the `other` model which is in tmpdir
+    export_to = os.path.join(tmpdir, "exported_model")
+
+    for action in m.acceptable_actions:
+        print(action)
+        m_out = m.apply(actions=[action], values=[m], export_to=export_to)
+        arr_check = m_out.read(m_out.filenames[0])
+        assert(arr[0] != arr_check[0])
+
+def test_model_dot(test_model_serial):
+    """
+    Test out the main apply function without involving another model
+    """
+    # Brute force compute the dot product manually so we know what the right
+    # answer is to compare to
+    model_vector = np.array([])
+    for fid in test_model_serial.filenames:
+        model_vector = np.append(model_vector, read_fortran_binary(fid))
+    dot_product_to_check = np.dot(model_vector, model_vector)
+
+    # Generate dot product with itself to compare
+    dot_product = test_model_serial.dot(test_model_serial)
+
+    # There will be some floating point rounding issues but they should be 
+    # more or less the same
+    assert(dot_product == pytest.approx(dot_product_to_check, 1E-4))
+
+# def test_model_angle(test_model_parallel):
+#     """
+#     Check that the angle function works as expected
+#     """
+#     m = test_model_parallel
+#     assert(m.angle(m) == 0)
+#     # BCBC FINISH
+
+def test_model_get(test_model_serial, test_model_parallel):
+    """
+    Test getting values in serial and parallel
+    """
+    ms = test_model_serial
+    mp = test_model_parallel
+
+    # Calculated these values manually
+    assert(ms.get("max").astype("float") == pytest.approx(160983859200.0, 1E-11))
+    assert(mp.get("max").astype("float") == pytest.approx(160983859200.0, 1E-11))
+
+    assert(ms.get("min").astype("float") == pytest.approx(24041525248.0, 1E-10))
+    assert(mp.get("min").astype("float") == pytest.approx(24041525248.0, 1E-10))
+
+    assert(ms.get("mean").astype("float") == pytest.approx(113692614920.5, 1E-11))
+    assert(mp.get("mean").astype("float") == pytest.approx(113692614920.0, 1E-11))
+
+    assert(ms.get("sum").astype("float") == pytest.approx(3.683640548943462e+16, 1E-16))
+    assert(mp.get("sum").astype("float") == pytest.approx(3.683640548943462e+16, 1E-16))
+
+    mpv = mp.get("vector")
+    msv = ms.get("vector")
+    assert(np.all(msv == mpv))
+    assert(len(mpv) == 324000)
+
+#
+# MISCELLANEOUS TEST FUNCTIONS
+#
 def test_custom_import():
     """
     Test that importing based on internal modules works for various inputs
@@ -85,3 +232,4 @@ def test_custom_import():
     module = custom_import(name="preprocess", module="default")
     assert(module.__name__ == "Default")
     assert(module.__module__ == "seisflows.preprocess.default")
+

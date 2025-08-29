@@ -34,8 +34,7 @@ from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
 from seisflows.tools.graphics import plot_optim_stats
-from seisflows.tools.math import angle, dot
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 from seisflows.plugins import line_search as line_search_dir
 
 
@@ -130,10 +129,6 @@ class Gradient:
 
         # Internally used parameters for keeping track of optimization
         self._restarted = False
-        self._acceptable_vectors = ["m_new", "m_old", "m_try",
-                                    "g_new", "g_old", "g_try",
-                                    "p_new", "p_old", "alpha",
-                                    "f_new", "f_old", "f_try"]
         self._acceptable_preconditioners = ["diagonal"]
 
         # .title() ensures we grab the class and not the module
@@ -141,6 +136,20 @@ class Gradient:
             line_search_dir, line_search_method.title())(
                                         step_count_max=step_count_max
                                         )
+        
+        # Set internal paths to storage locations of models, gradients, etc.
+        for tag in ["m_new", "m_old", "m_try",  # Models (vector)
+                    "g_new", "g_old", "g_try",  # Gradients (vector)
+                    "p_new", "p_old",           # Search Directions (vector)
+                    "f_new", "f_old", "f_try",  # Misfits (scalar)
+                    "alpha",                    # Step Length (scalar)
+                    "dm",                       # Perturbation (vector)
+                    "scratch"                   # Scratch array (vector)
+                    ]:
+            # Make the paths 'hidden' so they don't show up in the parameter 
+            # file when we run `seisflows configure`. Create empty directories
+            # so we don't run into an empty directory issues
+            self.path[f"_{tag}"] = os.path.join(self.path.scratch, tag)
 
     def __str__(self):
         """Quickly access underlying line search search history, mostly for
@@ -195,78 +204,6 @@ class Gradient:
         self.load_checkpoint()
         self.checkpoint()  # will be empty
 
-    def load_vector(self, name):
-        """
-        Convenience function to access the full paths of model and gradient
-        vectors that are saved to disk. Corresponding `save_vector` function
-        saves vectors into the correct location and format that can be loaded
-        by this function.
-
-        .. note::
-
-            Model, gradient and misfit vectors are named as follows:
-            m_new: current model
-            m_old: previous model
-            m_try: line search model
-            f_new: current objective function value
-            f_old: previous objective function value
-            f_try: line search function value
-            g_new: current gradient direction
-            g_old: previous gradient direction
-            p_new: current search direction
-            p_old: previous search direction
-            alpha: trial search direction (aka p_try)
-
-        :type name: str
-        :param name: name of the vector, acceptable: m, g, p, f, alpha
-        :rtype: Model, vector or float
-        :return: loaded vector corresponding to `name` that may take on 
-            different type based on which vector it is
-        """
-        assert(name in self._acceptable_vectors)
-
-        model = os.path.join(self.path.scratch, f"{name}")
-        model_npy = os.path.join(self.path.scratch, f"{name}.npy")
-        model_txt = os.path.join(self.path.scratch, f"{name}.txt")
-
-        if os.path.exists(model):
-            model = Model(path=model)
-        elif os.path.exists(model_npy):
-            model = np.load(model_npy)
-        elif os.path.exists(model_txt):
-            model = float(np.loadtxt(model_txt))
-        else:
-            raise FileNotFoundError(f"no optimization file found for '{name}'")
-
-        return model
-
-    def save_vector(self, name, m):
-        """
-        Convenience function to save/overwrite vectors on disk. Corresponding
-        function `load_vector` loads in vectors that have been saved with
-        this function
-
-        :type name: str
-        :param name: name of the vector to save or overwrite
-        :type m: seisflows.tools.specfem.Model or float
-        :param m: Model, vector, or value to save to disk 
-        """
-        assert(name in self._acceptable_vectors)
-
-        if isinstance(m, Model):
-            path = os.path.join(self.path.scratch, f"{name}")
-            unix.rm(path)  # ensure that no old files are stored here
-            unix.mkdir(path)
-            m.write(path=path)  # write in the same format as SPECFEM uses
-        elif isinstance(m, np.ndarray):
-            path = os.path.join(self.path.scratch, f"{name}.npy")
-            np.save(path=path)
-        elif isinstance(m, (float, int)):
-            path = os.path.join(self.path.scratch, f"{name}.txt")
-            np.savetxt(path, [m])
-        else:
-            raise TypeError(f"optimize.save unrecognized type error {type(m)}")
-
     def checkpoint(self):
         """
         The optimization module (and its underlying `line_search` attribute)
@@ -313,26 +250,52 @@ class Gradient:
             logger.info("no optimization checkpoint file, assume 1st iteration")
             self.checkpoint()
 
-    def _precondition(self, q):
+    def precondition(self, q, actions=[], values=[], export_to=None):
         """
-        Apply available preconditioner to a given gradient
+        Apply available preconditioner to a given gradient. For efficiency,
+        additional `actions` and `values` can be applied while the 
+        preconditioner is being applied. This can be called like
+
+        > Gradient.precondition(q=g_new, actions=["*"], values=[-1])
+
+        which would not only apply the preconditioner, but also multiply the
+        resulting vector by -1. Multiple actions can be strung together.
 
         :type q: np.array
         :param q: Vector to precondition, typically gradient contained in: g_new
-        :rtype: np.array
-        :return: preconditioned vector
+        :type actions: list of str
+        :param actions: additional actions to apply on top of the preconditioner
+            such as multiplying by another value
+        :type values: list of float
+        :param values: values associated with `actions`. Length of values must 
+            match actions
+        :type export_to: str
+        :param export_to: path to export the model values to disk. The filenames
+            of the exported files will match the input filenames of this Model,
+            not the `other` model. If not given, will export to the same
+            directory as the input model `self.path`, which means it overwrites
+            the current model
         """
-        if self.preconditioner is not None:
-            p = Model(path=self.path.preconditioner)
-            if self.preconditioner.upper() == "DIAGONAL":
-                logger.info("applying diagonal preconditioner")
-                return p.vector * q
-            else:
-                raise NotImplementedError(
-                    f"preconditioner {self.preconditioner} not supported"
-                )
-        else:
-            return q
+        precon = Model(path=self.path.preconditioner)  # preconditioner
+
+        assert(len(actions) == len(values)), \
+            f"number of actions do not match number ofvalues"
+
+        # Apply a diagonal preconditioner, as well as any other user-defined
+        # actions ontop of the preconditioner
+        if self.preconditioner.upper() == "DIAGONAL":
+            logger.info(f"applying diagonal preconditioner and {actions} "
+                        f"to {values}")
+            preconditioned_q = q.apply(actions=["*"] + actions, 
+                                       values=[precon] + values,
+                                       export_to=export_to
+                                       )
+
+        # > ADD OTHER PRECONDITIONERS HERE, FOLLOW TEMPLATE FOR DIAGONAL
+        # if self.preconditioner.upper() == "NAME":
+        #   ...
+
+        return preconditioned_q
 
     def compute_direction(self):
         """
@@ -342,16 +305,22 @@ class Gradient:
         .. note::
             Other optimization algorithms must overload this method
 
-        :rtype: seisflows.tools.specfem.Model
-        :return: search direction as a Model instance
+        :rtype: seisflows.tools.specfem_model.Model
+        :return: p_new, search direction as a Model instance
         :raises SystemError: if the search direction is 0, signifying a zero
             gradient which will not do anything in an update
         """
-        g_new = self.load_vector("g_new")
-        p_new = g_new.copy()
-        p_new.update(vector=-1 * self._precondition(g_new.vector))
-
-        if sum(p_new.vector) == 0:
+        g_new = Model(path=self.path._g_new)
+        if self.preconditioner is not None:
+            p_new = self.precondition(q=g_new, actions=["*"], values=[-1],
+                                      export_to=self.path._p_new)
+        else:
+            # Only multiply by -1 to get the search direction
+            p_new = g_new.apply(actions=["*"], values=[-1.0], 
+                                export_to=self.path._p_new)
+            
+        # Check the newly created search direction vector 
+        if p_new.get("sum") == 0:
             logger.critical(msg.cli(
                 "Search direction vector 'p' is 0, meaning no model update can "
                 "take place. Please check your gradient and waveform misfits. "
@@ -368,13 +337,13 @@ class Gradient:
         model. Also contains a check to see if the line search has been 
         restarted.
         """
-        f = self.load_vector("f_new")  # current misfit value from preprocess
-        g = self.load_vector("g_new")  # current gradient from scaled kernels
-        p = self.load_vector("p_new")  # current search direction
+        f = np.loadtxt(self.path._f_new)  # current misfit value from preprocess
+        g = Model(path=self.path._g_new)  # current gradient
+        p = Model(path=self.path._p_new)  # current search direction
         
         logger.info("calculating gradient dot products GTG and GTP")
-        gtg = dot(g.vector, g.vector)
-        gtp = dot(g.vector, p.vector)
+        gtg = g.dot(g)
+        gtp = g.dot(p)
 
         # Restart plugin line search if the optimization library restarts, 
         # restart conditions are determined in `Optimize.compute_direction()`
@@ -391,10 +360,10 @@ class Gradient:
         Incremenet the line search step count as we have finished the current.
         """
         # Save step length and associated misfit into the line search
-        alpha_try = self.load_vector("alpha")  # step length
-        f_try = self.load_vector("f_try")  # misfit for the trial model
-        self._line_search.update_search_history(step_len=alpha_try, 
-                                                func_val=f_try)
+        self._line_search.update_search_history(
+            step_len=np.loadtxt(self.path._alpha),  # Step length
+            func_val= np.loadtxt(self.path._f_try)  # Misfit for trial model
+            )
         logger.info(f"saving misfit and step length for step count == "
                     f"{self.step_count}")
 
@@ -436,18 +405,20 @@ class Gradient:
         first_iteration = bool(self._line_search.step_lens.count(0) == 1)
         first_step = bool(self.step_count == 1)
         
-        # Initialize empty vectors for checks
-        m, p = None, None
+        # Initialize Model vectors that will be used for calculating step
+        m = Model(path=self.path._m_new)  # current model
+        p = Model(path=self.path._p_new)  # current search direction
+        norm_m, norm_p = None, None
 
         # Manually set the step length as some percentage of the model vector.
         # Only do this at the very first model update
-        if self.step_len_init and first_iteration and first_step:
-            m = self.load_vector("m_new")  # current model
-            p = self.load_vector("p_new")  # current search direction
-            norm_m = max(abs(m.vector))
-            norm_p = max(abs(p.vector))
-
+        if self.step_len_init and first_iteration and first_step:  
+            # We find an initial estimate for step lenght by scaling by the 
+            # model divided by the 
+            norm_m = m.get(what="absmax")
+            norm_p = p.get(what="absmax")
             alpha = self.step_len_init * norm_m / norm_p
+
             status = None
             logger.debug(f"setting first step length with user-requested "
                          f"`step_len_init`={self.step_len_init}")
@@ -456,13 +427,12 @@ class Gradient:
         else:
             alpha, status = self._line_search.calculate_step_length()
 
-        # Apply optional step length safeguard to prevent step length from 
+        # Apply optional step length safeguards to prevent step length from 
         # getting too large w.r.t model values
         if status == "TRY" and (self.step_len_max or self.step_len_min):
-            m = m or self.load_vector("m_new")  # current model
-            p = p or self.load_vector("p_new")  # current search direction
-            norm_m = max(abs(m.vector))
-            norm_p = max(abs(p.vector))
+            # These parameters may have been initiated so we don't do it again
+            norm_m = norm_m or m.get(what="absmax")
+            norm_p = norm_p or p.get(what="absmax")
 
             # Determine minimum alpha as a fraction of the current model
             if self.step_len_min:
@@ -488,9 +458,8 @@ class Gradient:
                     logger.warning(f"`alpha` has exceeded maximum value "
                                    f"{self.step_len_max * 100}%")
                     if first_step:
-                        # If this is the first step, pull back slightly so that 
-                        # line search can safely increase step length later
-                        # TODO: Where does this value come from?
+                        # Scale back by Golden Ratio so that line search can 
+                        # safely increase step length in future steps
                         alpha = 0.618034 * max_allowable_alpha
                         logger.info("reducing step length for first step")
                     else:
@@ -507,26 +476,33 @@ class Gradient:
         """
         Generates a trial model `m_try` by perturbing the starting model `m_new`
         with a given search direction `p_new` and a pre-calculated step length
-        `alpha`
+        `alpha`. Exports `m_try` and `alpha` to disk
 
         :type alpha: float
         :param alpha: step length recommended by the line search. if None,
             due to failed line search, then this function returns None
-        :rtype: np.array or NoneType
-        :return: trial model that can be used for line search evaluation or 
-            None if alpha is None
         """
-        if alpha is not None:
-            # The new model is the old model plus a step with a given magnitude 
-            m_try = self.load_vector("m_new").copy()
-            p = self.load_vector("p_new")  # current search direction
+        # Current search direction
+        p_new = Model(path=self.path._p_new)
 
-            dm = alpha * p.vector  # update = step length * step direction
-            logger.info(f"updating model with `dm` (dm_min={dm.min():.2E}, "
-                        f"dm_max = {dm.max():.2E})")
-            m_try.update(vector=m_try.vector + dm)
-        else:
-            m_try = None
+        # Get Model Update = step length (a) * step direction (p)
+        dm = p_new.apply(actions=["*"], values=[alpha], export_to=self.path._dm)
+        logger.info(f"updating model with `dm` "
+                    f"(dm_min={dm.get('min'):.2E}, "
+                    f"dm_max = {dm.get('max'):.2E})"
+                    )
+        
+        # The new model is the current model `m_new` plus a perturbation `dm`
+        # defined as the search direction `p_new` scaled by step length `alpha`
+        m_new = Model(path=self.path._m_new)  # This will be overwritten
+
+        # Export this model to the internal optimization library
+        # m_i+1 = m_i + a * dm
+        m_try = m_new.apply(actions=["+"], values=[dm], 
+                            export_to=self.path._m_try)
+
+        # Export `alpha` which is now tied to the current trial model `m_try`
+        np.savetxt(self.path._alpha, [alpha])
 
         return m_try
 
@@ -534,8 +510,11 @@ class Gradient:
         """
         Prepares algorithm machinery and scratch directory for next model update
 
-        Removes old model/search parameters, moves current parameters to old,
-        sets up new current parameters and writes statistic outputs
+        - Irretrievably removes `old` model and search parameters
+        - Moves current `try` parameters to `old` for reference in next iter.
+        - Sets up `new` current parameters
+        - Writes and plots statistic output
+        - Resets line serach machinery
         """
         unix.cd(self.path.scratch)
 
@@ -545,7 +524,7 @@ class Gradient:
         old_files = glob(os.path.join(self.path.scratch, "?_old*"))
         if old_files:
             logger.info(f"removing previous iteration model files: "
-                        f"{old_files}")
+                        f"{[os.path.basename(_) for _ in old_files]}")
             for old_file in old_files:
                 unix.rm(old_file)
 
@@ -566,14 +545,15 @@ class Gradient:
             unix.mv(src, dst)
 
         logger.info("setting trial model as starting model (m_try -> m_new)")
-        unix.mv(src=os.path.join(self.path.scratch, "m_try"),
-                dst=os.path.join(self.path.scratch, "m_new"))
+        unix.mv(src=self.path._m_try, dst=self.path._m_new)
 
-        # Choose minimum misfit value as final misfit/model. index 0 is initial
+        # Choose minimum misfit value as final misfit/model, this is the 
+        # best accepted model, and does not necessarily correspond to the last
+        # line search step
         x, f, idx = self._line_search.get_search_history()
 
         # Figure out what step length and step count that corresponds to
-        self.save_vector("f_new", f.min())
+        np.savetxt(self.path._f_new, [f.min()])
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
         logger.info("resetting line search step count to 0")
@@ -588,7 +568,7 @@ class Gradient:
         Essentially checking if this is a steepest-descent optimization, which
         cannot and should not be restarted. If the search direction is calc'ed
         by another optimization schema, the search direction and gradient should
-        differ
+        differ and would allow us to restart by falling back to grad. descent.
 
         :type threshold: float
         :param threshold: angle threshold for the angle between the search
@@ -596,20 +576,29 @@ class Gradient:
         :rtype: bool
         :return: pass (True) fail (False) status for retrying line search
         """
-        g = self.load_vector("g_new")
-        p = self.load_vector("p_new")
+        g = Model(path=self.path._g_new)  # Gradient
+        p = Model(path=self.path._p_new)  # Search Direction
 
-        theta = angle(p.vector, -1 * g.vector)
+        # Take the negative gradient and store in scratch vector because we only
+        # need it for a short time
+        neg_g = g.apply(actions=["*"], values=[-1], 
+                        export_to=self.path._scratch)
+
+        # Calculate the angle between the search direction and the neg. gradient
+        theta = neg_g.angle(other=p)
         logger.debug(f"checking gradient/search direction angle, "
                      f"theta: {theta:6.3f}")
+        
+        # Free up scratch
+        neg_g.clear()
 
         if abs(theta) < threshold:
-            logger.info(f"search direction below threshold {threshold}, will "
-                        f"not attempt restart")
+            logger.debug(f"search direction theta={abs(theta):.2E} is below "
+                         f"threshold {threshold}, will not attempt restart")
             return False  # Do not restart
         else:
-            logger.info(f"search direction above threshold {threshold}, "
-                        f"attempting restart")
+            logger.debug(f"search direction theta={abs(theta):.2E} is above "
+                         f"threshold {threshold}, attempting restart")
             return True  # Go for restart
 
     def restart(self):
@@ -628,48 +617,6 @@ class Gradient:
         """
         pass
 
-    def get_stats(self):
-        """
-        Get Optimization statistics for the current evaluation of an inversion.
-        Returns a dictionary of values which can then be written to a text file
-        or plotted for convenience.           
-
-        .. note::
-
-            The following `factor` was included in the original SeisFlows stats
-            but started throwing runtime errors. Not sure what is was for -- BC
-
-            factor = -1 * dot(g.vector, g.vector)
-            factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]) 
-                    
-        :rtype: Dict of float
-        :return: SeisFlows dictionary object containing statistical informaion
-            about the optimization module
-        """
-        # We construct stats from the gradient (g), search direction (p),
-        # step lengths (x) and function values/misfit (f)
-        g = self.load_vector("g_new")
-        p = self.load_vector("p_new")
-        x, f, _  = self._line_search.get_search_history()
-        step_count = self._line_search.step_count
-
-        # Construct statistics
-        step_length = x[f.argmin()]  # final, accepted step length
-        misfit = f[f.argmin()]  # final, accepted misfit value
-        if_restarted = int(self._restarted)
-        grad_norm_L1 = np.linalg.norm(g.vector, 1)  # L1 norm of gradient
-        grad_norm_L2 = np.linalg.norm(g.vector, 2)  # L2 norm of gradient
-        slope = (f[1] - f[0]) / (x[1] - x[0])  # Slope of the misfit function
-        # Deviation of the search direction from the gradient direction
-        theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)  
-
-        dict_out = Dict(step_count=step_count, step_length=step_length,
-                        misfit=misfit, if_restarted=if_restarted,
-                        grad_norm_L1=grad_norm_L1, grad_norm_L2=grad_norm_L2, 
-                        slope=slope, theta=theta)
-    
-        return dict_out
-
     def write_stats(self, fid="./optim_optim.txt"):
         """
         Write stats to file so that we don't lose information to subsequent
@@ -682,7 +629,6 @@ class Gradient:
         logger.info(f"writing optimization stats: '{fid}'")
 
         keys = ["misfit", "step_count",  "step_length", 
-                "grad_norm_L1", "grad_norm_L2",
                 "slope", "theta", "if_restarted"
                 ]
 
@@ -708,9 +654,70 @@ class Gradient:
                 f_.write(stats_str)  
 
         # Write stats for the current, finished, line search
-        stats = self.get_stats()
+        stats = self._get_stats()
         with open(fid, "a") as f_:
             stats_str = [f"{stats[key]:6.3E}" for key in keys]
             stats_str = ",".join(stats_str) + "\n"
             f_.write(stats_str)
 
+    def _get_stats(self):
+        """
+        Get Optimization statistics for the current evaluation of an inversion.
+        Returns a dictionary of values which can then be written to a text file
+        or plotted for convenience.           
+
+        .. note::
+
+            The following `factor` was included in the original SeisFlows stats
+            but started throwing runtime errors. Not sure what is was for -- BC
+
+            factor = -1 * dot(g.vector, g.vector)
+            factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]) 
+
+        .. note:: L1/L2 Norm
+
+            BC The original SeisFlows calculated L1 and L2 norm of the gradient.
+            I removed these because they are heavy operations to run on large
+            model vectors and were not very useful when evaluating models. 
+            Maybe okay for 2D problems where you can quickly take a model norm
+            but large 3D models were hanging a long time. If we want to 
+            re-instate them then we need to find a more efficient way to 
+            calculate norms with the new Model class paradigm (#245)
+                    
+        :rtype: Dict of float
+        :return: SeisFlows dictionary object containing statistical informaion
+            about the optimization module
+        """
+        # We construct stats from the gradient (g), search direction (p),
+        # step lengths (x) and function values/misfit (f)
+        g = Model(self.path._g_new)
+        p = Model(self.path._p_new)
+
+        x, f, _  = self._line_search.get_search_history()
+        step_count = self._line_search.step_count
+
+        # Construct statistics
+        step_length = x[f.argmin()]  # final, accepted step length
+        misfit = f[f.argmin()]  # final, accepted misfit value
+        if_restarted = int(self._restarted)
+        slope = (f[1] - f[0]) / (x[1] - x[0])  # Slope of the misfit function
+
+        # Calculate norms which may take a little bit of time
+        # !!! See note above
+        # grad_norm_L1 = np.linalg.norm(g.vector, 1)  # L1 norm of gradient
+        # grad_norm_L2 = np.linalg.norm(g.vector, 2)  # L2 norm of gradient
+
+        # Deviation of the search direction from the gradient direction
+        # Take the negative gradient and store in scratch vector
+        neg_g = g.apply(actions=["*"], values=[-1], 
+                        export_to=self.path._scratch)
+        theta = 180. * np.pi ** -1 * p.angle(neg_g) 
+
+        dict_out = Dict(step_count=step_count, step_length=step_length,
+                        misfit=misfit, if_restarted=if_restarted,
+                        slope=slope, theta=theta)
+        
+        # Clear out disk space
+        neg_g.clear()
+    
+        return dict_out

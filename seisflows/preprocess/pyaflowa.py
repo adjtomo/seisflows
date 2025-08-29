@@ -19,7 +19,7 @@ from pyatoa import Config, Manager, Inspector, ManagerError
 from pysep.utils.io import read_events_plus, read_stations
 
 from seisflows import logger
-from seisflows.tools import unix
+from seisflows.tools import unix, msg
 from seisflows.tools.config import Dict
 from seisflows.tools.graphics import imgs_to_pdf
 from seisflows.tools.specfem import return_matching_waveform_files
@@ -168,7 +168,8 @@ class Pyaflowa:
         self.plot_waveforms = plot_waveforms
         self.preprocess_log_level = preprocess_log_level
         if preproc_toggles is None: 
-            self.preproc_toggles = Dict(standardize=True, preprocess=True, window=True)
+            self.preproc_toggles = Dict(standardize=True, preprocess=True, 
+                                        window=True)
         else:
             self.preproc_toggles = Dict(preproc_toggles)
 
@@ -332,6 +333,9 @@ class Pyaflowa:
         :type _serial: bool
         :param _serial: debug function to turn preprocessing to a serial task
             whereas it is normally a multiprocessed parallel task
+
+        :raises SystemExit: If no windows are found for the given source if 
+            the User has requested that windows be selected
         """
         # Set a unique Config object to specify which Source we want to process
         config = self._config.copy()
@@ -379,12 +383,27 @@ class Pyaflowa:
         # Slightly different than Default preprocessing because we need to
         # normalize by the total number of windows
         if save_residuals:
-            # Normalize the raw misfit by the number of measurements
-            if total_windows != 0:
-                summed_misfit = total_misfit / total_windows
-            # Edge case where number of windows is 0 (or we didn't pick windows)
+            if self.preproc_toggles.window:
+                # Normalize the raw misfit by the number of measurements
+                try:
+                    summed_misfit = total_misfit / total_windows
+                except ZeroDivisionError:
+                    # NOTE: I am making this break the whole workflow
+                    # because if we are getting into a situation where there 
+                    # are no windows recovered then we are 1) wasting compute
+                    # time generating synthetics that are not used or incorrect
+                    # and 2) potentially pushing our model into an incorrect 
+                    # local minimum that is no longer constrained by the data.
+                    # Either way we don't want to continue the workflow.
+                    logger.critical(
+                        msg.cli(f"No windows found for {source_name}. Please "
+                                f"check waveforms figures in "
+                                f"{self.path._figures}. Exiting workflow.",
+                                border="=", header="No Windows Error")
+                                )
+                    sys.exit(-1)
+            # Case where we don't pick windows at all, misfit is not normalized
             else:
-                logger.warning("0 windows found, will not normalize raw misfit")
                 summed_misfit = total_misfit
             with open(save_residuals, "w") as f:
                 f.write(f"{summed_misfit:.2E}\n")

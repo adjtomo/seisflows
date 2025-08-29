@@ -7,12 +7,17 @@ the PyPDF2 package if manipulating pdf files. Internal imports for all functions
 to remove Pyatoa-wide dependencies on these packages for short functions.
 """
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+from glob import glob
 from PIL import Image
 from pypdf import PdfMerger
+from scipy.interpolate import griddata
 from seisflows.tools import unix
+from seisflows.tools.specfem import read_fortran_binary
+from seisflows import logger
 
 
 def merge_pdfs(fids, fid_out, remove_fids=False):
@@ -264,7 +269,7 @@ def plot_2d_contour(x, z, data, cmap="viridis", zero_midpoint=False):
 
 
 def plot_2d_image(x, z, data, res_x=1000, res_z=1000, cmap="viridis",
-                  vmin=None, vmax=None, levels=101):
+                  vmin=None, vmax=None, levels=101, **kwargs):
     """
     Plots values of a SPECEFM2D model/gradient by interpolating onto a regular 
     grid. Used for the SeisFlows command `seisflows plot2d`
@@ -289,8 +294,6 @@ def plot_2d_image(x, z, data, res_x=1000, res_z=1000, cmap="viridis",
     :param resZ: number of points for the interpolation in z- direction 
     (default=1000)
     """
-    from scipy.interpolate import griddata
-
     # Figure out aspect ratio of the figure
     r = (max(x) - min(x))/(max(z) - min(z))
     rx = r/np.sqrt(1 + r**2)
@@ -322,4 +325,75 @@ def plot_2d_image(x, z, data, res_x=1000, res_z=1000, cmap="viridis",
     plt.axis("image")
 
     return f, im, cbar
+
+
+def plot_specfem2d_model(path, par, cmap=None, coord_path=None, title=False,
+                         show=True, save=False, **kwargs):
+    """
+    SPECFEM2D only, plot a 2D model (XZ or XY) quickly. This function is pretty
+    brute force because we assume that 2D models are realatively small so it
+    should be easy to 
+
+    :type parameter: str
+    :param parameter: chosen internal parameter value to plot.
+    :type cmap: str
+    :param cmap: colormap which match available matplotlib colormap.
+        If None, will choose default colormap based on parameter choice.
+    :type show: bool
+    :param show: show the figure after plotting
+    :type title: str
+    :param title: optional title to prepend to some values that are
+        provided by default. Useful for adding information about iteration,
+        step count etc.
+    :type save: str
+    :param save: if not None, full path to figure to save the output image
+    """
+    if not coord_path:
+        coord_path = path
+
+    # Choose default colormap based on parameter values
+    if cmap is None:
+        if "kernel" in par:
+            cmap = "seismic_r"
+        else:
+            cmap = "Spectral"
+
+    # Load in the coordinate arrays and data array
+    x, z, arr = np.array([]), np.array([]), np.array([])
+    for xfile in sorted(glob(os.path.join(coord_path, "proc??????_x.bin"))):
+        x = np.append(x, read_fortran_binary(xfile))
+    for zfile in sorted(glob(os.path.join(coord_path, "proc??????_z.bin"))):
+        z = np.append(z, read_fortran_binary(zfile))
+    for arrfile in sorted(glob(os.path.join(path, f"proc??????_{par}.bin"))):
+        arr = np.append(arr, read_fortran_binary(arrfile))
+    
+    if not x.any() or not z.any():
+        logger.critical(f"no coordinate files found for {coord_path}")
+        sys.exit(-1)
+    if not arr.any():
+        logger.critical(f"no data found for '{par}' in: {path}")
+        sys.exit(-1)
+
+    f, p, cbar = plot_2d_image(x=x, z=z, data=arr, cmap=cmap, **kwargs)
+
+    # Set some figure labels based on information we know here
+    ax = plt.gca()
+    ax.set_xlabel("X [m]")
+    ax.set_ylabel("Z [m]")
+
+    # Allow User to title the figure, e.g., with iteration, step count etc.
+    _title = (f"{par.title()}_min = {arr.min()};\n"
+              f"{par.title()}_max = {arr.max()};\n"
+              f"{par.title()}_mean = {arr.mean()}"
+              )
+    if title:
+        _title = f"{title}\n{_title}"
+    ax.set_title(_title)
+
+    cbar.ax.set_ylabel(par.title(), rotation=270, labelpad=15)
+
+    if save:
+        plt.savefig(save)
+    if show:
+        plt.show()
 

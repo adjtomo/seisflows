@@ -23,6 +23,7 @@ from inspect import getmro
 from seisflows import logger, ROOT_DIR, NAMES, __version__
 from seisflows.tools import unix, msg
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
+from seisflows.tools.graphics import plot_specfem2d_model
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model, check_source_names)
 
@@ -1195,8 +1196,7 @@ class SeisFlows:
 
         st.plot(outfile=savefig, **kwargs)
 
-    def plot2d(self, name=None, parameter=None, vmin=None, vmax=None, cmap=None, 
-               center_cmap=False, levels=101, savefig=None, noshow=False, 
+    def plot2d(self, name=None, parameter=None, cmap=None, savefig=None,
                **kwargs):
         """
         Plot model, gradient or kernels in the PATH.OUTPUT
@@ -1211,45 +1211,28 @@ class SeisFlows:
         :type savefig: str
         :param savefig: optional name and path of filename to save figure
             to disk
-        :type noshow: bool
-        :param noshow: Figure is shown by default, use `noshow` to not show 
-            figure after generation. Useful for scripting when you only want
-            to save figures
         """
-        from seisflows.tools.model import Model
-
         # Figure out which models/gradients/kernels we can actually plot
         _, output_dir, _ = getpar(key="path_output",
                                   file=self._args.parameter_file,
                                   delim=":")
-        # Assuming only models/kernels/gradients have the format *_* in output
-        acceptable_names = sorted([
-            os.path.basename(_) for _ in glob(os.path.join(output_dir, "*_*"))
-        ])
-        if name is None:
-            print(msg.cli(f"Available models/gradients/kernels",
-                          items=sorted(acceptable_names), header="Plot2D")
-                  )
-            sys.exit(0)
-        else:
-            assert(name in acceptable_names), (
-                f"`seisflows plot 2d` can only plot {acceptable_names}"
-            )
+        path_model_name = os.path.join(output_dir, name.upper())
+        assert(os.path.exists(path_model_name)), \
+            f"output path {path_model_name} does not exist"
+    
         # Grab model_init to use its coordinates
         # name of directory for model_init is defined by solver.specfem.setup()
-        base_model = Model(path=os.path.join(output_dir, "MODEL_INIT"))
-        assert(base_model.coordinates is not None), \
+        path_model_init = os.path.join(output_dir, "MODEL_INIT")
+        assert(glob(os.path.join(path_model_init, "proc??????_[x].bin"))), \
             f"`MODEL_INIT` does not have any available 2D coordinates"
 
         # Now read in the actual updated values and update the model
-        plot_model = Model(path=os.path.join(output_dir, name))
-        plot_model.coordinates = base_model.coordinates
-
         # plot2d has internal check for acceptable parameter value
-        plot_model.plot2d(parameter=parameter, cmap=cmap, levels=levels, 
-                          center_cmap=center_cmap, vmin=vmin, vmax=vmax,
-                          title=f"{name} // {parameter}", show=not noshow, 
-                          save=savefig)
+        plot_specfem2d_model(path=path_model_name, coord_path=path_model_init,
+                             par=parameter, cmap=cmap, show=True,
+                             title=f"{name} // {parameter}", save=savefig,
+                             **kwargs
+                             )
 
     def reset(self, choice=None, **kwargs):
         """

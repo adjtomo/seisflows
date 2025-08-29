@@ -36,6 +36,7 @@ from seisflows.optimize.gradient import Gradient
 from seisflows.tools import unix
 from seisflows.tools.msg import DEG
 from seisflows.tools.math import angle
+from seisflows.tools.specfem_model import Model
 from seisflows.plugins import line_search as line_search_dir
 
 
@@ -80,9 +81,20 @@ class LBFGS(Gradient):
         self.LBFGS_thresh = lbfgs_thresh
 
         # Set new L-BFGS dependent paths for storing previous gradients
-        self.path["_LBFGS"] = os.path.join(self.path.scratch, "LBFGS")
-        self.path["_y_file"] = os.path.join(self.path["_LBFGS"], "Y.dat")
-        self.path["_s_file"] = os.path.join(self.path["_LBFGS"], "S.dat")
+        self.path._LBFGS = os.path.join(self.path.scratch, "LBFGS")
+
+        # `r` defines the inverse Hessian used for search direction compute
+        # in `compute_direction()`
+        self.path["_r"] = os.path.join(self.path._LBFGS, "r")
+
+        # These are used to store LBFGS memory which include model and gradient
+        # differences
+        for i in range(self.LBFGS_mem):
+            # `y` = model difference (m_i+1 - m_i)
+            self.path[f"_y{i}"] = os.path.join(self.path._LBFGS, f"y{i}")
+
+            # `s` = gradient difference (g_i+1 - g_i)
+            self.path[f"_s{i}"] = os.path.join(self.path._LBFGS, f"s{i}")
 
         # Internally used memory parameters for the L-BFGS optimization algo.
         self._LBFGS_iter = 0
@@ -129,6 +141,8 @@ class LBFGS(Gradient):
         """
         Call on the L-BFGS optimization machinery to compute a search
         direction using internally stored memory of previous gradients.
+        
+        Exports new search direction to `p_new`
 
         The potential outcomes when computing direction with L-BFGS:
         1. First iteration of L-BFGS optimization, search direction is defined
@@ -140,55 +154,61 @@ class LBFGS(Gradient):
             force a restart, search direction is inverse gradient
         4. New search direction is acceptably angled from previous,
             becomes the new search direction
-
-        :rtype: seisflows.tools.specfem.Model
-        :return: search direction as a Model instance
         """
         self._LBFGS_iter += 1
         logger.info(f"LBFGS iteration incremented -> {self._LBFGS_iter}")
 
-        # Load the current gradient direction, which is the L-BFGS search
-        # direction if this is the first iteration
-        g = self.load_vector("g_new")
-        p_new = g.copy()
+        # Load the current gradient direction 
+        g = Model(path=self.path._g_new)  
 
+        # First LBFGS iteration means we default to gradient descent p = -g
         if self._LBFGS_iter == 1:
             logger.info("first L-BFGS iteration, default to gradient descent "
                         "(P = -G)")
-            p_new.update(vector=-1 * g.vector)
-            restarted = False
-        # Restart condition or first iteration lead to setting search direction
-        # as the inverse gradient (i.e., default to steepest descent)
+            # Search direction `p_new` is negative gradient 
+            p_new = g.apply(actions=["*"], values=[-1], 
+                            export_to=self.path._p_new)
+        # Optional periodic restart condition to recalibrate w/ gradient desc.
         elif self._LBFGS_iter > self.LBFGS_max:
             logger.info("restarting L-BFGS due to periodic restart condition. "
                         "setting search direction as inverse gradient (P = -G)")
             self.restart()
-            p_new.update(vector=-1 * g.vector)
-            restarted = True
+
+            # New search direction `p_new` is negative gradient
+            p_new = g.apply(actions=["*"], values=[-1], 
+                            export_to=self.path._p_new)
         # Normal LBFGS direction computation
         else:
             # Update the search direction, apply the inverse Hessian such that
             # 'q' becomes the new search direction 'g'
             logger.info("applying inverse Hessian to gradient")
-            s, y = self._update_search_history()
-            q = g.copy()
-            q.update(vector=self._apply_inverse_hessian(g.vector, s, y))
+            r = self._apply_inverse_hessian_to_gradient(q=g)  # new grad. `r`
+
+            # Check the status of the new search direction by calculating the
+            # angle between the new gradient `r` and the old gradient `g`
+            theta = (180. / np.pi) * g.angle(r)  # units: deg
+            logger.info(f"new search direction `r` {theta:.2f}{DEG} from `g`")
 
             # Determine if the new search direction is appropriate by checking
             # its angle to the previous search direction
-            if self._check_status(g.vector, q.vector):
-                logger.info("new L-BFGS search direction found")
-                p_new.update(vector=-1 * q.vector)
-                restarted = False
+            if 0. < theta < (90. - self.LBFGS_thresh):
+                logger.info("new L-BFGS direction `r` is a descent direction")
+                # New search direction `p_new` is p = -r
+                p_new = r.apply(actions=["*"], values=[-1], 
+                                export_to=self.path._p_new)
             else:
-                logger.info("new search direction not appropriate, defaulting "
-                            "to gradient descent")
+                logger.info("new search direction not a descent direction, " 
+                            "falling back to gradient descent")
                 self.restart()
-                p_new.update(vector=-1 * g.vector)
-                restarted = True
 
-        # Assign restart condition to internal memory
-        self._restarted = restarted
+                if theta > (90. - self.LBFGS_thres):
+                    logger.debug(f"restarting L-BFGS due to `LBFGS_thresh`: "
+                                 f"angle ({theta:.2f}) > 90 - "
+                                 f"safeguard ({self.LBFGS_thresh})")
+                    
+                # New search direction `p_new` is negative gradient
+                p_new = g.apply(actions=["*"], values=[-1], 
+                                export_to=self.path._p_new)
 
         return p_new
 
@@ -207,144 +227,176 @@ class LBFGS(Gradient):
         self._LBFGS_iter = 0  # will be incremented to 1 by `compute_direction`
         self._memory_used = 0
 
-        # Clear out previous gradient information. Check file existence first
-        # because the first iteration will not have generated S and Y yet, but
-        # we may want to run restart for manual line search restart
-        if os.path.exists(self.path._s_file):
-            s = np.memmap(filename=self.path._s_file, mode="r+")
-            s[:] = 0.
-        if os.path.exists(self.path._y_file):
-            y = np.memmap(filename=self.path._y_file, mode="r+")
-            y[:] = 0.
+        # Clear out previous model difference (s_k) and 
+        # gradient difference (y_k) information 
+        for i in self.LBFGS_mem:
+            Model(os.path.join(self.path[f"_y{i}"])).clear()
+            Model(os.path.join(self.path[f"_s{i}"])).clear()
+
+    def _apply_inverse_hessian_to_gradient(self, q):
+        """
+        Applies L-BFGS inverse Hessian to given vector following Appendix A
+        Recursion from Modrak and Tromp (2016). Ultimately calculates a new
+        gradient vector `r based on L-BFGS Algorithm. Does not return but 
+        updates path `LBFGS._r` where the updated gradient vector is stored.
+
+        In words the Recursion step is as follows:
+        (1) Set q = gk
+            i = k− 1
+            j= min (k, l) 
+        (2) Perform j times: 
+            lambda_i = s_i^T * q / y_i^T * s_i, 
+            q -= lambda_i * y_i
+            i -= 1
+        (3) Set gamma = s^T_(k-1) * y_(k-1) / y^T_(k-1) * y_k-1
+            r = gamma * D * q
+            i = k - j
+        (4) Perform j times
+            mu = y_i^T * r / y_i^T
+            r += s_i(lambda_i - mu)
+            i += 1
+        (5) End with result: p_k = -r
+
+        :type q: seisflows.tools.specfem_model.Model
+        :param q: current gradient, stored in `g_new`
+        """
+        # Step 0: Update memory for L-BFGS
+        self._update_search_history()
+
+        # Step 1: Set q=g_k, i=k-1, j=min(k,l)
+        k = self._memory_used
+        j = min(k, self.LBFGS_mem)
+
+        # Used to store dot products so we don't have to recompute
+        s_dot_q = np.zeros(k)
+        y_dot_s = np.zeros(k)
+        
+        # Step 2: Perform j timesz 
+        # Note that we are storing intermediate variables in the `scratch` path
+        # because they do not need to be retained
+        for i in range(j):
+            y_i = Model(self.path[f"_y{i}"])
+            s_i = Model(self.path[f"_s{i}"])
+
+            # lambda_i = s_i^T * q / y_i^T * s_i
+            s_dot_q[i] = s_i.dot(q)    
+            y_dot_s[i] = y_i.dot(s_i)  # former: rh = 1 / y_dot_s
+            lambda_i = s_dot_q[i] / y_dot_s[i]  # former al = s_dot_q / y_dot_s
+
+            # q -= lambda_i * y_i
+            # Note the math is rearranged so we can make this slightly more
+            # efficient but it's solving the same operation. Export to scratch
+            q = y_i.apply(actions=["*", "*", "+"], values=[lambda_i, -1, q],
+                          export_to=self.path._scratch)
+
+        # Optional step, apply preconditioner in place on the scratch path
+        if self.preconditioner:
+            r = self.precondition(q=q)
+        else:
+            r = q
+            
+        # Step 3: Use scaling M3 proposed by Liu & Nocedal 1989
+        y_0 = Model(self.path._y0)
+        s_0 = Model(self.path._s0)
+        sty_over_yty = s_0.dot(y_0) / y_0.dot(y_0)
+
+        # We now use the actual `r` path that will provide the final quantity
+        # `r` which defines the scaled gradient
+        r = r.apply(actions=["*"], values=[sty_over_yty], 
+                    export_to=self.path._r)
+        
+        # Clear out the scratch directory now that we don't need it anymore
+        q.clear()
+
+        # Step 4: Second matrix product, calculate scaled gradient `r`
+        for i in range(k - 1, -1 ,-1):  
+            # Load vectors from disk
+            y_i = Model(self.path[f"_y{i}"])
+            s_i = Model(self.path[f"_s{i}"])
+
+            # mu = y_i^T * r / y_i^T * s_i
+            mu = y_i.dot(r) / y_dot_s[i]  # previously defined as `be`
+            lambda_i = s_dot_q[i] / y_dot_s[i]
+
+            # r += s_i(lambda_i - mu)
+            # Again we slightly rearrange the math to make the operation more
+            # efficient but in the end we update the `r` model vector
+            r = s_i.apply(actions=["*", "+"], values=[lambda_i - mu, r],
+                          export_to=self.path._r)
+            
+        return Model(self.path._r)
 
     def _update_search_history(self):
         """
-        Updates L-BFGS algorithm history
+        Updates L-BFGS algorithm history by removing old memory and storing
+        new model differences (s_k) and gradient differences (y_k)
 
         .. note::
-            Because models are large, and multiple iterations of models need to
-            be stored in memory, previous models are stored as `memmaps`,
-            which allow for access of small segments of large files on disk,
-            without reading the entire file. Memmaps are array like objects.
-
+            This algorithm is notated in Modrak & Tromp 2016 Appendix A
+        
         .. note::
             Notation for s and y taken from Liu & Nocedal 1989
             iterate notation: sk = x_k+1 - x_k and yk = g_k+1 - gk
-
-        :rtype s: np.memmap
-        :return s: memory of the model differences `m_new - m_old`
-        :rtype y: np.memmap
-        :return y: memory of the gradient differences `g_new - g_old`
         """
-        # Determine the iterates for model m and gradient g
-        s_k = \
-            self.load_vector("m_new").vector - self.load_vector("m_old").vector
-        y_k = \
-            self.load_vector("g_new").vector - self.load_vector("g_old").vector
+        # If we have memory assigned, we need to make space for the latest entry
+        # Essentially were shifting every index down by one (i -> i+1) and 
+        # removing the last index to make way for new 0th index memory. In 
+        # practice we're just renaming directories
+        if self._memory_used > 0:
+            if self._memory_used == self.LBFGS_mem:
+                # Remove the oldest memory if we exceed the memory threshold
+                unix.rm(self.path[f"_y{self._memory_used - 1}"])
+                unix.rm(self.path[f"_s{self._memory_used - 1}"])
+            # Iterate backwards, so for mem==3 we go: 2, 1 (ignore 0)
+            for i in np.arange(self._memory_used, 0, -1):
+                # Don't go past the memory requirement (I couldnt seem to find 
+                # a clean way to run the range so that I didn't need this extra 
+                # catch but oh well, it works.)
+                if i >= self.LBFGS_mem:
+                    continue
+                # Reassigning the next index to the current. E.g., if mem==3 we
+                # start at i==2 which we don't need anymore, and move i==1 into 
+                # the 2 spot.
+                unix.mv(src=self.path[f"_y{i-1}"], dst=self.path[f"_y{i}"])
+                unix.mv(src=self.path[f"_s{i-1}"], dst=self.path[f"_s{i}"])
+        
+        # Assign the current model and gradient differences to 0th index
+        # s_k = m_new - m_old
+        Model(self.path._m_new).apply(
+            actions=["-"], values=[Model(self.path._m_old)],
+            export_to=self.path._s0
+            )
+        # y_k = g_new - g_old
+        Model(self.path._g_new).apply(
+            actions=["-"], values=[Model(self.path._g_old)],
+            export_to=self.path._y0
+            )
 
-        # Determine the shape of the memory map (length of model, length of mem)
-        m = len(s_k)
-        n = self.LBFGS_mem
-
-        # Initial iteration, need to create the memory map
-        if self._memory_used == 0:
-            s = np.memmap(filename=self.path._s_file, mode="w+",
-                          dtype="float32", shape=(m, n))
-            y = np.memmap(filename=self.path._y_file, mode="w+",
-                          dtype="float32", shape=(m, n))
-            # Store the model and gradient differences in memmaps
-            s[:, 0] = s_k
-            y[:, 0] = y_k
-            self._memory_used = 1
-        # Subsequent iterations will append to memory maps
-        else:
-            s = np.memmap(filename=self.path._s_file, mode="r+",
-                          dtype="float32", shape=(m, n))
-            y = np.memmap(filename=self.path._y_file, mode="r+",
-                          dtype="float32", shape=(m, n))
-            # Shift all stored memory by one index to make room for latest mem
-            s[:, 1:] = s[:, :-1]
-            y[:, 1:] = y[:, :-1]
-            # Store the latest model and gradient in first index
-            s[:, 0] = s_k
-            y[:, 0] = y_k
-
-            # Keep track of the memory used
-            if self._memory_used < self.LBFGS_mem:
-                self._memory_used += 1
-
-        return s, y
-
-    def _apply_inverse_hessian(self, q, s=None, y=None):
-        """
-        Applies L-BFGS inverse Hessian to given vector
-
-        :type q: np.array
-        :param q: gradient direction to apply L-BFGS to
-        :type s: np.memmap
-        :param s: memory of model differences
-        :param s: memory of model differences
-        :type y: np.memmap
-        :param y: memory of gradient direction differences
-        :rtype r: np.array
-        :return r: new search direction from application of L-BFGS
-        """
-        # If no memmaps are given as arguments, instantiate them
-        if s is None or y is None:
-            m = len(q)
-            n = self.LBFGS_mem
-            s = np.memmap(filename=self.path._s_file, mode="w+",
-                          dtype="float32", shape=(m, n))
-            y = np.memmap(filename=self.path._y_file, mode="w+",
-                          dtype="float32", shape=(m, n))
-
-        # First matrix product
-        # Recursion step 2 from appendix A of Modrak & Tromp 2016
-        kk = self._memory_used
-        rh = np.zeros(kk)
-        al = np.zeros(kk)
-        for ii in range(kk):
-            rh[ii] = 1 / np.dot(y[:, ii], s[:, ii])
-            al[ii] = rh[ii] * np.dot(s[:, ii], q)
-            q = q - al[ii] * y[:, ii]
-
-        # Apply an optional preconditioner. Otherwise r==q
-        r = self._precondition(q)
-
-        # Use scaling M3 proposed by Liu and Nocedal 1989
-        sty = np.dot(y[:, 0], s[:, 0])
-        yty = np.dot(y[:, 0], y[:, 0])
-        r *= sty/yty
-
-        # Second matrix product
-        # Recursion step 4 from appendix A of Modrak & Tromp 2016
-        for ii in range(kk - 1, -1, -1):
-            be = rh[ii] * np.dot(y[:, ii], r)
-            r = r + s[:, ii] * (al[ii] - be)
-
-        return r
+        # Increment memory up to LBFGS memory threshold
+        if self._memory_used < self.LBFGS_mem:
+            self._memory_used += 1
 
     def _check_status(self, g, r):
         """
         Check the status of the apply() function, determine if restart necessary
         Return of False means restart, return of True means good to go.
 
-        :type g: np.array
+        :type g: seisflows.tools.specfem_model.Model
         :param g: current gradient direction
-        :type r: np.array
+        :type r: seisflows.tools.specfem_model.Model
         :param r: new gradient direction
         :rtype: bool
         :return: okay status based on status check (False==bad, True==good)
         """
-        theta = 180. * np.pi ** -1 * angle(g, r)
+        theta = 180. * np.pi ** -1 * g.angle(r)
         logger.info(f"new search direction: {theta:.2f}{DEG} from current")
 
         if not 0. < theta < 90.:
             logger.info("restarting L-BFGS, theta not a descent direction")
-            okay = False
+            return False
         elif theta > 90. - self.LBFGS_thresh:
             logger.info("restarting L-BFGS due to practical safeguard")
-            okay = False
+            return False
         else:
-            okay = True
-        return okay
+            return True
+

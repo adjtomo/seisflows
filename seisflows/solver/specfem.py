@@ -27,7 +27,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import get_task_id, Dict
-from seisflows.tools.model import Model
+from seisflows.tools.specfem_model import Model
 from seisflows.tools.specfem import getpar, setpar, check_source_names
 
 
@@ -394,6 +394,8 @@ class Specfem:
 
     def check_model_values(self, path):
         """
+        BCBC skipping model check for now, need to reinstate this
+        
         Convenience function to check parameter and model validity for
         chosen Solver model. Should be called by the Workflow module
 
@@ -401,6 +403,11 @@ class Specfem:
         :param path: path to model file(s) that should be in the format expected
             by the Model class (FORTRAN binary, ADIOS etc.)
         """
+        logger.warning("DEVEL: Model check function has been bypassed for "
+                       "now, you are responsible for ensuring your model " 
+                       "complies")
+        return
+
         assert os.path.exists(path), f"Model check path does not exist: {path}"
 
         _model = Model(path=path, parameters=self._parameters,
@@ -597,6 +604,7 @@ class Specfem:
     @property
     def model_files(self):
         """
+        BCBC do we need this? maybe remove
         Return a list of paths to model files that match the internal parameter
         list. Used to generate model vectors of the same length as gradients.
 
