@@ -1,7 +1,7 @@
 SeisFlows 
 ==========
 
-[![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=devel)](https://seisflows.readthedocs.io/en/devel/?badge=devel)
+[![Documentation Status](https://readthedocs.org/projects/seisflows/badge/?version=latest)](https://seisflows.readthedocs.io/en/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 SeisFlows is an open-source, Python-based waveform inversion package that tackles the problems of seismic wavefield simulation, full waveform inversion, seismic migration, and adjoint tomography on a variety of compute systems, from laptops to supercomputers. Seisflows is built on top of external numerical solvers to make it easier for users to run large, complicated workflows with lots of moving parts.
