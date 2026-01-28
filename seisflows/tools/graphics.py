@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from PIL import Image
-from pypdf import PdfMerger
+from pypdf import PdfWriter
 from seisflows.tools import unix
 
 
@@ -28,7 +28,7 @@ def merge_pdfs(fids, fid_out, remove_fids=False):
     :param remove_fids: remove the original input PDF files if the output PDF
         was successfully created. Defaults to False, original files are kept.
     """
-    merger = PdfMerger()
+    merger = PdfWriter()
     for fid in fids:
         merger.append(fid)
 
