@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v3.5.5
+> **IMPORTANT PACKAGE UDPATE**: New development strategy implemented. No longer using a `main` and `devel`
+branch. `main` now points to the most up to date version of the code. Versions that have 
+been deemed stable will be officially version released and can be found in the `Releases` tab. This should cut down on wildly development branches.
+- Renamed main branch `master` -> `main`
+- `main` is now the most up-to-date development branch of the code
+- #255: adds preprocessing toggles in the `Pyaflowa` preprocessing module
+- #257: Updates to Chinook system to match new cluster upgrades
+- #258: Improves 2D plotting
+
+
 ## v3.5.3 
 - Hotfix: extend floating point precision to avoid rounding off dt for very 
   small values of `dt` in SPECFEM (see #244)
