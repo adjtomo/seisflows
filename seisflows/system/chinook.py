@@ -9,6 +9,8 @@ Information on Chinook can be found here:
 https://uaf-rcs.gitbook.io/uaf-rcs-hpc-docs/hpc
 """
 import os
+from datetime import timedelta
+
 from seisflows.system.slurm import Slurm
 
 
@@ -48,7 +50,7 @@ class Chinook(Slurm):
         self.submit_to = submit_to or self.partition
 
         self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,
-                            "t1standard": 40, "t2standard": 40, "analysis": 28
+                            "t1standard": 28, "t2standard": 28, "analysis": 28
                             }
 
     @property
@@ -69,36 +71,59 @@ class Chinook(Slurm):
         """
         _call = " ".join([
             f"sbatch",
+            f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
             f"--ntasks=1",
             f"--partition={self.submit_to}",
-            f"--time={self._walltime}"
+            f"--time={self.walltime}"
         ])
         return _call
 
-    @property
-    def run_call_header(self):
+    def run_call(self, executable="", single=False, array=None, tasktime=None):
         """
-        The run call defines the SBATCH header which is used to run tasks during
+        The run call defines the SBATCH call which is used to run tasks during
         an executing workflow. Like the submit call its arguments are dictated
         by the given system. Run calls are modified and called by the `run`
         function
 
+        :type executable: str
+        :param exectuable: the actual exectuable to run within the SBATCH 
+            directive. Something like './script.py'
+        :type array: str
+        :param array: overwrite the `array` variable to run specific jobs. If
+            not provided, then we will run jobs 0-{ntask}%{ntask_max}. Jobs 
+            should be submitted in the format of a SLURM array string, 
+            something like: 0,1,3,5 or 2-4,8-22
+        :type single: bool
+        :param single: flag to get a run call that is meant to be run on the
+            mainsolver (ntask==1), or run for all jobs (ntask times). Examples
+            of single process runs include smoothing, and kernel combination
         :rtype: str
         :return: the system-dependent portion of a run call
         """
+        array = array or self.task_ids(single=single)  # get job array str
+        tasktime = tasktime or self.tasktime
+
+        # Determine if this is a single-process or array job
+        if single:
+            env = "SEISFLOWS_TASKID=0," 
+        else:
+            env = ""
+        
         _call = " ".join([
-            f"sbatch",
-            f"{self.slurm_args or ''}",
-            f"--job-name={self.title}",
-            f"--ntasks={self.nproc:d}",
-            f"--partition={self.partition}",
-            # f"--tasks-per-node={self.node_size}",  # actually not required?
-            f"--time={self._tasktime}",
-            f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-            f"--array=0-{self.ntask-1 % self.ntask_max}",
-            f"--parsable"
+             f"sbatch",
+             f"{self.slurm_args or ''}",
+             f"--job-name={self.title}",
+             f"--nodes={self.nodes}",
+             f"--ntasks={self.nproc:d}",
+             f"--partition={self.partition}",
+             f"--time={tasktime}",
+             f"--output={os.path.join(self.path.log_files, '%A_%a')}",
+             f"--array={array}",
+             f"--parsable",
+             f"{executable}",  # <-- The actual script/program to run goes here
+             f"--environment {env}{self.environs or ''}"
         ])
         return _call

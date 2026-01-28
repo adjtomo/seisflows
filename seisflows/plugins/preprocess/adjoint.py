@@ -109,6 +109,7 @@ def traveltime(syn, obs, nt, dt, *args, **kwargs):
     wadj *= 1. / (sum(wadj * wadj) * dt)
 
     wadj *= misfit.traveltime(syn, obs, nt, dt)
+
     return wadj
 
 

@@ -118,6 +118,7 @@ class Maui(Slurm):
         """
         _call = " ".join([
             f"sbatch",
+            f"{self.slurm_args or ''}",
             f"--account={self.account}",
             f"--cluster={self.ancil_cluster}",
             f"--partition={self.ancil_partition}",
@@ -153,7 +154,7 @@ class Maui(Slurm):
              f"--ntasks={self.nproc:d}",
              f"--time={self._tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-             f"--array=0-{self.ntask-1 % self.ntask_max}",
+             f"--array={self.task_ids()}",
              f"--parsable"
         ])
         return _call
@@ -177,6 +178,6 @@ class Maui(Slurm):
              f"--ntasks={self.nproc:d}",
              f"--time={self.ancil_tasktime:d}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
-             f"--array=0-{self.ntask-1 % self.ntask_max}"
+             f"--array={self.task_ids()}"
         ])
         return _call

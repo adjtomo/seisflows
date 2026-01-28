@@ -36,10 +36,8 @@ Installation
 
 To install SeisFlows and its dependencies, we recommend installing within
 a Conda environment to not affect your root environment. The 
-`master <https://github.com/adjtomo/seisflows/>`__ branch contains the most
-stable release and is the preferred installation branch. The 
-`devel <https://github.com/adjtomo/seisflows/tree/devel>`__ branch houses 
-the most up-to-date codebase, but is likely to be **unstable**.
+`main` branch houses the most up-to-date codebase but may be unstable. If you 
+need a stable version of the code, please look at release tags.
 
 .. note::
 
@@ -122,6 +120,13 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
 .. toctree::
    :maxdepth: 1
    :hidden:
+   :caption: Workflows
+
+   noise_inversion
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
    :caption: How To's
 
    tips_and_tricks
@@ -134,6 +139,6 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
    :caption: Development
 
    extending
-   changelog
+   CHANGELOG
    code_dev_plan
 

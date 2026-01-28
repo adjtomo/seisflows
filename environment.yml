@@ -3,11 +3,13 @@ channels:
     - conda-forge
 dependencies:
     - pip
+    - numpy<2.0.0  # requires PyASDF update
     - obspy
     - cartopy
     - pyyaml
+    - pypdf
     - pip:
-      - pyatoa<=0.2.2
-      - pysep-adjtomo<=0.4.1
+      - pyatoa
+      - pysep-adjtomo
       - -e .
-       
+

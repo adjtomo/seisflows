@@ -57,37 +57,37 @@ class Backtrack(Bracket):
         :return: (alpha==calculated step length,
             status==how to treat the next step count evaluation)
         """
-        # Determine the line search history
-        x, f, gtg, gtp, step_count, update_count = self.get_search_history()
-
-        # quasi-Newton direction is not yet scaled properly, so instead
-        # of a bactracking line perform a bracketing line search
-        if update_count == 0:
+        # Determine the current line search history
+        x, f, _ = self.get_search_history()
+        first_iteration = bool(self.update_count == 1)
+        first_step = bool(self.step_count == 1)
+        
+        # Check if this is the first iteration (by counting 0 step lens).
+        # Quasi-Newton direction is not yet scaled properly if first iter. 
+        # Instead of a bactracking line perform a bracketing line search
+        if first_iteration:
+            logger.info("first iteration, defaulting to bracketing line search")
             alpha, status = super().calculate_step_length()
-       
         # Assumed well scaled search direction, attempt backtracking line search 
         # with unit step length
         else:
-            self._print_stats(x, f)
-
             # Initial unit step length
-            if step_count == 0:
-                alpha = min(1., self.step_len_max)
-                logger.info(f"try: attempt unit step length w/ alpha={alpha}")
+            if first_step:
+                alpha = 1.
+                logger.info(f"try: first step of iteration, attempt unit step")
                 status = "TRY"
             # Pass if misfit is reduced
             elif f.min() < f[0]:
                 alpha = x[f.argmin()]
-                logger.info(f"pass: misfit decreased, line search "
-                            f"successful w/ alpha={alpha}")
+                logger.info(f"pass: misfit decreased, line search successful")
                 status = "PASS"
             # If misfit continually increases, decrease step length
-            elif step_count < self.step_count_max:
-                slope = gtp[-1] / gtg[-1]
+            elif self.step_count < self.step_count_max:
+                slope = self.gtp[-1] / self.gtg[-1]
                 alpha = parabolic_backtrack(f0=f[0], g0=slope, x1=x[1],
                                             f1=f[1], b1=0.1, b2=0.5)
-                logger.info(f"try: misfit increasing, attempting "
-                            f"to decrease step length to alpha={alpha}")
+                logger.info(f"try: misfit increasing, parabloic backtrack "
+                            f"to decrease step length")
                 status = "TRY"
             # Failed because step_count_max exceeded
             else:
@@ -96,6 +96,11 @@ class Backtrack(Bracket):
                             f"({self.step_count_max}) has been exceeded")
                 alpha = None
                 status = "FAIL"
+            # Decrement step count to set the final accepted value if pass 
+            # because we will not be running another step
+            if status == "PASS":
+                self.step_count -= 1
+                logger.info(f"final accepted step count == {self.step_count}")
 
         return alpha, status
 

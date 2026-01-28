@@ -5,6 +5,7 @@
 # Instead we need to load the module and environment manually, before submit
 # ==============================================================================
 
+# Defines where our Conda environment is stored
 WORK_DIR=/work/01/gr58/share/adjtomo
 
 # Load MPI and activate Conda environment

@@ -26,12 +26,14 @@ different optimization algorithms.
     stagnation of the nonlinear optimizationalgorithm.
 """
 import os
+import sys
 import numpy as np
 from glob import glob
 
 from seisflows import logger
 from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
+from seisflows.tools.graphics import plot_optim_stats
 from seisflows.tools.math import angle, dot
 from seisflows.tools.model import Model
 from seisflows.plugins import line_search as line_search_dir
@@ -39,8 +41,8 @@ from seisflows.plugins import line_search as line_search_dir
 
 class Gradient:
     """
-    Gradient Optimization
-    ---------------------
+    Gradient Optimization [Optimize Base]
+    -------------------------------------
     Defines foundational structure for Optimization module. Applies a 
     gradient/steepest descent optimization algorithm.
 
@@ -63,7 +65,10 @@ class Gradient:
     :param step_len_init: initial line search step length guess, provided
         as a fraction of current model parameters.
     :type step_len_max: float
-    :param step_len_max: maximum allowable step length during the line
+    :param step_len_max: optional, maximum allowable step length during the line
+        search. Set as a fraction of the current model parameters
+    :type step_len_min: float
+    :param step_len_min: optional, minimum allowable step length during the line
         search. Set as a fraction of the current model parameters
 
     Paths
@@ -75,9 +80,10 @@ class Gradient:
     ***
     """
     def __init__(self, line_search_method="bracket",
-                 preconditioner=None, step_count_max=10, step_len_init=0.05,
-                 step_len_max=0.5, workdir=os.getcwd(), path_optimize=None,
-                 path_output=None, path_preconditioner=None, **kwargs):
+                 preconditioner=None, step_count_max=10, step_len_init=0.01,
+                 step_len_max=0.1, step_len_min=1E-3, workdir=os.getcwd(), 
+                 path_optimize=None, path_output=None, path_preconditioner=None, 
+                 **kwargs):
         """
         Gradient-descent input parameters.
 
@@ -98,6 +104,7 @@ class Gradient:
         self.step_count_max = step_count_max
         self.step_len_init = step_len_init
         self.step_len_max = step_len_max
+        self.step_len_min = step_len_min
 
         # Set required path structure
         self.path = Dict(
@@ -110,8 +117,8 @@ class Gradient:
         # Hidden paths to store checkpoint file in scratch directory
         self.path["_checkpoint"] = os.path.join(self.path.scratch,
                                                 "checkpoint.npz")
-        self.path["_stats_file"] = os.path.join(self.path.scratch,
-                                                "output_optim.txt")
+        # Hidden path to export stats log and figures
+        self.path["_optim_output"] = os.path.join(self.path.output, "optimize")
 
         # Internal check to see if the chosen line search algorithm exists
         if not hasattr(line_search_dir, line_search_method):
@@ -132,8 +139,13 @@ class Gradient:
         # .title() ensures we grab the class and not the module
         self._line_search = getattr(
             line_search_dir, line_search_method.title())(
-            step_count_max=step_count_max, step_len_max=step_len_max,
-        )
+                                        step_count_max=step_count_max
+                                        )
+
+    def __str__(self):
+        """Quickly access underlying line search search history, mostly for
+        debug purposes"""
+        return self._line_search.__str__()
 
     @property
     def step_count(self):
@@ -154,16 +166,30 @@ class Gradient:
                 f"weight file"
             )
 
-        assert 0. < self.step_len_init, f"optimize.step_len_init must be >= 0."
-        assert 0. < self.step_len_max, f"optimize.step_len_max must be >= 0."
-        assert self.step_len_init < self.step_len_max, \
-            f"optimize.step_len_init must be < optimize.step_len_max"
+        if self.step_len_init is not None:
+            assert 0. < self.step_len_init, \
+                f"optimize.step_len_init must be >= 0."
+        if self.step_len_max is not None:
+            assert 0. < self.step_len_max, \
+                f"optimize.step_len_max must be >= 0."
+        if self.step_len_min is not None:
+            assert 0. < self.step_len_min, \
+                f"optimize.step_len_min must be >= 0."
+        if self.step_len_max is not None and self.step_len_init is not None:
+            assert self.step_len_init < self.step_len_max, \
+                f"optimize.step_len_init must be < optimize.step_len_max"
+        if self.step_len_min is not None and self.step_len_init is not None:
+            assert self.step_len_init > self.step_len_min, \
+                f"optimize.step_len_init must be > optimize.step_len_min"
+    
+        self._line_search.check()
 
     def setup(self):
         """
         Sets up nonlinear optimization machinery
         """
         unix.mkdir(self.path.scratch)
+        unix.mkdir(self.path._optim_output)
 
         # Load checkpoint (if resuming) or save current checkpoint
         self.load_checkpoint()
@@ -172,9 +198,12 @@ class Gradient:
     def load_vector(self, name):
         """
         Convenience function to access the full paths of model and gradient
-        vectors that are saved to disk
+        vectors that are saved to disk. Corresponding `save_vector` function
+        saves vectors into the correct location and format that can be loaded
+        by this function.
 
         .. note::
+
             Model, gradient and misfit vectors are named as follows:
             m_new: current model
             m_old: previous model
@@ -190,15 +219,18 @@ class Gradient:
 
         :type name: str
         :param name: name of the vector, acceptable: m, g, p, f, alpha
+        :rtype: Model, vector or float
+        :return: loaded vector corresponding to `name` that may take on 
+            different type based on which vector it is
         """
         assert(name in self._acceptable_vectors)
 
-        model_npz = os.path.join(self.path.scratch, f"{name}.npz")
-        model_npy = model_npz.replace(".npz", ".npy")
-        model_txt = model_npz.replace(".npz", ".txt")
+        model = os.path.join(self.path.scratch, f"{name}")
+        model_npy = os.path.join(self.path.scratch, f"{name}.npy")
+        model_txt = os.path.join(self.path.scratch, f"{name}.txt")
 
-        if os.path.exists(model_npz):
-            model = Model(path=model_npz)
+        if os.path.exists(model):
+            model = Model(path=model)
         elif os.path.exists(model_npy):
             model = np.load(model_npy)
         elif os.path.exists(model_txt):
@@ -210,19 +242,22 @@ class Gradient:
 
     def save_vector(self, name, m):
         """
-        Convenience function to save/overwrite vectors on disk
+        Convenience function to save/overwrite vectors on disk. Corresponding
+        function `load_vector` loads in vectors that have been saved with
+        this function
 
         :type name: str
-        :param name: name of the vector to overwrite
+        :param name: name of the vector to save or overwrite
         :type m: seisflows.tools.specfem.Model or float
-        :param m: Model to save to disk as npz array
+        :param m: Model, vector, or value to save to disk 
         """
         assert(name in self._acceptable_vectors)
 
         if isinstance(m, Model):
-            path = os.path.join(self.path.scratch, f"{name}.npz")
-            m.model = m.split()  # overwrite m representation
-            m.save(path=path)
+            path = os.path.join(self.path.scratch, f"{name}")
+            unix.rm(path)  # ensure that no old files are stored here
+            unix.mkdir(path)
+            m.write(path=path)  # write in the same format as SPECFEM uses
         elif isinstance(m, np.ndarray):
             path = os.path.join(self.path.scratch, f"{name}.npy")
             np.save(path=path)
@@ -248,9 +283,8 @@ class Gradient:
                         gtg=self._line_search.gtg,
                         gtp=self._line_search.gtp,
                         step_count=self._line_search.step_count,
-                        step_len_max=self._line_search.step_len_max
+                        iteridx=self._line_search.iteridx,
                        )
-
         np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
 
     def load_checkpoint(self):
@@ -274,9 +308,9 @@ class Gradient:
             self._line_search.gtg = list(dict_in["gtg"])
             self._line_search.gtp = list(dict_in["gtp"])
             self._line_search.step_count = int(dict_in["step_count"])
-            self._line_search.step_len_max = float(dict_in["step_len_max"])
+            self._line_search.iteridx = list(dict_in["iteridx"])
         else:
-            logger.info("no optimization checkpoint found, assuming first run")
+            logger.info("no optimization checkpoint file, assume 1st iteration")
             self.checkpoint()
 
     def _precondition(self, q):
@@ -310,132 +344,191 @@ class Gradient:
 
         :rtype: seisflows.tools.specfem.Model
         :return: search direction as a Model instance
+        :raises SystemError: if the search direction is 0, signifying a zero
+            gradient which will not do anything in an update
         """
         g_new = self.load_vector("g_new")
         p_new = g_new.copy()
         p_new.update(vector=-1 * self._precondition(g_new.vector))
 
+        if sum(p_new.vector) == 0:
+            logger.critical(msg.cli(
+                "Search direction vector 'p' is 0, meaning no model update can "
+                "take place. Please check your gradient and waveform misfits. "
+                "SeisFlows exiting prior to start of line search.", border="=",
+                header="optimization gradient error")
+            )
+            sys.exit(-1)
+
         return p_new
 
     def initialize_search(self):
         """
-        Generate a trial model by perturbing the current model in the search
-        direction with a given step length, calculated by the chosen line
-        search algorithm.
-
-        :rtype: tuple
-        :return: (Model, float) or (m_try==trial model, alpha=step length)
+        Setup a the line search machinery by inputting values for the initial
+        model. Also contains a check to see if the line search has been 
+        restarted.
         """
-        m = self.load_vector("m_new")  # current model from external solver
+        f = self.load_vector("f_new")  # current misfit value from preprocess
         g = self.load_vector("g_new")  # current gradient from scaled kernels
         p = self.load_vector("p_new")  # current search direction
-        f = self.load_vector("f_new")  # current misfit value from preprocess
-
-        norm_m = max(abs(m.vector))
-        norm_p = max(abs(p.vector))
+        
+        logger.info("calculating gradient dot products GTG and GTP")
         gtg = dot(g.vector, g.vector)
         gtp = dot(g.vector, p.vector)
 
-        # Restart plugin line search if the optimization library restarts
+        # Restart plugin line search if the optimization library restarts, 
+        # restart conditions are determined in `Optimize.compute_direction()`
         if self._restarted:
             self._line_search.clear_search_history()
 
-        # Optional safeguard to prevent step length from getting too large
-        if self.step_len_max:
-            new_step_len_max = self.step_len_max * norm_m / norm_p
-            self._line_search.step_len_max = new_step_len_max
-            logger.info(f"enforcing max step length safeguard")
-
         # Initialize the line search and save it to disk.
-        self._line_search.update_search_history(func_val=f, step_len=0.,
-                                                gtg=gtg, gtp=gtp)
+        self._line_search.initialize_line_search(func_val=f, gtg=gtg, gtp=gtp)
 
-        alpha, _ = self._line_search.calculate_step_length()
-
-        # Alpha defines the trial step length. Optional step length override
-        if self.step_len_init and len(self._line_search.step_lens) <= 1:
-            alpha = self.step_len_init * norm_m / norm_p
-            logger.debug(f"overwriting initial step length, "
-                         f"alpha_new={alpha:.2E}")
-
-        # The new model is the old model, scaled by the step direction and
-        # gradient threshold to remove any outlier values
-        m_try = m.copy()
-        m_try.update(vector=m.vector + alpha * p.vector)
-        logger.info("trial model 'm_try' parameters: ")
-        m_try.check()
-
-        return m_try, alpha
-
-    def increment_step_count(self):
+    def update_search(self):
         """
-        Convenience function to increment line search step count by 1. This is
-        wrapped in a function to keep things explicit, rather than calling +=1 
-        randomly in script. We are also accessing a private member of the class
-        so better to have a public function take care of incrementing.
+        Collect information on a forward evaluation that just took place so 
+        that we can assess how to proceed with the current line search. 
+        Incremenet the line search step count as we have finished the current.
         """
+        # Save step length and associated misfit into the line search
+        alpha_try = self.load_vector("alpha")  # step length
+        f_try = self.load_vector("f_try")  # misfit for the trial model
+        self._line_search.update_search_history(step_len=alpha_try, 
+                                                func_val=f_try)
+        logger.info(f"saving misfit and step length for step count == "
+                    f"{self.step_count}")
+
+        # Log out the current line search stats for reference
+        x, f, idx = self._line_search.get_search_history()
+        idx_str = ", ".join([f"{_:>9}" for _ in idx])   # step count
+        x_str = ", ".join([f"{_:.3E}" for _ in x])  # step length
+        f_str = ", ".join([f"{_:.3E}" for _ in f])  # misfit value
+        logger.info(f"step count  = {idx_str}")
+        logger.info(f"step length = {x_str}")
+        logger.info(f"misfit val  = {f_str}")
+
+        # Increment step count for next line search evaluation
         self._line_search.step_count += 1
-        logger.info(f"step count incremented -> {self._line_search.step_count}")
+        logger.info(f"increment step count -> {self._line_search.step_count}")
 
-    def update_line_search(self):
+    def calculate_step_length(self):
         """
-        Updates line search status and step length after a forward simulation
-        has been run and misfit calculated. Checks misfit against line search
-        history to see if the line search has been completed.
+        Determine the step length `alpha` based on the current configuration
+        of the line search machinery (i.e., the misfit vs. function evaluation 
+        values). Has a catch for whether we want to manual override the step 
+        length. Also returns a status that tells the Workflow how to proceed
+        with a line search.
 
-        .. note::
-
-            This is a bit confusing as it calculates the step length `alpha` for
-            the NEXT line search step, while storing the `alpha` value that
-            was calculated from the LAST line search step. This is because we
-            need a corresponding misfit `f_try` from the value of `alpha`, which
-            happens externally with the solver module
-
-        If line search returns a passing exit code (0 or 1), sets up for a
-        subsequent line search evaluation by saving a new step length (alpha),
-        and creating a new trial model (m_try).
-
-        .. note:
-
+        :rtype alpha: float
+        :return alpha: step length recommended by the line search. This is
+            intrinsically tied to the `status`. When `status`=='TRY', alpha
+            represents the step length to take for the next step. When `status`
+            =='PASS', then alpha represents the best fitting step count found
+            for this line search evaluation.
+        :rtype status: str
+        :return status: the status recommended to the workflow. Three options:
             Available status returns are:
             'TRY': try/re-try the line search as conditions have not been met
             'PASS': line search was successful, you can terminate the search
             'FAIL': line search has failed for one or more reasons.
-
-        :rtype: tuple
-        :return: (Model, float, bool) or (m_try==trial model, alpha=step length,
-            status==how to proceed with line search)
         """
-        # Collect information on a forward evaluation that just took place
-        alpha_try = self.load_vector("alpha")  # step length
-        f_try = self.load_vector("f_try")  # misfit for the trial model
+        # Used as checks to determine where we are in the inversion
+        first_iteration = bool(self._line_search.step_lens.count(0) == 1)
+        first_step = bool(self.step_count == 1)
+        
+        # Initialize empty vectors for checks
+        m, p = None, None
 
-        # Update the line search with a new step length and misfit value
-        self._line_search.update_search_history(step_len=alpha_try,
-                                                func_val=f_try)
+        # Manually set the step length as some percentage of the model vector.
+        # Only do this at the very first model update
+        if self.step_len_init and first_iteration and first_step:
+            m = self.load_vector("m_new")  # current model
+            p = self.load_vector("p_new")  # current search direction
+            norm_m = max(abs(m.vector))
+            norm_p = max(abs(p.vector))
 
-        # Calculate a new step length based on the current step length and its
-        # corresponding misfit.
-        alpha, status = self._line_search.calculate_step_length()
+            alpha = self.step_len_init * norm_m / norm_p
+            status = None
+            logger.debug(f"setting first step length with user-requested "
+                         f"`step_len_init`={self.step_len_init}")
+        # OR, after the first evaluation, it's expected that the line search 
+        # will know how to scale automatically
+        else:
+            alpha, status = self._line_search.calculate_step_length()
 
-        # Note: if status is 'PASS' then `alpha` represents the step length of
-        # the lowest misfit in the line search and we reconstruct `m_try` w/ it
-        if status.upper() in ["PASS", "TRY"]:
-            # Create a new trial model based on search direction, step length
-            # and the initial model vector
-            _m = self.load_vector("m_new")
-            _p = self.load_vector("p_new")
+        # Apply optional step length safeguard to prevent step length from 
+        # getting too large w.r.t model values
+        if status == "TRY" and (self.step_len_max or self.step_len_min):
+            m = m or self.load_vector("m_new")  # current model
+            p = p or self.load_vector("p_new")  # current search direction
+            norm_m = max(abs(m.vector))
+            norm_p = max(abs(p.vector))
 
-            # Sets the latest trial model using the current `alpha` value
-            m_try = _m.copy()
-            m_try.update(vector=_m.vector + alpha * _p.vector)
-            logger.info("line search model 'm_try' parameters: ")
-            m_try.check()
-        elif status.upper() == "FAIL":
-            # Failed line search skips over costly vector manipulations
+            # Determine minimum alpha as a fraction of the current model
+            if self.step_len_min:
+                logger.debug("checking safeguard min allowable step length: "
+                            f"{self.step_len_min * 100}%")
+                min_allowable_alpha = self.step_len_min * norm_m / norm_p
+                if alpha < min_allowable_alpha:
+                    logger.warning(f"step length `alpha` is below minimum "
+                                   f"threshold value {min_allowable_alpha:.2f}")
+                    if first_step:
+                        logger.info("forcing step length to minimum value")
+                        alpha = min_allowable_alpha
+                    else:
+                        logger.critical(msg.mjr("MINIMUM STEP LENGTH EXCEEDED, "
+                                                "EXITING WORKFLOW"))
+                        sys.exit(-1)
+            # Determine maximum alpha as a fraction of the current model
+            if self.step_len_max:
+                logger.debug("checking safeguard max allowable step length: "
+                            f"{self.step_len_max * 100}%")
+                max_allowable_alpha = self.step_len_max * norm_m / norm_p
+                if alpha > max_allowable_alpha:
+                    logger.warning(f"`alpha` has exceeded maximum value "
+                                   f"{self.step_len_max * 100}%")
+                    if first_step:
+                        # If this is the first step, pull back slightly so that 
+                        # line search can safely increase step length later
+                        # TODO: Where does this value come from?
+                        alpha = 0.618034 * max_allowable_alpha
+                        logger.info("reducing step length for first step")
+                    else:
+                        logger.critical(msg.mjr("MAXIMUM STEP LENGTH EXCEEDED, "
+                                                "EXITING WORKFLOW"))
+                        sys.exit(-1)
+
+        if alpha is not None:
+            logger.info(f"step length `alpha` = {alpha:.3E}")
+    
+        return alpha, status
+
+    def compute_trial_model(self, alpha):
+        """
+        Generates a trial model `m_try` by perturbing the starting model `m_new`
+        with a given search direction `p_new` and a pre-calculated step length
+        `alpha`
+
+        :type alpha: float
+        :param alpha: step length recommended by the line search. if None,
+            due to failed line search, then this function returns None
+        :rtype: np.array or NoneType
+        :return: trial model that can be used for line search evaluation or 
+            None if alpha is None
+        """
+        if alpha is not None:
+            # The new model is the old model plus a step with a given magnitude 
+            m_try = self.load_vector("m_new").copy()
+            p = self.load_vector("p_new")  # current search direction
+
+            dm = alpha * p.vector  # update = step length * step direction
+            logger.info(f"updating model with `dm` (dm_min={dm.min():.2E}, "
+                        f"dm_max = {dm.max():.2E})")
+            m_try.update(vector=m_try.vector + dm)
+        else:
             m_try = None
 
-        return m_try, alpha, status
+        return m_try
 
     def finalize_search(self):
         """
@@ -448,31 +541,38 @@ class Gradient:
 
         logger.info(msg.sub("FINALIZING LINE SEARCH"))
 
-        # Remove the old model parameters
-        if glob("?_old"):
-            logger.info("removing previously accepted model files (?_old)")
-            for fid in ["m_old", "f_old", "g_old", "p_old"]:
-                unix.rm(os.path.join(self.path.scratch, fid))
+        # Remove the old-old model parameters (from the last time this was run)
+        old_files = glob(os.path.join(self.path.scratch, "?_old*"))
+        if old_files:
+            logger.info(f"removing previous iteration model files: "
+                        f"{old_files}")
+            for old_file in old_files:
+                unix.rm(old_file)
 
-        # Needs to be run before shifting model in next step
-        self._write_stats()
+        # Export stats and figures to output, must run before shifting model
+        self.write_stats(fid=os.path.join(self.path._optim_output, 
+                                          "output_optim.txt"))
+        plot_optim_stats(fid=os.path.join(self.path._optim_output,
+                                          "output_optim.txt"),
+                         path_out=self.path._optim_output)
 
-        logger.info("renaming current (new) optimization vectors as "
-                    "previous model (old)")
-        # e.g., m_new.npz -> m_old.npz
-        for src in glob(os.path.join(self.path.scratch, "*_new.*")):
-            dst = src.replace("_new.", "_old.")
+        logger.info("setting current model as previous model (?_new -> ?_old)")
+        # e.g., f_new.txt -> f_old.txt
+        for src in glob(os.path.join(self.path.scratch, "?_new*")):
+            # Change 'new' to 'old' in ONLY the filename (#259)
+            fid = os.path.basename(src)
+            fid_new = fid.replace("_new", "_old")
+            dst = src.replace(fid, fid_new)
             unix.mv(src, dst)
 
-        # Reconstruct
-        x, f, *_ = self._line_search.get_search_history()
-
-        logger.info("setting accepted trial model (try) as current model (new)")
-        unix.mv(src=os.path.join(self.path.scratch, "m_try.npz"),
-                dst=os.path.join(self.path.scratch, "m_new.npz"))
+        logger.info("setting trial model as starting model (m_try -> m_new)")
+        unix.mv(src=os.path.join(self.path.scratch, "m_try"),
+                dst=os.path.join(self.path.scratch, "m_new"))
 
         # Choose minimum misfit value as final misfit/model. index 0 is initial
-        f = self._line_search.get_search_history()[1]
+        x, f, idx = self._line_search.get_search_history()
+
+        # Figure out what step length and step count that corresponds to
         self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
@@ -483,7 +583,7 @@ class Gradient:
         """
         After a failed line search, this determines if restart is worthwhile
         by checking, in effect, if the search direction was the same as the
-        negative gradientdirection.
+        negative gradient direction.
 
         Essentially checking if this is a steepest-descent optimization, which
         cannot and should not be restarted. If the search direction is calc'ed
@@ -504,8 +604,12 @@ class Gradient:
                      f"theta: {theta:6.3f}")
 
         if abs(theta) < threshold:
+            logger.info(f"search direction below threshold {threshold}, will "
+                        f"not attempt restart")
             return False  # Do not restart
         else:
+            logger.info(f"search direction above threshold {threshold}, "
+                        f"attempting restart")
             return True  # Go for restart
 
     def restart(self):
@@ -524,65 +628,89 @@ class Gradient:
         """
         pass
 
-    def _write_stats(self):
+    def get_stats(self):
         """
-        Simplified write function to append values to text files.
-        Used because stats line search information can be overwritten
-        by subsequent iterations so we need to append values to text files
-        if they should be retained.
+        Get Optimization statistics for the current evaluation of an inversion.
+        Returns a dictionary of values which can then be written to a text file
+        or plotted for convenience.           
 
         .. note::
 
-            This CSV file can be easily read and plotted using np.genfromtxt
-            >>> np.genfromtxt("optim_stats.txt", delimiter=",", names=True, \
-                              dtype=None)
-        """
-        logger.info(f"writing optimization stats")
+            The following `factor` was included in the original SeisFlows stats
+            but started throwing runtime errors. Not sure what is was for -- BC
 
-        # Gather required information from line search parameters
+            factor = -1 * dot(g.vector, g.vector)
+            factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0]) 
+                    
+        :rtype: Dict of float
+        :return: SeisFlows dictionary object containing statistical informaion
+            about the optimization module
+        """
+        # We construct stats from the gradient (g), search direction (p),
+        # step lengths (x) and function values/misfit (f)
         g = self.load_vector("g_new")
         p = self.load_vector("p_new")
-        x, f, *_ = self._line_search.get_search_history()
+        x, f, _  = self._line_search.get_search_history()
+        step_count = self._line_search.step_count
 
-        # Calculated stats factors
-        # TODO What is this? It was returning a RuntimeError for value too small
-        #   for double precision. Do we need to keep it?
-        # factor = -1 * dot(g.vector, g.vector)
-        # factor = factor ** -0.5 * (f[1] - f[0]) / (x[1] - x[0])
+        # Construct statistics
+        step_length = x[f.argmin()]  # final, accepted step length
+        misfit = f[f.argmin()]  # final, accepted misfit value
+        if_restarted = int(self._restarted)
+        grad_norm_L1 = np.linalg.norm(g.vector, 1)  # L1 norm of gradient
+        grad_norm_L2 = np.linalg.norm(g.vector, 2)  # L2 norm of gradient
+        slope = (f[1] - f[0]) / (x[1] - x[0])  # Slope of the misfit function
+        # Deviation of the search direction from the gradient direction
+        theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)  
+
+        dict_out = Dict(step_count=step_count, step_length=step_length,
+                        misfit=misfit, if_restarted=if_restarted,
+                        grad_norm_L1=grad_norm_L1, grad_norm_L2=grad_norm_L2, 
+                        slope=slope, theta=theta)
+    
+        return dict_out
+
+    def write_stats(self, fid="./optim_optim.txt"):
+        """
+        Write stats to file so that we don't lose information to subsequent
+        iterations. File is written to path._output_optim/fid
+
+        :type fid: str
+        :param fid: full path and filename to save the text file. defaults to
+            ./output_optim.txt
+        """
+        logger.info(f"writing optimization stats: '{fid}'")
+
+        keys = ["misfit", "step_count",  "step_length", 
+                "grad_norm_L1", "grad_norm_L2",
+                "slope", "theta", "if_restarted"
+                ]
 
         # First time, write header information and start model misfit. Note that
         # most of the statistics do not apply to the starting model so they
         # are set to 0 by default
-        if not os.path.exists(self.path._stats_file):
-            _head = ("step_count,step_length,grad_norm_L1,grad_norm_L2,"
-                     "misfit,if_restarted,slope,theta\n")
-            step_count = 0
-            step_length = x[0]
-            grad_norm_L1 = 0
-            grad_norm_L2 = 0
-            misfit = f[0]
-            slope = 0
-            theta = 0
-            _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
-                    f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
-                    f"{slope:6.3E},{theta:6.3E}\n")
-            with open(self.path._stats_file, "w") as f_:
-                f_.write(_head)
-                f_.write(_str)
+        if not os.path.exists(fid):
+            with open(fid, "w") as f_:
+                x, f, _  = self._line_search.get_search_history()
+                header = ",".join(keys) + "\n"
+                f_.write(header)
+                # Write values for first iteration
+                _write_vals = []
+                for key in keys:
+                    if key == "step_length":
+                        val = x[0]
+                    elif key == "misfit":
+                        val = f[0]
+                    else:
+                        val = 0
+                    _write_vals.append(f"{val:6.3E}") 
+                stats_str = ",".join(_write_vals) + "\n"
+                f_.write(stats_str)  
 
-        # Gather/calculate information from a given line search run
-        step_count = self._line_search.step_count
-        step_length = x[f.argmin()]
-        misfit = f[f.argmin()]
+        # Write stats for the current, finished, line search
+        stats = self.get_stats()
+        with open(fid, "a") as f_:
+            stats_str = [f"{stats[key]:6.3E}" for key in keys]
+            stats_str = ",".join(stats_str) + "\n"
+            f_.write(stats_str)
 
-        grad_norm_L1 = np.linalg.norm(g.vector, 1)
-        grad_norm_L2 = np.linalg.norm(g.vector, 2)
-
-        slope = (f[1] - f[0]) / (x[1] - x[0])
-        theta = 180. * np.pi ** -1 * angle(p.vector, -1 * g.vector)
-
-        _str = (f"{step_count:0>2},{step_length:6.3E},{grad_norm_L1:6.3E},"
-                f"{grad_norm_L2:6.3E},{misfit:6.3E},{int(self._restarted)},"
-                f"{slope:6.3E},{theta:6.3E}\n")
-        with open(self.path._stats_file, "a") as f_:
-            f_.write(_str)

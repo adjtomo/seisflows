@@ -21,23 +21,33 @@ class Model:
     """
     A container for reading, storing and manipulating model/gradient/kernel
     parameters from SPECFEM2D/3D/3D_GLOBE.
-    Stores metadata information alongside model data allowing models to be
-    converted to back and forth between vector representations required by the
-    optimization library.
-    Also contains utility functions to read/write itself so that models can be
-    saved alongside their metadata.
     """
     # Dictate the parameters that Model can handle, which does not cover all
     # files created by SPECFEM, which includes things like 'ibool', 'info' etc.
-    acceptable_parameters = ["vp", "vs", "rho",
-                             "vpv", "vph", "vsv", "vsh", "eta"]
+    acceptable_parameters = [
+            # Isotropic wavespeeds (kernels alpha and beta are renamed vp, vs)
+            "vp", "vs",
+            # Transverse Isotropic Wavespeeds
+            "vpv", "vph", "vsv", "vsh", "eta",
+            # Density, attenuation
+            "rho", "rhop", "kappa", "mu",
+            # 21 Parameter general anisotropy c_ij
+            "c11", "c12", "c13", "c14", "c15", "c16", 
+            "c22", "c23", "c24", "c25", "c26", 
+            "c33", "c34", "c35", "c36", 
+            "c44", "c45", "c46", 
+            "c55", "c56", 
+            "c66", 
+            ]
     # Add kernel tag to all acceptable parameters for adjoint simulation results
     acceptable_parameters.extend([f"{_}_kernel" for _ in acceptable_parameters])
+    # Add source mask for SPECFEM3D_ source masking
+    acceptable_parameters.append("mask_source")
     # Edit acceptable parameters for 3DGLOBE, which must include region name
     for parameter in acceptable_parameters[:]:
         for region in ["1", "2", "3"]:
             acceptable_parameters.append(f"reg{region}_{parameter}")
-
+    
     def __init__(self, path=None, fmt="", parameters=None, regions="123", 
                  flavor=None):
         """
@@ -46,6 +56,7 @@ class Model:
         formats
 
         .. note::
+
             The `vector` representation is based completely on the `model`
             attribute. In order to update the model based on vector manipulation
             you must use the update() function.
@@ -53,23 +64,29 @@ class Model:
         :type path: str
         :param path: path to SPECFEM model/kernel/gradient files
         :type fmt: str
-        :param fmt: expected format of the files (e.g., '.bin'), if None, will
-            attempt to guess based on the file extensions found in `path`
-            Available formats are: .bin, .dat
+        :param fmt: expected format of the files (e.g., '.bin'). By default the 
+            Model class will attempt to guess based on the file extensions found 
+            in `path` (`fmt`==NoneType). Available formats are: 
+            - .bin: Fortran binary format
+            - .dat: ASCII-based data format used for SPECFEM2D
         :type parameters: list
-        :param parameters: the list of parameters to consider when defining
-            the 'model', which is what will be updated during an inversion. 
+        :param parameters: optional list of parameters to consider when defining
+            the 'model', which is what will be updated during an inversion. If 
+            not given, all parameters found in `path` that match 
+            `acceptable_parameters` will be used to define the model.
         :type regions: str
-        :param regions: only for SPECFEM3D_GLOBE, which regions of the chunk 
+        :param regions: SPECFEM3D_GLOBE ONLY! Defines which regions of the chunk 
             to consider in your 'model'. Valid regions are 1, 2 and 3. If you 
             want all regions, set as '123'. If you only want region 1, set as 
             '1'. Order insensitive.
         :type flavor: str
-        :param flavor: optional, tell Model what version of SPECFEM was used
+        :param flavor: Optional, tells Model what version of SPECFEM was used
             to generate the model, acceptable values are ['2D', '3D', '3DGLOBE']
-            If None, will try to guess based on file matching
+            By default Model will try to guess based on file matching.
+        :raises AssertionError: if the `path` does not exist or the `path`
+            does not contain expected Model files
         """
-        self.path = path
+        self.path = path 
         self.fmt = fmt
         self.flavor = flavor
         self.model = None
@@ -78,6 +95,8 @@ class Model:
         else:
             self.regions = None
         self.coordinates = None
+
+        # Internally used parameters
         self._parameters = parameters
         self._ngll = None
         self._nproc = None
@@ -88,36 +107,51 @@ class Model:
             assert(self.flavor in acceptable_flavors), \
                 f"User-defined `flavor' must be in {acceptable_flavors}"
 
-        # Load an existing model if a valid path is given
-        if self.path and os.path.exists(path):
-            # Read existing model from a previously saved .npz file
-            if os.path.splitext(path)[-1] == ".npz":
-                self.model, self.coordinates, self._ngll, self.fmt = \
-                    self.load(file=self.path)
-                _first_key = list(self.model.keys())[0]
-                self._nproc = len(self.model[_first_key])
-            # Read a SPECFEM model from its native output files
-            else:
-                # Dynamically guess things about the model based on files given
-                if not self.fmt:
-                    self.fmt = self._guess_file_format()
-                if not self.flavor:
-                    self.flavor = self._guess_specfem_flavor()
-    
-                # Gather internal representation of the model for manipulation
-                self._nproc, self.available_parameters = \
-                    self._get_nproc_parameters()
-                self.model = self.read(parameters=parameters)
-
-                # Coordinates are only useful for SPECFEM2D models
-                if self.flavor == "2D":
-                    self.coordinates = self.read_coordinates_specfem2d()
-
-            # .sorted() enforces parameter order every time, otherwise things
-            # can get screwy if keys returns different each time
-            self._parameters = sorted(self.model.keys())
+        # Load an existing model if a valid `path`` is given
+        if self.path:
+            self.setup()
         else:
             logger.warning("no/invalid `path` given, initializing empty Model")
+
+    def setup(self, path=None):
+        """
+        Set up the internal Model definition by guessing or ingesting the
+        file format, solver flavor, reading the model values and metadata
+        and assigning internal variables
+
+        :type path: str
+        :param path: optional path to Model files. If not given, defaults to 
+            the internal `path` attribute.
+        :raises AssertionError: if the `path` does not exist or the `path`
+            does not contain expected Model files
+        """
+        path = path or self.path
+
+        # Dynamically guess things about the model based on files given
+        if not self.fmt:
+            self.fmt = self._guess_file_format()
+        if not self.flavor:
+            self.flavor = self._guess_specfem_flavor()
+
+        # A few checks, if the User gives a `path`, we EXPECT model files
+        # otherwise don't give a path
+        assert(os.path.exists(path)), \
+            f"Model `path` does not exist, cannot read model: '{path}'"
+        assert(glob(os.path.join(path, self.fnfmt(val="*", ext=self.fmt)))), \
+            (f"Model `path` contains no matching model files matching "
+             f"wildcard '*{self.fmt}': '{path}'")
+
+        # Gather internal representation of the model for manipulation
+        self._nproc, self.available_parameters = self._get_nproc_parameters()
+        self.model = self.read(parameters=self._parameters)
+
+        # Coordinates are only useful for SPECFEM2D models
+        if self.flavor == "2D":
+            self.coordinates = self.read_coordinates_specfem2d()
+
+        # .sorted() enforces parameter order every time, otherwise things
+        # can get screwy if keys returns different each time
+        self._parameters = sorted(self.model.keys())
 
     def fnfmt(self, i="*", val="*", ext="*"):
         """
@@ -273,10 +307,10 @@ class Model:
                 coordinates["x"].append(np.loadtxt(fid).T[:, 0])
                 coordinates["z"].append(np.loadtxt(fid).T[:, 0])
 
-        # If nothing is found even though we expected files to be there
+        # If no coordinates then move on, sometimes we don't save the 
+        # coordinates if we're just using the model for updates. But without
+        # coordinates the default plot functions will not work
         if not list(coordinates["x"]) or not list(coordinates["z"]):
-            logger.warning("no coordinates found for assumed SPECFEM2D model, "
-                           "will not be able to plot figures")
             return None
 
         # Internal check for parameter validity by checking length of coord
@@ -316,11 +350,13 @@ class Model:
 
         return m
 
-    def write(self, path, fmt=None):
+    def write(self, path=None, fmt=None):
         """
         Save a SPECFEM model/gradient/kernel vector loaded into memory back to
         disk in the appropriate format expected by SPECFEM
         """
+        path = path or os.getcwd()
+
         unix.mkdir(path)
         if fmt is None:
             assert (self.fmt is not None), f"must specifiy model format: `fmt`"
@@ -356,15 +392,58 @@ class Model:
                 imax = sum(self.ngll) * idim + sum(self.ngll[:iproc + 1])
                 model[key].extend([vector[imin:imax]])
 
-            model[key] = np.array(model[key])
+            model[key] = np.array(model[key], dtype="object")
         return model
+
+    def print_stats(self):
+        """
+        Print out all model parameters (min, mean, max) in the logger. Useful
+        for checking if models are different, if a model is being satisfactorily 
+        udpated, or for debugging purposes.
+        """
+        # Tell the User min and max values of the updated model
+        for key, vals in self.model.items():
+            min_val = np.hstack(vals).min()
+            max_val = np.hstack(vals).max()
+            mean_val = np.hstack(vals).mean()
+            # Choose formatter based on the magnitude of the value
+            if min_val < 1 or max_val > 1E4:
+                parts = (f"{key}: min={min_val:.3E}; mean={mean_val:.3E}; "
+                         f"max={max_val:.3E}")
+            else:
+                parts = (f"{key}: min={min_val:.3f}; mean={mean_val:.3f}; "
+                         f"max={max_val:.3f}")
+            logger.info(parts)
 
     def check(self, min_pr=-1., max_pr=0.5):
         """
         Checks parameters in the model. If Vs and Vp present, checks poissons
-        ratio. Checks for negative velocity values. And prints out model
-        min/max values
+        ratio. Checks for negative velocity values. 
+
+        :type min_pr: float
+        :para min_pr: minimum allowable Poisson's ratio, if applicable
+        :type max_pr: float
+        :param max_pr: maximum allowable Poisson's ratio, if applicable
+        :raises AssertionError: 
+            - if the input model has no values for any of its parameters
+            - if the model contains any NaN values 
         """
+        # Checks to make sure the model is filled out, otherwise the following
+        # checks will fail unexpectedly
+        for key, val in self.model.items():
+            # Make sure there are values in the model (not empty)
+            assert(val.size != 0), (
+                 f"SPECFEM_{self.flavor} model '{key}' has no values, please "
+                 f"check your input model `path_model_init` and the chosen "
+                 f"`material` which controls the expected parameters"
+                 )
+            # Make sure none of the values are NaNs
+            assert(not np.isnan(np.hstack(val).astype(float)).any()), (
+                 f"SPECFEM_{self.flavor} model '{key}' contains NaN values and "
+                 f"should not, please check your model construction"
+                 )
+
+        # Check the physicality of the parameters
         if self.flavor in ["2D", "3D"]:
             self._check_2d3d_parameters(min_pr, max_pr)
         elif self.flavor == "3DGLOBE":
@@ -391,17 +470,6 @@ class Model:
 
         if "vp" in self.model and np.hstack(self.model.vp).min() < 0:
             logger.warning(f"Vp minimum is negative {self.model.vp.min()}")
-
-        # Tell the User min and max values of the updated model
-        for key, vals in self.model.items():
-            min_val = np.hstack(vals).min()
-            max_val = np.hstack(vals).max()
-            # Choose formatter based on the magnitude of the value
-            if min_val < 1 or max_val > 1E4:
-                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
-            else:
-                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
-            logger.info(parts)
 
     def _check_3dglobe_parameters(self, min_pr=-1., max_pr=0.5):
         """
@@ -437,92 +505,6 @@ class Model:
                                            f"poisson's ratio out of bounds: "
                                            f"{pr.min():.2f} < {min_pr}")
 
-        # SPECFEM3D_GLOBE requires an additional separation by region
-        for key, vals in self.model.items():
-            min_val = np.hstack(vals).min()
-            max_val = np.hstack(vals).max()
-            # Choose formatter based on the magnitude of the value
-            if min_val < 1 or max_val > 1E4:
-                parts = f"{min_val:.2E} <= {key} <= {max_val:.2E}"
-            else:
-                parts = f"{min_val:.2f} <= {key} <= {max_val:.2f}"
-            logger.info(parts)
-
-    def save(self, path):
-        """
-        Save instance attributes (model, vector, metadata) to disk as an
-        .npz array so that it can be loaded in at a later time for future use
-        """
-        model = self.split()
-        if self.coordinates:
-            # Incase we have model parameters called 'x' or 'z', rename for save
-            model["x_coord"] = self.coordinates["x"]
-            model["z_coord"] = self.coordinates["z"]
-
-        np.savez(file=path, fmt=self.fmt, **model)
-
-    def _load2d3d(self, file):
-        """
-        Load in a previously saved .npz file containing model information
-        and re-create a Model instance matching the one that was `save`d
-
-        :type file: str
-        :param file: .npz file to load data from. Must have been created by
-            Model.save()
-        :rtype: tuple (Dict, list, str)
-        :return: (Model Dictionary, ngll points for each slice, file format)
-        """
-        model = Dict()
-        coords = Dict()
-        ngll = []
-        data = np.load(file=file)
-        for i, key in enumerate(data.files):
-            if key == "fmt":
-                continue
-            # Special case where we are using SPECFEM2D and carry around coords
-            elif "coord" in key:
-                coords[key[0]] = data[key]  # drop '_coord' suffix from `save`
-            else:
-                model[key] = data[key]
-                # Assign the number of GLL points per slice. Only needs to happen
-                # once because all model values should have same points/slice
-                if not ngll:
-                    for array in model[key]:
-                        ngll.append(len(array))
-
-        return model, coords, ngll, str(data["fmt"])
-
-    def load(self, file):
-        """
-        Load in a previously saved .npz file containing model information
-        and re-create a Model instance matching the one that was `save`d
-
-        :type file: str
-        :param file: .npz file to load data from. Must have been created by
-            Model.save()
-        :rtype: tuple (Dict, list, str)
-        :return: (Model Dictionary, ngll points for each slice, file format)
-        """
-        model = Dict()
-        coords = Dict()
-        ngll = []
-        data = np.load(file=file)
-        for i, key in enumerate(data.files):
-            if key == "fmt":
-                continue
-            # Special case where we are using SPECFEM2D and carry around coords
-            elif "coord" in key:
-                coords[key[0]] = data[key]  # drop '_coord' suffix from `save`
-            else:
-                model[key] = data[key]
-                # Assign the number of GLL points per slice. Only needs to happen
-                # once because all model values should have same points/slice
-                if not ngll:
-                    for array in model[key]:
-                        ngll.append(len(array))
-
-        return model, coords, ngll, str(data["fmt"])
-
     def update(self, model=None, vector=None):
         """
         Update internal model/vector defitions. Because these two quantities
@@ -534,7 +516,8 @@ class Model:
         elif vector is not None:
             self.model = self.split(vector=vector)
 
-    def plot2d(self, parameter, cmap=None, show=True, title="", save=None):
+    def plot2d(self, parameter, vmin=None, vmax=None, cmap=None, levels=None, 
+               center_cmap=False, title="", show=True, save=None):
         """
         Plot internal model parameters as a 2D image plot.
 
@@ -569,10 +552,9 @@ class Model:
         if cmap is None:
             if "kernel" in parameter:
                 cmap = "seismic_r"
-                zero_midpoint = True
+                center_cmap = True
             else:
                 cmap = "Spectral"
-                zero_midpoint = False
 
         # 'Merge' the coordinate matrices to get a vector representation
         x, z = np.array([]), np.array([])
@@ -581,17 +563,31 @@ class Model:
             z = np.append(z, self.coordinates["z"][iproc])
         data = self.merge(parameter=parameter)
 
-        f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap,
-                                   zero_midpoint=zero_midpoint)
+        # Select min and max values of the data range
+        if vmin is None:
+            vmin = data.min()
+        if vmax is None:
+            vmax = data.max()
+
+        # Get min and max values for colormap bounds. 
+        if center_cmap:
+            vmax = max(abs(vmin), abs(vmax))
+            vmin = -1 * vmax
+
+        # Plot the actual image
+        f, p, cbar = plot_2d_image(x=x, z=z, data=data, cmap=cmap, 
+                                   levels=levels, vmin=vmin, vmax=vmax
+                                   )
 
         # Set some figure labels based on information we know here
         ax = plt.gca()
         ax.set_xlabel("X [m]")
         ax.set_ylabel("Z [m]")
+
         # Allow User to title the figure, e.g., with iteration, step count etc.
-        _title = (f"{parameter.title()}_min = {data.min()};\n"
-                  f"{parameter.title()}_max = {data.max()};\n"
-                  f"{parameter.title()}_mean = {data.mean()}")
+        _title = (f"{parameter.title()}_min = {data.min():.3E};\n"
+                  f"{parameter.title()}_max = {data.max():.3E};\n"
+                  f"{parameter.title()}_mean = {data.mean():.3E}")
         if title:
             _title = f"{title}\n{_title}"
         ax.set_title(_title)
@@ -620,7 +616,6 @@ class Model:
             avail_par = list(set(avail_par).intersection(
                                         set(self.acceptable_parameters)
                                         ))
-
             # Count the number of files for matching parameters only (do once)
             # Globe version requires the region number in the wild card
             nproc = len(glob(os.path.join(
@@ -677,10 +672,15 @@ class Model:
         fids = [os.path.basename(_) for _ in fullpaths]
         fids = [os.path.splitext(_)[0] for _ in fids]
         unique_tags = set(["_".join(_.split("_")[1:]) for _ in fids])
-    
-        if self.regions and self.regions[0] in unique_tags:
+  
+        # SPECFEM3D_GLOBE
+        # Smash all the tags into a single string and look for 'reg1' (or 
+        # whatever region User chooses). Assuming here that SPECFEM2D/3D won't
+        # have parameters that contain the phrase 'reg1'
+        if self.regions and self.regions[0] in "".join(unique_tags):
             flavor = "3DGLOBE"
-        # SPECFEM2D won't have a 'y' model
+        # SPECFEM3D is the only one that has a 'y' parameter, globe code
+        # doesn't store coordinate information and 2D only has X and Z coords
         elif "y" in unique_tags:
             flavor = "3D"
         else:
@@ -705,10 +705,7 @@ class Model:
         for fid in sorted(fids):  # make sure were going in numerical order
             array.append(read_fortran_binary(fid))
 
-        # !!! Causes a visible deprecation warning from NumPy but setting
-        # !!! array type as 'object' causes problems with pickling and
-        # !!! merging arrays
-        array = np.array(array)
+        array = np.array(array, dtype="object")
 
         return array
 
@@ -748,7 +745,7 @@ class Model:
         for fid in sorted(fids):
             array.append(np.loadtxt(fid).T[:, column_idx])
 
-        return np.array(array)
+        return np.array(array, dtype="object")
 
     def _write_model_fortran_binary(self, path):
         """
@@ -756,6 +753,7 @@ class Model:
         Data are written as single precision floating point numbers
 
         .. note::
+        
             FORTRAN unformatted binaries are bounded by an INT*4 byte count.
             This function mimics that behavior by tacking on the boundary data
             as 'int32' at the top and bottom of the data array.

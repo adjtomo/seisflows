@@ -6,14 +6,23 @@ seismic data, apply preprocessing such as filtering, quantify misfit,
 and write adjoint sources that are expected by the solver.
 """
 import os
+import sys
 import numpy as np
+import traceback
+from concurrent.futures import ProcessPoolExecutor, wait
 from glob import glob
+
 from obspy import read as obspy_read
 from obspy import Stream, Trace, UTCDateTime
+from pysep.utils.io import read_events_plus
 
 from seisflows import logger
-from seisflows.tools import signal, unix
+from seisflows.tools import unix
 from seisflows.tools.config import Dict, get_task_id
+from seisflows.tools.graphics import plot_waveforms
+from seisflows.tools.signal import normalize, resample, filter, mute, trim
+from seisflows.tools.specfem import (rename_as_adjoint_source,
+                                     return_matching_waveform_files)
 
 from seisflows.plugins.preprocess import misfit as misfit_functions
 from seisflows.plugins.preprocess import adjoint as adjoint_sources
@@ -21,8 +30,8 @@ from seisflows.plugins.preprocess import adjoint as adjoint_sources
 
 class Default:
     """
-    Default Preprocess
-    ------------------
+    Default Preprocess [Preprocess Base]
+    ------------------------------------
     Data processing for seismic traces, with options for data misfit,
     filtering, normalization and muting.
 
@@ -38,23 +47,41 @@ class Default:
     :type misfit: str
     :param misfit: misfit function for waveform comparisons. For available
         see seisflows.plugins.preprocess.misfit
-    :type backproject: str
-    :param backproject: backprojection function for migration, or the
-        objective function in FWI. For available see
+    :type adjoint: str
+    :param adjoint: adjoint source misfit function (backprojection function for
+        migration, or the objective function in FWI). For available see
         seisflows.plugins.preprocess.adjoint
     :type normalize: str
     :param normalize: Data normalization parameters used to normalize the
-        amplitudes of waveforms. Choose from two sets:
-        ENORML1: normalize per event by L1 of traces; OR
-        ENORML2: normalize per event by L2 of traces;
-        &
-        TNORML1: normalize per trace by L1 of itself; OR
-        TNORML2: normalize per trace by L2 of itself
+        amplitudes of waveforms. By default, set to NoneType, which means no
+        normalization is applied. User can choose from one of the following
+        options to normalize BOTH `obs` and `syn` data:
+
+        - TNORML1: normalize per trace by the L1 norm of itself
+        - TNORML2: normalize per trace by the L2 norm of itself
+        - TNORM_MAX: normalize by the maximum positive amplitude in the trace
+        - TNORM_ABSMAX: normalize by the absolute maximum amplitude in the trace
+        - TNORM_MEAN: normalize by the mean of the absolute trace
+        - RNORM_OBS_MAX: normalize synthetic traces by the maximum amplitude of
+            the corresponding observed trace
+        - RNORM_OBS_ABSMAX: normalize synthetic traces by the absolute maximum
+            amplitude of the corresponding observed trace
+        - RNORM_SYN_MAX: normalize observed traces by the maximum amplitude of
+            the corresponding synthetic trace
+        - RNORM_SYN_ABSMAX: normalize observed traces by the absolute maximum
+            amplitude of the corresponding synthetic trace
+
+        Note: options ENORML? are not currently available. If this is a
+        feature you would like to see, please open a GitHub Issue.
+        - ENORML1: normalize per event by L1 of traces; OR
+        - ENORML2: normalize per event by L2 of traces;
     :type filter: str
-    :param filter: Data filtering type, available options are:
-        BANDPASS (req. MIN/MAX PERIOD/FREQ);
-        LOWPASS (req. MAX_FREQ or MIN_PERIOD);
-        HIGHPASS (req. MIN_FREQ or MAX_PERIOD)
+    :param filter: Data filtering type, by default no filtering is applied.
+        Available options for user to choose are:
+
+        - BANDPASS (requires: MIN_FREQ + MAX_FREQ OR MIN_PERIOD + MAX PERIOD);
+        - LOWPASS (requires: MAX_FREQ OR MIN_PERIOD);
+        - HIGHPASS (requires: MIN_FREQ OR MAX_PERIOD);
     :type min_period: float
     :param min_period: Minimum filter period applied to time series.
         See also MIN_FREQ, MAX_FREQ, if User defines FREQ parameters, they
@@ -73,11 +100,16 @@ class Default:
         they will overwrite PERIOD parameters.
     :type mute: list
     :param mute: Data mute parameters used to zero out early / late
-        arrivals or offsets. Choose any number of:
-        EARLY: mute early arrivals;
-        LATE: mute late arrivals;
-        SHORT: mute short source-receiver distances;
-        LONG: mute long source-receiver distances
+        arrivals or offsets. Choose the following:
+        - EARLY: mute early arrivals
+        - LATE: mute late arrivals;
+        - SHORT: mute short source-receiver distances;
+        - LONG: mute long source-receiver distances
+        input comma separated list of strings, (e.g., mute: early,late,short)
+    :type plot_waveforms: bool
+    :param plot_waveforms: plot waveforms from each evaluation of the misfit.
+        By default turned off as this can produce many files for an interative
+        inversion.
 
     Paths
     -----
@@ -92,24 +124,28 @@ class Default:
                  min_period=None, max_period=None, min_freq=None, max_freq=None,
                  mute=None, early_slope=None, early_const=None, late_slope=None,
                  late_const=None, short_dist=None, long_dist=None,
+                 plot_waveforms=False, source_prefix=None,
                  workdir=os.getcwd(), path_preprocess=None, path_solver=None,
                  **kwargs):
         """
         Preprocessing module parameters
 
         .. note::
-            Paths and parameters listed here are shared with other modules and 
+
+            Paths and parameters listed here are shared with other modules and
             so are not included in the class docstring.
 
         :type syn_data_format: str
         :param syn_data_format: data format for reading synthetic traces into
             memory. Shared with solver module. Available formats: 'su', 'ascii'
+        :type source_prefix: str
+        :param source_prefix: prefix of source/event/earthquake files. Used for
+            reading and determining source locations for preprocessing
         :type workdir: str
         :param workdir: working directory in which to look for data and store
         results. Defaults to current working directory
-        :type path_preprocess: str
-        :param path_preprocess: scratch path for all preprocessing processes,
-            including saving files
+        :type path_solver: str
+        :param path_solver: scratch path for solver used to access trace files
         """
         self.syn_data_format = syn_data_format.upper()
         self.obs_data_format = obs_data_format.upper()
@@ -126,6 +162,18 @@ class Default:
         self.mute = mute or []
         self.normalize = normalize or []
 
+        # Set the min/max frequencies and periods, frequency takes priority
+        if self.filter:
+            if self.min_freq is not None:
+                self.max_period = 1 / self.min_freq
+            elif self.max_period is not None:
+                self.min_freq = 1 / self.max_period
+
+            if self.max_freq is not None:
+                self.min_period = 1 / self.max_freq
+            elif self.min_period is not None:
+                self.max_freq = 1 / self.min_period
+
         # Mute arrivals sub-parameters
         self.early_slope = early_slope
         self.early_const = early_const
@@ -134,10 +182,14 @@ class Default:
         self.short_dist = short_dist
         self.long_dist = long_dist
 
+        # Miscellaneous paramters
+        self.source_prefix = source_prefix
+        self.plot_waveforms = plot_waveforms
+
         self.path = Dict(
             scratch=path_preprocess or os.path.join(workdir, "scratch",
                                                     "preprocess"),
-            solver=path_solver or os.path.join(workdir, "scratch", "solver")
+            solver=path_solver or os.path.join(workdir, "scratch", "solver"),
         )
 
         # The list <_obs_acceptable_data_formats> always includes
@@ -154,13 +206,21 @@ class Default:
         self._acceptable_adjsrcs = [_ for _ in dir(adjoint_sources)
                                     if not _.startswith("_")]
 
+        # Acceptable preprocessing parameter options
+        self._acceptable_norms = {"TNORML1", "TNORML2", "TNORM_MAX",
+                                  "TNORM_ABSMAX", "TNORM_MEAN", "RNORM_SYN_MAX",
+                                  "RNORM_SYN_ABSMAX", "RNORM_OBS_MAX",
+                                  "RNORM_OBS_ABSMAX"}
+                                  #, "ENORML1", "ENORML2"}
+        self._acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
+        self._acceptable_filters = {"BANDPASS", "LOWPASS", "HIGHPASS"}
+
         # Internal attributes used to keep track of inversion workflows
         self._iteration = None
         self._step_count = None
-        self._source_names = None
 
     def check(self):
-        """ 
+        """
         Checks parameters and paths
         """
         if self.misfit:
@@ -172,15 +232,12 @@ class Default:
 
         # Data normalization option
         if self.normalize:
-            acceptable_norms = {"TNORML1", "TNORML2", "ENORML1", "ENORML2"}
-            chosen_norms = [_.upper() for _ in self.normalize]
-            assert(set(chosen_norms).issubset(acceptable_norms))
+            assert(self.normalize.upper() in self._acceptable_norms)
 
         # Data muting options
         if self.mute:
-            acceptable_mutes = {"EARLY", "LATE", "LONG", "SHORT"}
             chosen_mutes = [_.upper() for _ in self.mute]
-            assert(set(chosen_mutes).issubset(acceptable_mutes))
+            assert(set(chosen_mutes).issubset(self._acceptable_mutes))
             if "EARLY" in chosen_mutes:
                 assert(self.early_slope is not None)
                 assert(self.early_slope >= 0.)
@@ -198,20 +255,8 @@ class Default:
 
         # Data filtering options that will be passed to ObsPy filters
         if self.filter:
-            acceptable_filters = ["BANDPASS", "LOWPASS", "HIGHPASS"]
-            assert self.filter.upper() in acceptable_filters, \
-                f"self.filter must be in {acceptable_filters}"
-
-            # Set the min/max frequencies and periods, frequency takes priority
-            if self.min_freq is not None:
-                self.max_period = 1 / self.min_freq
-            elif self.max_period is not None:
-                self.min_freq = 1 / self.max_period
-
-            if self.max_freq is not None:
-                self.min_period = 1 / self.max_freq
-            elif self.min_period is not None:
-                self.max_freq =  1 / self.min_period
+            assert self.filter.upper() in self._acceptable_filters, \
+                f"self.filter must be in {self._acceptable_filters}"
 
             # Check that the correct filter bounds have been set
             if self.filter.upper() == "BANDPASS":
@@ -236,73 +281,35 @@ class Default:
                 "PAR.MIN_FREQ < PAR.MAX_FREQ"
             )
 
-        assert(self.syn_data_format.upper() in self._syn_acceptable_data_formats), \
-            f"synthetic data format must be in {self._syn_acceptable_data_formats}"
+        # Check that User-chosen data formats are acceptable
+        assert(self.syn_data_format.upper() in
+                self._syn_acceptable_data_formats), (
+            f"synthetic data format must be in "
+            f"{self._syn_acceptable_data_formats}"
+            )
 
-        assert(self.obs_data_format.upper() in self._obs_acceptable_data_formats), \
-            f"observed data format must be in {self._obs_acceptable_data_formats}"
+        assert(self.obs_data_format.upper() in
+                self._obs_acceptable_data_formats), (
+            f"observed data format must be in "
+            f"{self._obs_acceptable_data_formats}"
+            )
 
         assert(self.unit_output.upper() in self._acceptable_unit_output), \
             f"unit output must be in {self._acceptable_unit_output}"
 
     def setup(self):
         """
-        Sets up data preprocessing machinery by dynamicalyl loading the
-        misfit, adjoint source type, and specifying the expected file type
-        for input and output seismic data.
+        Sets up data preprocessing machinery
         """
         unix.mkdir(self.path.scratch)
 
-    def read(self, fid, data_format):
+    def finalize(self):
         """
-        Waveform reading functionality. Imports waveforms as Obspy streams
-
-        :type fid: str
-        :param fid: path to file to read data from
-        :type data_format: str
-        :param data_format: format of the file to read data from
-        :rtype: obspy.core.stream.Stream
-        :return: ObsPy stream containing data stored in `fid`
+        Teardown procedures for the default preprocessing class. Required
+        to keep things general because Pyaflowa preprocessing module has
+        some finalize procedures.
         """
-        st = None
-        if data_format.upper() == "SU":
-            st = obspy_read(fid, format="SU", byteorder="<")
-        elif data_format.upper() == "SAC":
-            st = obspy_read(fid, format="SAC")
-        elif data_format.upper() == "ASCII":
-            st = read_ascii(fid)
-        return st
-
-    def write(self, st, fid):
-        """
-        Waveform writing functionality. Writes waveforms back to format that
-        SPECFEM recognizes
-
-        :type st: obspy.core.stream.Stream
-        :param st: stream to write
-        :type fid: str
-        :param fid: path to file to write stream to
-        """
-        if self.syn_data_format.upper() == "SU":
-            for tr in st:
-                # Work around for ObsPy data type conversion
-                tr.data = tr.data.astype(np.float32)
-            max_delta = 0.065535
-            dummy_delta = max_delta
-
-            if st[0].stats.delta > max_delta:
-                for tr in st:
-                    tr.stats.delta = dummy_delta
-
-            # Write data to file
-            st.write(fid, format="SU")
-
-        elif self.syn_data_format.upper() == "ASCII":
-            for tr in st:
-                # Float provides time difference between starttime and default
-                time_offset = float(tr.stats.starttime)
-                data_out = np.vstack((tr.times() + time_offset, tr.data)).T
-                np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
+        pass
 
     def _calculate_misfit(self, **kwargs):
         """Wrapper for plugins.preprocess.misfit misfit/objective function"""
@@ -318,177 +325,28 @@ class Default:
         else:
             return None
 
-    def initialize_adjoint_traces(self, data_filenames, output,
-                                  data_format=None):
-        """
-        SPECFEM requires that adjoint traces be present for every matching
-        synthetic seismogram. If an adjoint source does not exist, it is
-        simply set as zeros. This function creates all adjoint traces as
-        zeros, to be filled out later
-
-        Appends '.adj. to the solver filenames as expected by SPECFEM (if they
-        don't already have that extension)
-
-        TODO there are some sem2d and 3d specific tasks that are not carried
-        TODO over here, were they required?
-
-        :type data_filenames: list of str
-        :param data_filenames: existing solver waveforms (synthetic) to read.
-            These will be copied, zerod out, and saved to path `save`. Should
-            come from solver.data_filenames
-        :type output: str
-        :param output: path to save the new adjoint traces to.
-        """
-        for fid in data_filenames:
-            st = self.read(fid=fid, data_format=self.syn_data_format).copy()
-            fid = os.path.basename(fid)  # drop any path before filename
-            for tr in st:
-                tr.data *= 0
-
-            adj_fid = self._rename_as_adjoint_source(fid)
-
-            # Write traces back to the adjoint trace directory
-            self.write(st=st, fid=os.path.join(output, adj_fid))
-
-    def _check_adjoint_traces(self, source_name, save_adjsrcs, synthetic):
-        """Check that all adjoint traces required by SPECFEM exist"""
-        source_name = source_name or self._source_names[get_task_id()]
-        specfem_data_path = os.path.join(self.path.solver, source_name, "DATA")
-
-        # since <STATIONS_ADJOINT> is generated only when using SPECFEM3D
-        # by copying <STATIONS>, check adjoint stations in <STATIONS>
-        adj_stations = np.loadtxt(os.path.join(specfem_data_path,
-                                               "STATIONS"), dtype="str")
-
-        if not isinstance(adj_stations[0], np.ndarray):
-            adj_stations = [adj_stations]
-
-        adj_template = "{net}.{sta}.{chan}.adj"
-
-        channels = [os.path.basename(syn).split('.')[2] for syn in synthetic]
-        channels = list(set(channels))
-
-        st = self.read(fid=synthetic[0], data_format=self.syn_data_format)
-        for tr in st:
-            tr.data *= 0.
-
-        for adj_sta in adj_stations:
-            sta = adj_sta[0]
-            net = adj_sta[1]
-            for chan in channels:
-                adj_trace = adj_template.format(net=net, sta=sta, chan=chan)
-                adj_trace = os.path.join(save_adjsrcs, adj_trace)
-                if not os.path.isfile(adj_trace):
-                    self.write(st=st, fid=adj_trace)
-
-    def _rename_as_adjoint_source(self, fid):
-        """
-        Rename synthetic waveforms into filenames consistent with how SPECFEM
-        expects adjoint sources to be named. Usually this just means adding
-        a '.adj' to the end of the filename
-        """
-        if not fid.endswith(".adj"):
-            if self.syn_data_format.upper() == "SU":
-                fid = f"{fid}.adj"
-            elif self.syn_data_format.upper() == "ASCII":
-                # Differentiate between SPECFEM3D and 3D_GLOBE
-                # SPECFEM3D: NN.SSSS.CCC.sem?
-                # SPECFEM3D_GLOBE: NN.SSSS.CCC.sem.ascii
-                ext = os.path.splitext(fid)[-1]  
-                # SPECFEM3D
-                if ".sem" in ext:
-                    fid = fid.replace(ext, ".adj")
-                # GLOBE (!!! Hardcoded to only work with ASCII format)
-                elif ext == ".ascii":
-                    root, ext1 = os.path.splitext(fid)  # .ascii
-                    root, ext2 = os.path.splitext(root)  # .sem
-                    fid = fid.replace(f"{ext2}{ext1}", ".adj")
-
-        return fid
-
-    def _setup_quantify_misfit(self, source_name):
-        """
-        Gather waveforms from the Solver scratch directory which will be used
-        for generating adjoint sources
-        """
-        source_name = source_name or self._source_names[get_task_id()]
-
-        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
-        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
-
-        observed = sorted(os.listdir(obs_path))
-        synthetic = sorted(os.listdir(syn_path))
-
-        assert(len(observed) != 0 and len(synthetic) != 0), \
-            f"cannot quantify misfit, missing observed or synthetic traces"
-
-        # verify observed traces format
-        obs_ext = list(set([os.path.splitext(x)[-1] for x in observed]))
-
-        if self.obs_data_format.upper() == "ASCII":
-            obs_ext_ok = obs_ext[0].upper() == ".ASCII" or \
-                         obs_ext[0].upper() == f".SEM{self.unit_output[0]}"
-        else:
-            obs_ext_ok = obs_ext[0].upper() == f".{self.obs_data_format}"
-
-        assert(len(obs_ext) == 1 and obs_ext_ok), (
-            f"observed traces have more than one format or their format "
-            f"is not the one defined in parameters.yaml"
-        )
-
-        # verify synthetic traces format
-        syn_ext = list(set([os.path.splitext(x)[-1] for x in synthetic]))
-
-        if self.syn_data_format == "ASCII":
-            syn_ext_ok = syn_ext[0].upper() == ".ASCII" or \
-                         syn_ext[0].upper() == f".SEM{self.unit_output[0]}"
-        else:
-            syn_ext_ok = syn_ext[0].upper() == f".{self.syn_data_format}"
-
-        assert(len(syn_ext) == 1 and syn_ext_ok), (
-            f"synthetic traces have more than one format or their format "
-            f"is not the one defined in parameters.yaml"
-        )
-
-        # remove data format
-        observed = [os.path.splitext(x)[0] for x in observed]
-        synthetic = [os.path.splitext(x)[0] for x in synthetic]
-
-        # only return traces that have both observed and synthetic files
-        matching_traces = sorted(list(set(synthetic).intersection(observed)))
-
-        assert(len(matching_traces) != 0), (
-            f"there are no traces with both observed and synthetic files for "
-            f"source: {source_name}; verify that observations and synthetics "
-            f"have the same name including channel code"
-        )
-
-        observed.clear()
-        synthetic.clear()
-
-        for file_name in matching_traces:
-            observed.append(os.path.join(obs_path, f"{file_name}{obs_ext[0]}"))
-            synthetic.append(os.path.join(syn_path, f"{file_name}{syn_ext[0]}"))
-
-        assert(len(observed) == len(synthetic)), (
-            f"number of observed traces does not match length of synthetic for "
-            f"source: {source_name}"
-        )
-
-        return observed, synthetic
-
     def quantify_misfit(self, source_name=None, save_residuals=None,
-                        export_residuals=None, save_adjsrcs=None, iteration=1,
-                        step_count=0, **kwargs):
+                        export_residuals=None, save_adjsrcs=None,
+                        components=None, iteration=1, step_count=0,
+                        _serial=False, **kwargs):
         """
         Prepares solver for gradient evaluation by writing residuals and
         adjoint traces. Meant to be called by solver.eval_func().
 
         Reads in observed and synthetic waveforms, applies optional
         preprocessing, assesses misfit, and writes out adjoint sources and
-        STATIONS_ADJOINT file.
+        STATIONS_ADJOINT file. Processing for each station is done in parallel
+        using concurrent.futures.
 
-        TODO use concurrent futures to parallelize this
+        .. warning::
+
+            The concurrent processing in this function may fail in the case
+            that a User is running N>1 events using the 'Cluster' system but
+            on a local workstation, because each event is also run with
+            multiprocessing, so their compute may quickly run out of RAM or
+            cores. Might need to introduce `max_workers_preproc` and
+            `max_workers_solver` to ensure that there is a good balance
+            between the two values.
 
         :type source_name: str
         :param source_name: name of the event to quantify misfit for. If not
@@ -496,189 +354,357 @@ class Default:
             is assigned by system.run()
         :type save_residuals: str
         :param save_residuals: if not None, path to write misfit/residuls to
+        :type export_residuals: str
+        :param export_residuals: export all residuals (data-synthetic misfit)
+            that are generated by the external solver to `path_output`. If
+            False, residuals stored in scratch may be discarded at any time in
+            the workflow
         :type save_adjsrcs: str
         :param save_adjsrcs: if not None, path to write adjoint sources to
+        :type components: list
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
         :type iteration: int
-        :param iteration: current iteration of the workflow, information should
-            be provided by `workflow` module if we are running an inversion.
-            Defaults to 1 if not given (1st iteration)
+        :param iteration: optional, current iteration of the workflow used for
+            tagging output waveform figures if internal parameter 
+            `plot_waveforms` is set
         :type step_count: int
-        :param step_count: current step count of the line search. Information
-            should be provided by the `optimize` module if we are running an
-            inversion. Defaults to 0 if not given (1st evaluation)
+        :param step_count: optional, current step count of the line search, 
+            used for tagging output waveform figures if internal parameter
+            `plot_waveforms` is set
+        :type _serial: bool
+        :param _serial: debug function to turn preprocessing to a serial task
+            whereas it is normally a multiprocessed parallel task
         """
-        observed, synthetic = self._setup_quantify_misfit(source_name)
+        self._iteration = iteration
+        self._step_count = step_count
 
-        for obs_fid, syn_fid in zip(observed, synthetic):
-            obs = self.read(fid=obs_fid, data_format=self.obs_data_format)
-            syn = self.read(fid=syn_fid, data_format=self.syn_data_format)
+        # Retrieve matching obs and syn trace filenames to run through misfit
+        # and initialize empty adjoint sources
+        obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
+                                               components)
 
-            # Process observations and synthetics identically
-            if self.filter:
-                obs = self._apply_filter(obs)
-                syn = self._apply_filter(syn)
-            if self.mute:
-                obs = self._apply_mute(obs)
-                syn = self._apply_mute(syn)
-            if self.normalize:
-                obs = self._apply_normalize(obs)
-                syn = self._apply_normalize(syn)
+        # Process each pair in parallel. Max workers is the total num. of cores
+        # !!! see note in docstring !!!
+        residuals = []
+        if _serial:
+            for o, s in zip(obs, syn):
+                residual = self._quantify_misfit_single(o, s, source_name, 
+                                                        save_residuals, 
+                                                        save_adjsrcs)
+                residuals.append(residual)
+        # Process each pair in parallel. Max workers is total num. of cores        
+        else:
+            with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+                futures = [
+                    executor.submit(self._quantify_misfit_single, o, s,
+                                    source_name, save_residuals, save_adjsrcs)
+                    for (o, s) in zip(obs, syn)
+                ]
+            wait(futures)
+            # Results are returned in the order that they were submitted and
+            for future in futures:
+                try:
+                    residual = future.result()
+                    residuals.append(residual)
+                except Exception as e:
+                    logger.critical(f"PREPROC FAILED: {e}")
+                    # Uncomment if you want more extensive debug info
+                    # exc_str = traceback.format_exc()
+                    # logger.critical(exc_str)
+                    sys.exit(-1)
 
-            # Write the residuals/misfit and adjoint sources for each component
-            for tr_obs, tr_syn in zip(obs, syn):
-                # Simple check to make sure zip retains ordering
-                assert(tr_obs.stats.component == tr_syn.stats.component)
-                # Calculate the misfit value and write to file
-                if save_residuals and self._calculate_misfit:
-                    residual = self._calculate_misfit(
-                        obs=tr_obs.data, syn=tr_syn.data,
-                        nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
-                    )
-                    with open(save_residuals, "a") as f:
-                        f.write(f"{residual:.2E}\n")
+        # Write residuals to text file for other modules to find
+        if save_residuals:
+            with open(save_residuals, "a") as f:
+                for residual in residuals:
+                    f.write(f"{residual:.2E}\n")
 
-                # Generate an adjoint source trace, write to file
-                if save_adjsrcs and self._generate_adjsrc:
-                    adjsrc = tr_syn.copy()
-                    adjsrc.data = self._generate_adjsrc(
-                        obs=tr_obs.data, syn=tr_syn.data,
-                        nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
-                    )
-                    adjsrc = Stream(adjsrc)
-                    fid = os.path.basename(syn_fid)
-                    fid = self._rename_as_adjoint_source(fid)
-                    self.write(st=adjsrc, fid=os.path.join(save_adjsrcs, fid))
+            # Exporting residuals to disk (output/) for more permanent storage
+            if export_residuals:
+                unix.cp(src=save_residuals, dst=export_residuals)
 
-        if save_adjsrcs and self._generate_adjsrc:
-            self._check_adjoint_traces(source_name, save_adjsrcs, synthetic)
+        logger.info(f"FINISH QUANTIFY MISFIT: {source_name}")
 
-        # Exporting residuals to disk (output/) for more permanent storage
-        if export_residuals:
-            if not os.path.exists(export_residuals):
-                unix.mkdir(export_residuals)
-            unix.cp(src=save_residuals, dst=export_residuals)
-
-    def finalize(self):
-        """Teardown procedures for the default preprocessing class"""
-        pass
-
-    @staticmethod
-    def sum_residuals(residuals):
+    def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
+                               components=None):
         """
-        Returns the summed square of residuals for each event. Following
-        Tape et al. 2007
+        Gather a list of filenames of matching waveform IDs that can be
+        run through the misfit quantification step, and generate empty adjoint
+        sources so that Solver knows which components are zero'd out.
 
-        :type residuals: np.array
-        :param residuals: list of residuals from each NTASK event
+        :type source_name: str
+        :param source_name: the name of the source to process
+        :type components: list
+        :param components: optional list of components to ignore preprocessing
+            traces that do not have matching components. The adjoint sources for
+            these components will be 0. E.g., ['Z', 'N']. If None, all available
+            components will be considered.
+        :rtype: list of tuples
+        :return: [(observed filename, synthetic filename)]. tuples will contain
+            filenames for matching stations + component for obs and syn
+        """
+        obs_path = os.path.join(self.path.solver, source_name, "traces", "obs")
+        syn_path = os.path.join(self.path.solver, source_name, "traces", "syn")
+
+        # Initialize empty adjoint sources for all synthetics that may or may
+        # not be overwritten by the misfit quantification step
+        if save_adjsrcs is not None:
+            syn_filenames = glob(os.path.join(syn_path, "*"))
+            initialize_adjoint_traces(data_filenames=syn_filenames,
+                                      fmt=self.syn_data_format,
+                                      path_out=save_adjsrcs)
+
+        # Return a matching list of observed and synthetic waveform filenames
+        observed, synthetic = return_matching_waveform_files(
+            obs_path, syn_path, obs_fmt=self.obs_data_format,
+            syn_fmt=self.syn_data_format, components=components
+        )
+
+        return observed, synthetic
+
+    def _quantify_misfit_single(self, obs_fid, syn_fid, source_name,
+                                save_residuals=None, save_adjsrcs=None):
+        """
+        Run misfit quantification for one pair of data-synthetic waveforms.
+        This is kept in a separate function so that it can be parallelized for
+        more efficient processing.
+
+        :type obs_fid: str
+        :param obs_fid: filename for the observed waveform to be processed
+        :type syn_fid: str
+        :param syn_fid: filename for the synthetic waveform to be procsesed
+        :type source_name: str
+        :param source_name: name of the source used for getting origintime of
+            synthetic waveforms and tagging output waveform figures if internal 
+            parameter `plot` is set True
+        :type save_residuals: str
+        :param save_residuals: if not None, path to write misfit/residuls to
+        :type save_adjsrcs: str
+        :param save_adjsrcs: if not None, path to write adjoint sources to
         :rtype: float
-        :return: sum of squares of residuals
+        :return: residual value, calculated by the chosen misfit function
+            comparing `obs` and `syn`
         """
-        return np.sum(residuals ** 2.)
+        # Determine origintime of synthetic event, will ONLY be used if 
+        # `*_data_format` == 'ASCII'
+        source_fid = os.path.join(self.path.solver, source_name,
+                                  "DATA", self.source_prefix)
+        cat = read_events_plus(fid=source_fid, format=self.source_prefix)
 
-    def _apply_filter(self, st):
+        # Read in waveforms based on the User-defined format(s)
+        # `origintime` will only be applied if format=='ASCII'
+        obs = read(fid=obs_fid, data_format=self.obs_data_format,
+                   origintime=cat[0].preferred_origin().time)
+        syn = read(fid=syn_fid, data_format=self.syn_data_format,
+                   origintime=cat[0].preferred_origin().time)
+
+
+        logger.info(f"PREPROCESSING {syn[0].get_id()}")
+
+        # Wrap all the preprocessing functions into single function so that
+        # it can be more easily overwritten by overwriting classes
+        # Default order of processing steps is:
+        # resample, filter (optional), (optional), normalize (optional)
+        obs, syn = self.preprocess(obs, syn)
+
+        # Write the residuals/misfit and adjoint sources for each component
+        # The assumption here is that `obs` and `syn` are length=1
+        residual = 0
+        for tr_obs, tr_syn in zip(obs, syn):
+            # Simple check to make sure zip retains ordering. Only works if
+            # both syn and data have component stat. This may not be the case
+            # for poorly labelled data
+            if tr_obs.stats.component and tr_syn.stats.component:
+                assert (tr_obs.stats.component == tr_syn.stats.component), (
+                    f"{obs_fid}, {syn_fid}"
+                    f"Mismatched components for '{os.path.basename(obs_fid)}' "
+                    f"obs: `{tr_obs.stats.component}` != " 
+                    f"syn: `{tr_syn.stats.component}`. Please check `obs` data"
+                    )
+
+            # Calculate the misfit value and write to file
+            if save_residuals and self._calculate_misfit:
+                residual = self._calculate_misfit(
+                    obs=tr_obs.data, syn=tr_syn.data,
+                    nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
+                )
+                # Calculate misfit from measurement (e.g., Tromp et al. 2005 
+                # Eq. 1), ensuring misfit is a positive value so that it can be
+                # correctly compared during line search
+                residual = 1/2 * residual ** 2
+                logger.debug(f"{tr_syn.get_id()} misfit={residual:.3E}")
+            else:
+                residual = 0
+
+            # Generate an adjoint source trace, write to file in scratch dir.
+            # SPECFEM expects non time-reversed adjoint sources
+            if save_adjsrcs and self._generate_adjsrc:
+                adjsrc = tr_syn.copy()
+                adjsrc.data = self._generate_adjsrc(
+                    obs=tr_obs.data, syn=tr_syn.data,
+                    nt=tr_syn.stats.npts, dt=tr_syn.stats.delta
+                )
+                fid = os.path.basename(syn_fid)
+                fid = rename_as_adjoint_source(fid, fmt=self.syn_data_format)
+                write(st=Stream(adjsrc), fid=os.path.join(save_adjsrcs, fid),
+                      data_format=self.syn_data_format)
+            else:
+                adjsrc = None
+
+            # Plot waveforms showing observed, synthetic and adjoint source
+            if self.plot_waveforms:
+                # If source name is not provided by calling function, assign to
+                # the given task ID which can later be used to track source name
+                if source_name is None:
+                    source_name = get_task_id()
+
+                # Determine how to tag the output files
+                fig_path = os.path.join(self.path.scratch, source_name)
+                if not os.path.exists(fig_path):
+                    unix.mkdir(fig_path)
+                # e.g., path/to/figure/NN_SSS_LL_CCC_IS.png 
+                if self._iteration is not None:
+                    _itr = f"_i{self._iteration:0>2}"
+                else:
+                    _itr = ""
+                if self._step_count is not None:
+                    _stp = f"s{self._step_count:0>2}"
+                else:
+                    _stp = ""
+                fid_out = os.path.join(
+                    fig_path, f"{tr_syn.id.replace('.', '_')}{_itr}{_stp}.png"
+                )
+                title = f"{tr_syn.id}; misfit={residual:.3E}"
+                plot_waveforms(tr_obs=tr_obs, tr_syn=tr_syn, tr_adj=adjsrc,
+                               fid_out=fid_out, title=title)
+
+        return residual
+
+    def preprocess(self, obs, syn):
         """
-        Apply a filter to waveform data using ObsPy
+        Convenience function that wraps all preprocessing steps so that
+        they can be more easily overwritten if the User wants preprocessing
+        that does not follow this convention
 
-        :type st: obspy.core.stream.Stream
-        :param st: stream to be filtered
-        :rtype: obspy.core.stream.Stream
-        :return: filtered traces
+        :type obs: obspy.core.stream.Stream
+        :param obs: Stream containing observed waveforms
+        :type syn: obspy.core.stream.Stream
+        :param syn: Stream containing synthetic waveforms
         """
-        # Pre-processing before filtering
-        st.detrend("demean")
-        st.detrend("linear")
-        st.taper(0.05, type="hann")
+        # Resample observed waveforms to the same sampling rate as the
+        # synthetics because the output adjoint sources will need this samp rate
+        obs, syn = resample(st_a=obs, st_b=syn)
 
-        if self.filter.upper() == "BANDPASS":
-            st.filter("bandpass", zerophase=True, freqmin=self.min_freq,
-                      freqmax=self.max_freq)
-        elif self.filter.upper() == "LOWPASS":
-            st.filter("lowpass", zerophase=True, freq=self.max_freq)
-        elif self.filter.upper() == "HIGHPASS":
-            st.filter("highpass", zerophase=True, freq=self.min_freq)
+        # Trim the observed seismograms to the length of the synthetics. 
+        # Returned in the same order as input so syn first since we are trimming
+        # to syn
+        syn, obs = trim(st=syn, st_trim=obs)
 
-        return st
+        # Apply some basic detrends to clean up data
+        for st in [obs, syn]:
+            st.detrend("demean")
+            st.detrend("linear")
+            st.taper(0.05, type="hann")
 
-    def _apply_mute(self, st):
-        """
-        Apply mute on data based on early or late arrivals, and short or long
-        source receiver distances
+        if self.filter:
+            obs = filter(obs, choice=self.filter, min_freq=self.min_freq,
+                         max_freq=self.max_freq)
+            syn = filter(syn, choice=self.filter, min_freq=self.min_freq,
+                         max_freq=self.max_freq)
+        if self.mute:
+            obs = mute(obs)
+            syn = mute(syn)
+        if self.normalize:
+            if "RNORM_SYN" in self.normalize:
+                # normalize `obs` relative to the synthetic trace only
+                obs = normalize(st=obs, choice=self.normalize, st_rel=syn)
+            elif "RNORM_OBS" in self.normalize:
+                # normalize `syn` relative to the observed trace only
+                syn = normalize(st=syn, choice=self.normalize, st_rel=obs)
+            else:
+                # else, normalize traces relative to themselves
+                obs = normalize(st=obs, choice=self.normalize)
+                syn = normalize(st=syn, choice=self.normalize)
 
-        .. note::
-            The underlying mute functions have been refactored but not tested
-            as I was not aware of the intended functionality. Not gauranteed
-            to work, use at your own risk.
+        return obs, syn
 
-        :type st: obspy.core.stream.Stream
-        :param st: stream to mute
-        :rtype: obspy.core.stream.Stream
-        :return: muted stream object
-        """
-        mute_choices = [_.upper() for _ in self.mute]
-        if "EARLY" in mute_choices:
-            st = signal.mute_arrivals(st, slope=self.early_slope,
-                                      const=self.early_const, choice="EARLY")
-        if "LATE" in mute_choices:
-            st = signal.mute_arrivals(st, slope=self.late_slope,
-                                      const=self.late_const, choice="LATE")
-        if "SHORT" in mute_choices:
-            st = signal.mute_offsets(st, dist=self.short_dist, choice="SHORT")
-        if "LONG" in mute_choices:
-            st = signal.mute_offsets(st, dist=self.long_dist, choice="LONG")
-
-        return st
-
-    def _apply_normalize(self, st):
-        """
-        Normalize the amplitudes of waveforms based on user choice
-
-        .. note::
-            The normalization function has been refactored but not tested
-            as I was not aware of the intended functionality. Not gauranteed
-            to work, use at your own risk.
-
-        :type st: obspy.core.stream.Stream
-        :param st: All of the data streams to be normalized
-        :rtype: obspy.core.stream.Stream
-        :return: stream with normalized traces
-        """
-        st_out = st.copy()
-        norm_choices = [_.upper() for _ in self.normalize]
-
-        # Normalize an event by the L1 norm of all traces
-        if 'ENORML1' in norm_choices:
-            w = 0.
-            for tr in st_out:
-                w += np.linalg.norm(tr.data, ord=1)
-            for tr in st_out:
-                tr.data /= w
-        # Normalize an event by the L2 norm of all traces
-        elif "ENORML2" in norm_choices:
-            w = 0.
-            for tr in st_out:
-                w += np.linalg.norm(tr.data, ord=2)
-            for tr in st_out:
-                tr.data /= w
-        # Normalize each trace by its L1 norm
-        if "TNORML1" in norm_choices:
-            for tr in st_out:
-                w = np.linalg.norm(tr.data, ord=1)
-                if w > 0:
-                    tr.data /= w
-        elif "TNORML2" in norm_choices:
-            # normalize each trace by its L2 norm
-            for tr in st_out:
-                w = np.linalg.norm(tr.data, ord=2)
-                if w > 0:
-                    tr.data /= w
-
-        return st_out
-
-
-def read_ascii(fid, origintime=None):
+def read(fid, data_format, **kwargs):
     """
-    Read waveforms in two-column ASCII format. This is copied directly from
-    pyatoa.utils.read.read_sem()
+    Waveform reading functionality. Imports waveforms as Obspy streams
+
+    :type fid: str
+    :param fid: path to file to read data from
+    :type data_format: str
+    :param data_format: format of the file to read data from
+    :rtype: obspy.core.stream.Stream
+    :return: ObsPy stream containing data stored in `fid`
+    :raises TypeError: if the provided data format cannot be read
+    """
+    if data_format.upper() == "SU":
+        st = obspy_read(fid, format="SU", byteorder="<", **kwargs)
+    elif data_format.upper() == "ASCII":
+        st = read_ascii(fid, **kwargs)
+    else:
+        st = obspy_read(fid, format=data_format.upper(), **kwargs)
+    return st
+
+def write(st, fid, data_format):
+    """
+    Waveform writing functionality. Writes waveforms back to format that
+    SPECFEM recognizes
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to write
+    :type fid: str
+    :param fid: path to file to write stream to
+    :type data_format: str
+    :param data_format: format of the file to write to
+    """
+    if data_format.upper() == "SU":
+        for tr in st:
+            # Work around for ObsPy data type conversion
+            tr.data = tr.data.astype(np.float32)
+        max_delta = 0.065535
+        dummy_delta = max_delta
+
+        if st[0].stats.delta > max_delta:
+            for tr in st:
+                tr.stats.delta = dummy_delta
+
+        # Write data to file
+        st.write(fid, format="SU")
+
+    elif data_format.upper() == "ASCII":
+        for tr in st:
+            # Time offset should have been set by `read_ascii` when reading in
+            # the original ASCII waveform file
+            try:
+                time_offset = tr.stats.time_offset
+            except AttributeError:
+                time_offset = 0
+            data_out = np.vstack((tr.times() + time_offset, tr.data)).T
+            np.savetxt(fid, data_out, ["%13.7f", "%17.7f"])
+
+def read_ascii(fid, origintime=None, **kwargs):
+    """
+    Converts SPECFEM synthetics into ObsPy Stream objects with the correct
+    header information.
+
+    .. note::
+
+        This is a trimmed down version of pysep.utils.io.read_sem() which is
+        copied here for better visibility within SeisFlows, and ignores things
+        like SAC headers appending
+
+    :type fid: str
+    :param fid: path of the given ascii file
+    :type origintime: obspy.UTCDateTime
+    :param origintime: UTCDatetime object for the origintime of the event
+    :rtype st: obspy.Stream.stream
+    :return st: stream containing header and data info taken from ascii file
     """
     try:
         times = np.loadtxt(fname=fid, usecols=0)
@@ -707,10 +733,13 @@ def read_ascii(fid, origintime=None):
         data = np.array(data)
 
     if origintime is None:
-        origintime = UTCDateTime("1970-01-01T00:00:00")
+        origintime = UTCDateTime("2000-01-01T00:00:00")
 
-    # We assume that dt is constant after 'precision' decimal points
-    delta = round(times[1] - times[0], 4)
+    # Truncate after double precision due to floating point rounding, see #244
+    delta = round(times[1] - times[0], 14)
+    if delta == 0:
+        logger.critical("SPECFEM time step is too small, cannot resolve dt")
+        sys.exit(-1)
 
     # Honor that Specfem doesn't start exactly on 0
     origintime += times[0]
@@ -726,3 +755,40 @@ def read_ascii(fid, origintime=None):
     st = Stream([Trace(data=data, header=stats)])
 
     return st
+
+def initialize_adjoint_traces(data_filenames, fmt, path_out="./"):
+    """
+    SPECFEM requires that adjoint traces be present for every matching
+    synthetic seismogram. If an adjoint source does not exist, it is
+    simply set as zeros. This function creates all adjoint traces as
+    zeros, to be filled out later. Does this in parallel for speedup
+
+    :type data_filenames: list of str
+    :param data_filenames: existing solver waveforms (synthetic) to read.
+        These will be copied, zerod out, and saved to path `save`. Should
+        come from solver.data_filenames
+    :type fmt: str
+    :param fmt: format of the input waveforms which will be fed to the `read`
+        function to get a working Stream object used to write empty adjsrcs
+    :type path_out: str
+    :param path_out: path to save the new adjoint traces to. Ideally this is
+        set to 'solver/traces/adj'
+    """
+    # Read in a dummy synthetic file and zero out all data to write
+    st = read(fid=data_filenames[0], data_format=fmt).copy()
+    for tr in st:
+        tr.data *= 0
+    # Write adjoint sources in parallel using an empty Stream object
+    with ProcessPoolExecutor(max_workers=unix.nproc()) as executor:
+        futures = [
+            executor.submit(_write_adjsrc_single, st, fid, path_out, fmt)
+            for fid in data_filenames
+            ]
+    # Simply wait until this task is completed
+    wait(futures)
+
+def _write_adjsrc_single(st, fid, output, fmt):
+    """Parallelizable function to write out empty adjoint source"""
+    adj_fid = rename_as_adjoint_source(os.path.basename(fid), fmt=fmt)
+    write(st=st, fid=os.path.join(output, adj_fid), data_format=fmt)
+

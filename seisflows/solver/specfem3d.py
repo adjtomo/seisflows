@@ -4,6 +4,7 @@ This class provides utilities for the Seisflows solver interactions with
 Specfem3D Cartesian.
 """
 import os
+import time
 from glob import glob
 from seisflows import logger
 from seisflows.tools import unix
@@ -23,9 +24,10 @@ class Specfem3D(Specfem):
     :param source_prefix: Prefix of source files in path SPECFEM_DATA. Must be
         in ['CMTSOLUTION', 'FORCESOLUTION']. Defaults to 'CMTSOLUTION'
     :type export_vtk: bool
-    :param export_vtk: anytime a model, kernel or gradient is considered,
-        generate a VTK file and store it in the scratch/ directory for the User
-        to visualize at their leisure.
+    :param export_vtk: at the finalization step of each iteration, convert
+        all eligible model and gradient directories in the `path_output`
+        to .vtk files for visualization using ParaView (or similar programs). 
+        Files are exported to `path_output`/VTK
     :type prune_scratch: bool
     :param prune_scratch: prune/remove database files as soon as they are used,
         to keep overall filesystem burden down
@@ -39,30 +41,81 @@ class Specfem3D(Specfem):
     """
     __doc__ = Specfem.__doc__ + __doc__
 
-    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True,
+    def __init__(self, source_prefix="CMTSOLUTION", export_vtk=True, 
                  prune_scratch=True, **kwargs):
-        """Instantiate a Specfem3D_Cartesian solver interface"""
+        """
+        Instantiate a Specfem3D_Cartesian solver interface
+        
+        .. note:: Repeated variables
+
+            For variables that are expressed as both public and private (one
+            leading underscore), we have a public version so that the parameter
+            will show up in the parameter file, and a private one so that the 
+            other SPECFEM versions can use it for boolean logic without
+            necessarily needing to include it in their parameter file since it
+            is not accessed and therefore not necessary.
+        """
 
         super().__init__(source_prefix=source_prefix, **kwargs)
 
         self.prune_scratch = prune_scratch
-        self.export_vtk = export_vtk
 
-        # Define parameters based on material type
-        if self.materials.upper() == "ACOUSTIC":
-            self._parameters += ["vp"]
-        elif self.materials.upper() == "ELASTIC":
-            self._parameters += ["vp", "vs"]
+        # See note about repeated variables above
+        self.export_vtk = export_vtk
+        self._export_vtk = export_vtk
 
         # Overwriting the base class parameters
+        self._available_materials = ["ACOUSTIC", "ELASTIC", 
+                                     "TRANSVERSE_ISOTROPIC", "ANISOTROPIC"]
         self._acceptable_source_prefixes = ["CMTSOLUTION", "FORCESOLUTION"]
         self._required_binaries = ["xspecfem3D", "xmeshfem3D",
                                    "xgenerate_databases", "xcombine_sem",
-                                   "xsmooth_sem", "xcombine_vol_data_vtk"]
+                                   "xcombine_vol_data_vtk"]
+
+        # Choose what type of smoothing to use
+        if self.smooth_type == "gaussian":
+            logger.warning("`smooth_type` 'gaussian' is very slow, recommend "
+                           "switching to type 'pde'")
+            self._required_binaries.append("xsmooth_sem")        
+        elif self.smooth_type == "pde":
+            
+            self._required_binaries.append("xsmooth_sem_pde")
+        else:
+            raise NotImplementedError("`smooth_type` must be 'pde' or "
+                                      "'gaussian'")
+        
+        # Overwriting constants that will be referenced during simulations 
+        self._fwd_simulation_executables = [
+            "bin/xmeshfem3D", "bin/xgenerate_databases", "bin/xspecfem3D"
+            ]
+
+        self._adj_simulation_executables = ["bin/xspecfem3D"]
+        self._absorb_wildcard = "proc??????_absorb_field*"
+        self._forward_array_wildcard = "proc??????_save_forward_arrays*"
 
         # Internally used parameters set by functions within class
         self._model_databases = None
         self.path._vtk_files = os.path.join(self.path.scratch, "vtk_files")
+
+    def check(self):
+        """SPECFEM3D_Cartesian specific check tasks"""
+        super().check()
+
+        if isinstance(self.materials, str) and \
+            self.materials.upper() == "ANISOTROPIC":
+            logger.warning("the 'ANISOTROPIC' material parameter is an "
+                           "experimental feature that requires "
+                           "a modified version of SPECFEM3D. Use at your own "
+                           "risk, not guaranteed to work")
+
+            anisotropic_kl = getpar(key="ANISOTROPIC_KL", 
+                                    file=os.path.join(self.path.specfem_data, 
+                                                      "Par_file"))[1]
+            assert(anisotropic_kl == ".true."), (
+                f"SPECFEM3D Par_file parameter 'ANISOTROPIC_KL' must be set "
+                f"'.true.' for ANISOTROPIC parameters"
+                )
+
 
     def setup(self):
         """
@@ -70,9 +123,6 @@ class Specfem3D(Specfem):
         which the User can use for external visualization
         """
         super().setup()
-
-        # Work-in-progress
-        # self.combine_vol_data_vtk()
 
     def data_wildcard(self, comp="?"):
         """
@@ -109,41 +159,18 @@ class Specfem3D(Specfem):
         """
         return self.model_databases
 
-    def forward_simulation(self, executables=None, save_traces=False,
-                           export_traces=False, save_forward=True, **kwargs):
+    def forward_simulation(self, **kwargs):
         """
         Calls SPECFEM3D forward solver, exports solver outputs to traces dir
 
-        :type executables: list or None
-        :param executables: list of SPECFEM executables to run, in order, to
-            complete a forward simulation. This can be left None in most cases,
-            which will select default values based on the specific solver
-            being called (2D/3D/3D_GLOBE). It is made an optional parameter
-            to keep the function more general for inheritance purposes.
-        :type save_traces: str
-        :param save_traces: move files from their native SPECFEM output location
-            to another directory. This is used to move output waveforms to
-            'traces/obs' or 'traces/syn' so that SeisFlows knows where to look
-            for them, and so that SPECFEM doesn't overwrite existing files
-            during subsequent forward simulations
-        :type export_traces: str
-        :param export_traces: export traces from the scratch directory to a more
-            permanent storage location. i.e., copy files from their original
-            location
-        :type save_forward: bool
-        :param save_forward: whether to turn on the flag for saving the forward
-            arrays which are used for adjoint simulations. Not required if only
-            running forward simulations.
+        See `solver.specfem.forward_simulation` for info on required parameters
         """
         unix.cd(self.cwd)
 
-        if executables is None:
-            executables = ["bin/xgenerate_databases", "bin/xspecfem3D"]
-
-            # Database files only need to be made once, usually at the first
-            # evaluation. Once made, we don't have to run xmeshfem3D anymore.
-            if not glob(os.path.join(self.model_databases, "proc*_Database")):
-                executables = ["bin/xmeshfem3D"] + executables
+        if glob(os.path.join(self.model_databases, "proc*_Database")):
+            # Drop xmeshfem3D if we have already run it once. Only once per run
+            self._fwd_simulation_executables = \
+                self._fwd_simulation_executables[1:]
 
         # SPECFEM3D has to deal with attenuation
         if self.attenuation:
@@ -151,21 +178,14 @@ class Specfem3D(Specfem):
         else:
             setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
 
-        super().forward_simulation(executables=executables,
-                                   save_traces=save_traces,
-                                   export_traces=export_traces,
-                                   save_forward=save_forward
-                                   )
+        super().forward_simulation(**kwargs)
 
-        if self.prune_scratch:
-            logger.debug("removing '*.vt?' files from database directory")
-            unix.rm(glob(os.path.join(self.model_databases, "proc*_*.vt?")))
-
-    def adjoint_simulation(self, executables=None, save_kernels=False,
-                           export_kernels=False):
+    def adjoint_simulation(self, **kwargs):
         """
         Calls SPECFEM3D adjoint solver, creates the `SEM` folder with adjoint
         traces which is required by the adjoint solver
+
+        See `solver.specfem.adjoint_simulation` for info on required parameters
 
         :type executables: list or None
         :param executables: list of SPECFEM executables to run, in order, to
@@ -173,42 +193,21 @@ class Specfem3D(Specfem):
             which will select default values based on the specific solver
             being called (2D/3D/3D_GLOBE). It is made an optional parameter
             to keep the function more general for inheritance purposes.
-        :type save_kernels: str
-        :param save_kernels: move the kernels from their native SPECFEM output
-            location to another path. This is used to move kernels to another
-            SeisFlows scratch directory so that they are discoverable by
-            other modules. The typical location they are moved to is
-            path_eval_grad
-        :type export_kernels: str
-        :param export_kernels: export/copy/save kernels from the scratch
-            directory to a more permanent storage location. i.e., copy files
-            from their original location. Note that kernel file sizes are LARGE,
-            so exporting kernels can lead to massive storage requirements.
         """
-        if executables is None:
-            executables = ["bin/xspecfem3D"]
-
         # Make sure attenuation is OFF, if ON you'll get a floating point error
         unix.cd(self.cwd)
         setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         # Make sure we have a STATIONS_ADJOINT file. Simply copy STATIONS file
-        # !!! Do we need to tailor this to output of preprocess module? !!!
+        # we expect that preprocessing has created ALL required adjoint sources
         dst = os.path.join(self.cwd, "DATA", "STATIONS_ADJOINT")
         if not os.path.exists(dst):
             src = os.path.join(self.cwd, "DATA", "STATIONS")
             unix.cp(src, dst)
 
-        super().adjoint_simulation(executables=executables,
-                                   save_kernels=save_kernels,
-                                   export_kernels=export_kernels)
-
-        if self.prune_scratch:
-            for glob_key in ["proc??????_save_forward_array.bin",
-                             "proc??????_absorb_field.bin"]:
-                logger.debug(f"removing '{glob_key}' files from database "
-                             f"directory")
-                unix.rm(glob(os.path.join(self.model_databases, glob_key)))
+        # SPECFEM class takes care of `simulation_type`` and `save_forward`` 
+        # params as well as kernel renaming and export and scratch pruning
+        super().adjoint_simulation(**kwargs)
 
     def combine_vol_data_vtk(self, input_path, output_path, hi_res=False,
                              parameters=None):
@@ -228,7 +227,7 @@ class Specfem3D(Specfem):
         :type input_path: str
         :param input_path: path to database files to be summed.
         :type output_path: strs
-        :param output_path: path to export the outputs of xcombine_sem
+        :param output_path: path to export the outputs of the binary
         :type hi_res: bool
         :param hi_res: Set the high resolution flag to 1 or True, which will
             generate .vtk files with data at EACH GLL point, rather than at each

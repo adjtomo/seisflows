@@ -7,18 +7,20 @@ e.g., a workstation or a laptop. All other `System` classes build on this class.
 import os
 import sys
 import subprocess
+import time
+import numpy as np
 from contextlib import redirect_stdout
 
 from seisflows import logger
-from seisflows.tools import unix
+from seisflows.tools import unix, msg
 from seisflows.tools.config import Dict, import_seisflows
-from seisflows.tools.config import number_fid, set_task_id
+from seisflows.tools.config import copy_file, set_task_id
 
 
 class Workstation:
     """
-    Workstation System
-    ------------------
+    Workstation System [System Base]
+    --------------------------------
     Defines foundational structure for System module. When used standalone,
     runs solver tasks either in serial (if `nproc`==1; i.e., without MPI) or in
     parallel (if `nproc`>1; i.e., with MPI). All other tasks are run in serial.
@@ -31,15 +33,39 @@ class Workstation:
     :type nproc: int
     :param nproc: number of processors to use for each simulation. Choose 1 for
         serial simulations, and `nproc`>1 for parallel simulations.
+    :type tasktime: float
+    :param tasktime: maximum job time in units minutes for each job spawned by
+        the SeisFlows master job during a workflow. These include, e.g.,
+        running the forward solver, adjoint solver, smoother, kernel combiner.
+        All spawned tasks receive the same task time. Fractions of minutes
+        acceptable. If set as `None`, no tasktime will be enforced.
     :type mpiexec: str
     :param mpiexec: MPI executable on system. Defaults to 'mpirun -n ${NPROC}'
+    :type array: str
+    :param array: for `ntask` > 1, determine which tasks to submit to run. By
+        default (NoneType) this submits all task IDs [0:ntask), or for single
+        runs, submits only the first task ID, 0. However, for debugging or
+        manual control purposes, Users may input a string of task IDs that they
+        would like to run. Follows formatting of SLURM array directive
+        (https://slurm.schedmd.com/job_array.html), which is, for example:
+        1,2,3-8:2,10 -> 1,2,3,5,7,10
+        where '-' denotes a range (inclusive), and ':' denotes an optional step.
+        If ':' step is not given for a range, then step defaults to 1.
+    :type rerun: int
+    :param rerun: [EXPERIMENTAL FEATURE] attempt to re-run failed tasks or 
+        array tasks submitted with `run`. Collects information about failed 
+        jobs (or array jobs) after a failure, and re-submits with `run`. 
+        `rerun` is an integer defining how many times the User wants System to
+        try and rerun before failing the entire job. If 0 (default), a single
+        task failure will cause main job failure.
     :type log_level: str
     :param log_level: logger level to pass to logging module.
         Available: 'debug', 'info', 'warning', 'critical'
     :type verbose: bool
     :param verbose: if True, formats the log messages to include the file
-        name, line number and message type. Useful for debugging but
-        also very verbose.
+        name and line number of the log message in the source code, as well as 
+        the message and message type. Useful for debugging but also very verbose
+        so not recommended for production runs.
 
     Paths
     -----
@@ -54,10 +80,11 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
-    def __init__(self, ntask=1, nproc=1, mpiexec=None, log_level="DEBUG",
-                 verbose=False, workdir=os.getcwd(), path_output=None,
-                 path_system=None, path_par_file=None, path_output_log=None,
-                 path_log_files=None, **kwargs):
+    def __init__(self, ntask=1, nproc=1, tasktime=1, mpiexec=None, 
+                 array=None, rerun=0, log_level="DEBUG", verbose=False, 
+                 workdir=os.getcwd(), path_output=None, path_system=None, 
+                 path_par_file=None, path_output_log=None, path_log_files=None, 
+                 **kwargs):
         """
         Workstation System Class Parameters
 
@@ -76,7 +103,10 @@ class Workstation:
         """
         self.ntask = ntask
         self.nproc = nproc
+        self.tasktime = tasktime
+        self.rerun = rerun
         self.mpiexec = mpiexec
+        self.array = array
         self.log_level = log_level.upper()
         self.verbose = verbose
 
@@ -110,16 +140,27 @@ class Workstation:
         if self.mpiexec is not None:
             # Make user that `mpiexec` exists on system
             try:
-                stdout = subprocess.run(f"which {self.mpiexec}", shell=True,
-                                        check=True, text=True,
-                                        stdout=subprocess.PIPE).stdout
+                subprocess.run(f"which {self.mpiexec}", shell=True, check=True,
+                               text=True, stdout=subprocess.PIPE).stdout
             except subprocess.CalledProcessError:
                 logger.critical(
-                    f"MPI executable {self.mpiexec} was not found on system "
-                    f"with cmd: `which {self.mpiexec}. Please check that your "
+                    f"MPI executable '{self.mpiexec}' was not found on system "
+                    f"with cmd: `which {self.mpiexec}`. Please check that your "
                     f"MPI module is loaded and accessible from the command line"
                 )
                 sys.exit(-1)
+        # Check formatting of array parameters if provided
+        if self.array is not None:
+            try:
+                self.task_ids()
+            except Exception as e:
+                logger.critical(f"`array` argument can not be parsed by System "
+                                f"module. Please check error message: {e}")
+                sys.exit(-1)
+            logger.info(f"`system.array` == {self.array}")
+    
+        assert(isinstance(self.rerun, int)), f"`rerun` must be an int [0,inf)"
+        assert(self.rerun >= 0), f"`rerun` must be in bounds [0, inf)"
 
     def setup(self):
         """
@@ -142,17 +183,10 @@ class Workstation:
         for path in [self.path.scratch, self.path.output, self.path.log_files]:
             unix.mkdir(path)
 
-        # If resuming, move old log files to keep them out of the way. Number
-        # in ascending order, so we don't end up overwriting things
-        for src in [self.path.output_log, self.path.par_file]:
-            i = 1
-            if os.path.exists(src):
-                dst = os.path.join(self.path.log_files, number_fid(src, i))
-                while os.path.exists(dst):
-                    i += 1
-                    dst = os.path.join(self.path.log_files, number_fid(src, i))
-                logger.debug(f"copying par/log file to: {dst}")
-                unix.cp(src=src, dst=dst)
+    def finalize(self):
+        """Tear down tasks for the end of an Inversion-based iteration"""
+        unix.rm(self.path.scratch)
+        unix.mkdir(self.path.scratch)
 
     def submit(self, workdir=None, parameter_file="parameters.yaml"):
         """
@@ -165,13 +199,20 @@ class Workstation:
         :param parameter_file: parameter file name used to instantiate the
             SeisFlows package
         """
+        logger.info(msg.mjr("SEISFLOWS SUBMIT"))
+        
+        # Copy log files if present to avoid overwriting
+        for src in [self.path.output_log, self.path.par_file]:
+            if os.path.exists(src) and os.path.exists(self.path.log_files):
+                copy_file(src, copy_to=self.path.log_files)
+
         workflow = import_seisflows(workdir=workdir or self.path.workdir,
                                     parameter_file=parameter_file)
         workflow.check()
         workflow.setup()
         workflow.run()
 
-    def run(self, funcs, single=False, **kwargs):
+    def run(self, funcs, single=False, tasktime=None, **kwargs):
         """
         Executes task multiple times in serial.
 
@@ -187,13 +228,18 @@ class Workstation:
             This will change how the job array and the number of tasks is
             defined, such that the job is submitted as a single-core job to
             the system.
+        :type tasktime: float
+        :param tasktime: Custom tasktime in units minutes for running the given 
+            functions `funcs`. If not given, defaults to the System variable
+            `tasktime`. If System `tasktime` is also None, defaults to no 
+            tasktime (inifinty time). If tasks exceed the given `tasktime`, 
+            the program will exit
         """
-        if single:
-            ntasks = 1
-        else:
-            ntasks = self.ntask
+        if tasktime is None:
+            tasktime = self.tasktime or np.inf  
 
-        for task_id in range(ntasks):
+        for task_id in self.task_ids(single):
+            _start = time.time()
             # Set Task ID for currently running process
             set_task_id(task_id)
             log_file = self._get_log_file(task_id)
@@ -204,6 +250,56 @@ class Workstation:
                 with redirect_stdout(f):
                     for func in funcs:
                         func(**kwargs)
+                        # Check timeout condition. This is imprecise as it 
+                        # allows the function to finish first. But we assume 
+                        # workstation approaches don't need precise timekeeping
+                        if time.time() - _start > (tasktime * 60):  # seconds
+                            logger.critical(msg.cli(
+                                f"System Task {task_id} has exceeded the "
+                                f"defined tasktime {tasktime}m. Please check "
+                                f"log files and adjust `tasktime` if required", 
+                                header="timeout error",  border="=")
+                                )
+                            sys.exit(-1)
+
+    def task_ids(self, single=False):
+        """
+        Return a list of Task IDs (linked to each indiviudal source) to supply
+        to the 'run' function. By default this returns a range of available
+        tasks [0:ntask). See class docstring of parameter `array` for how to
+        manually set task_ids to use for run call.
+
+        :type single: bool
+        :param single: If we only want to run a single process, this is will 
+            default to TaskID == 0
+        :rtype: list
+        :return: a list of task IDs to be used by the `run` function
+        """
+        if single:
+            task_ids = [0]
+        else:
+            if self.array is not None:
+                task_ids = []
+                parts = self.array.split(",")  # e.g., 1,3,5-9,10
+                for part in parts:
+                    # e.g., 5-9 -> 5,6,7,8,9
+                    if "-" in part:
+                        # e.g., 5-9:2 -> 5,7,9
+                        if ":" in part:
+                            part, step = part.split(":")
+                        else:
+                            step = 1
+                        start, stop = part.split("-")
+                        # Range is inclusive of both ends, default step is 1
+                        task_ids += list(range(int(start), int(stop) + 1, 
+                                               int(step)))
+                    else:
+                        task_ids.append(int(part))
+
+            else:
+                task_ids = list(range(0, self.ntask, 1))
+
+        return task_ids
 
     def _get_log_file(self, task_id):
         """
