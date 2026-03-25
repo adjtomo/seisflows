@@ -168,9 +168,12 @@ class Specfem3D(Specfem):
         unix.cd(self.cwd)
 
         if glob(os.path.join(self.model_databases, "proc*_Database")):
-            # Drop xmeshfem3D if we have already run it once. Only once per run
+            # Drop xmeshfem3D if we have already run it once and created the 
+            # Database files. This loop will run each time, but only drop the 
+            # executable once.
             self._fwd_simulation_executables = \
-                self._fwd_simulation_executables[1:]
+                [exc for exc in self._fwd_simulation_executables if not 
+                 exc.endswith("xmeshfem3D")]
 
         # SPECFEM3D has to deal with attenuation
         if self.attenuation:
