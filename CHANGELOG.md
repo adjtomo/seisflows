@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v3.5.6
+- Bugfix SPECFEM3D unexpected removal of executables during forward runs
+
 ## v3.5.5
 > **IMPORTANT PACKAGE UDPATE**: New development strategy implemented. No longer using a `main` and `devel`
 branch. `main` now points to the most up to date version of the code. Versions that have 
