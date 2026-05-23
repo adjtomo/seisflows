@@ -156,7 +156,7 @@ corresponding job number.
 Pivoting to Research Problems
 -----------------------------
 
-Succesful completion of the SPECFEM2D example on your system means you will now
+Successful completion of the SPECFEM2D example on your system means you will now
 have a valid parameter file and working directory structure. 
 
 Pivoting to larger scale research problems will involve Users providing their 
