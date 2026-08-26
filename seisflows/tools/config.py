@@ -25,7 +25,7 @@ from importlib import import_module
 from seisflows import logger, NAMES
 from seisflows.tools import msg, unix
 
-ENV_VARIABLES = ["SEISFLOWS_TASKID", "SLURM_ARRAY_TASK_ID"]
+ENV_VARIABLES = ["SEISFLOWS_TASKID", "SLURM_ARRAY_TASK_ID", "PBS_ARRAY_INDEX"]
 
 
 class Dict(dict):
