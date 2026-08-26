@@ -1,0 +1,41 @@
+#!/bin/bash -e
+# ==============================================================================
+# Generic entry-point wrapper for `system.Pbs`.
+#
+# Unlike SLURM's sbatch, PBS's qsub does not reliably forward trailing
+# command line arguments to the submitted script -- some qsub builds scan
+# the entire command line for dash-prefixed tokens (GNU getopt 'permute'
+# behavior) rather than stopping at the first non-option argument, so
+# anything appended after the script name (e.g. '--workdir /path') gets fed
+# back into qsub's own option parser and rejected as an unrecognized
+# option.
+#
+# `system.Pbs.submit()`/`system.Pbs.run()` therefore pass everything the
+# real SeisFlows entry point ('submit' or 'run') needs as job environment
+# variables via qsub's '-v' option instead, and this script reads them back
+# out and translates them into the CLI arguments 'submit'/'run' expect.
+# This script is not meant to be edited directly.
+#
+# Reads (set via '-v'):
+#   SEISFLOWS_ENTRY_POINT              'submit' or 'run'
+#   SEISFLOWS_WORKDIR, SEISFLOWS_PARAMETER_FILE      (for 'submit')
+#   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS                (for 'run')
+# ==============================================================================
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+case "${SEISFLOWS_ENTRY_POINT}" in
+    submit)
+        exec python "${SCRIPT_DIR}/submit" --workdir "${SEISFLOWS_WORKDIR}" \
+            --parameter_file "${SEISFLOWS_PARAMETER_FILE}"
+        ;;
+    run)
+        exec python "${SCRIPT_DIR}/run" --funcs "${SEISFLOWS_FUNCS}" \
+            --kwargs "${SEISFLOWS_KWARGS}"
+        ;;
+    *)
+        echo "pbs_entry_point: SEISFLOWS_ENTRY_POINT must be 'submit' or " \
+             "'run', got '${SEISFLOWS_ENTRY_POINT}'" >&2
+        exit 1
+        ;;
+esac

@@ -21,11 +21,24 @@ systems.
     different vocabulary, `query_job_states` will need to be overwritten by
     the relevant child class (see e.g., `system.Miyabi`).
 
+.. note::
+    Unlike SLURM's 'sbatch', PBS's 'qsub' does not reliably forward
+    trailing command line arguments to the submitted script -- some 'qsub'
+    builds scan the *entire* command line for dash-prefixed tokens (GNU
+    getopt 'permute' behavior) rather than stopping at the first
+    non-option argument, so anything appended after the script name (e.g.
+    '--workdir /path') gets fed back into qsub's own option parser and
+    rejected as an unrecognized option. We therefore pass all information
+    the submitted script needs (working directory, pickled function/kwarg
+    paths, etc.) as real job environment variables via qsub's '-v' option
+    instead, and route execution through the generic
+    `runscripts/pbs_entry_point` wrapper, which reads them back out of the
+    environment and translates them into the CLI arguments the underlying
+    `submit`/`run` scripts expect.
+
 TODO
     Consider adding support for TORQUE-style 'qstat -f' parsing if/when a
     TORQUE-based child class is required.
-
-NOTE This code was written by Claude
 """
 import os
 import re
@@ -34,10 +47,10 @@ import time
 import subprocess
 import numpy as np
 
-from seisflows import logger
+from seisflows import logger, ROOT_DIR
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
-from seisflows.tools.config import pickle_function_list
+from seisflows.tools.config import pickle_function_list, copy_file
 
 
 class Pbs(Cluster):
@@ -70,6 +83,16 @@ class Pbs(Cluster):
     ***
     """
     __doc__ = Cluster.__doc__ + __doc__
+
+    # PBS-safe generic entry point wrapper, see module docstring note above.
+    # Overwrites `Cluster.submit_workflow`/`Cluster.run_functions`, which
+    # point directly at 'submit'/'run' -- unsafe for PBS since neither
+    # `Pbs.submit()` nor `Pbs.run()` append CLI arguments after this
+    # executable, relying instead on job environment variables (`-v`)
+    submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts",
+                                   "pbs_entry_point")
+    run_functions = os.path.join(ROOT_DIR, "system", "runscripts",
+                                 "pbs_entry_point")
 
     def __init__(self, ntask_max=100, queue=None, group=None, pbs_args="",
                  **kwargs):
@@ -166,7 +189,7 @@ class Pbs(Cluster):
         return _call
 
     def run_call(self, executable="", single=False, array=None,
-                 tasktime=None):
+                 tasktime=None, variables=""):
         """
         The run call defines the PBS directives which are used to run tasks
         during an executing workflow. Like the submit call its arguments are
@@ -178,14 +201,15 @@ class Pbs(Cluster):
             submitted WITHOUT the '-J' array directive (some PBS
             implementations reject single-element array ranges like
             '0-0'). In that case `SEISFLOWS_TASKID` is explicitly set to 0
-            through the `run_functions` script's own '--environment'
-            argument. For actual array jobs, the running task instead
-            recovers its ID from the PBS-assigned 'PBS_ARRAY_INDEX'
+            via `variables` (`-v`). For actual array jobs, the running task
+            instead recovers its ID from the PBS-assigned 'PBS_ARRAY_INDEX'
             environment variable (see `tools.config.ENV_VARIABLES`).
 
         :type executable: str
         :param exectuable: the actual exectuable to run within the PBS
-            directive. Something like './script.py'
+            directive. Something like './script.py'. No CLI arguments
+            should be appended here -- see module docstring note; use
+            `variables` instead
         :type array: str
         :param array: overwrite the `array` variable to run specific jobs. If
             not provided, then we will run jobs 0-{ntask}%{ntask_max}. Jobs
@@ -199,6 +223,9 @@ class Pbs(Cluster):
         :param tasktime: Custom tasktime in units minutes for running the
             given functions. If not given, defaults to the System variable
             `tasktime`
+        :type variables: str
+        :param variables: comma-separated 'VAR=val' string of job
+            environment variables to export via qsub's '-v' option
         :rtype: str
         :return: the system-dependent portion of a run call
         """
@@ -206,11 +233,7 @@ class Pbs(Cluster):
         tasktime = tasktime or self.tasktime
         walltime = self._fmt_walltime(tasktime)
 
-        # Single-process tasks (and 1-task workflows) are submitted as plain
-        # (non-array) jobs, so `SEISFLOWS_TASKID` must be set explicitly
         use_array = not (single or self.ntask == 1)
-        env = "" if use_array else "SEISFLOWS_TASKID=0,"
-
         mpiprocs = min(self.nproc, self.node_size)
 
         _call_list = [
@@ -227,10 +250,9 @@ class Pbs(Cluster):
             _call_list.append(f"-W group_list={self.group}")
         if use_array:
             _call_list.append(f"-J {array}")
-        _call_list += [
-            f"{executable}",  # <-- The actual script/program to run
-            f"--environment {env}{self.environs or ''}"
-        ]
+        if variables:
+            _call_list.append(f"-v {variables}")
+        _call_list.append(f"{executable}")  # <-- script to run, no CLI args
 
         return " ".join(_call_list)
 
@@ -271,6 +293,60 @@ class Pbs(Cluster):
             sys.exit(-1)
 
         return job_id
+
+    def _extra_qsub_variables(self):
+        """
+        Hook for child classes to inject additional job environment
+        variables (beyond the ones `Pbs.submit()`/`Pbs.run()` already set)
+        into the '-v' option of a qsub call, e.g. Miyabi uses this to pass
+        `SEISFLOWS_CONDA_ENV` to `runscripts/conda_activate-miyabi`.
+
+        :rtype: str
+        :return: comma-separated 'VAR=val' string, or empty string
+        """
+        return ""
+
+    def submit(self, workdir=None, parameter_file="parameters.yaml"):
+        """
+        Submits the main workflow job as a separate job submitted directly
+        to the system that is running the master job.
+
+        .. note::
+            Overwrites `Cluster.submit()`. See module docstring note --
+            `--workdir`/`--parameter_file` are passed via qsub's '-v'
+            option (as `SEISFLOWS_WORKDIR`/`SEISFLOWS_PARAMETER_FILE`)
+            rather than as trailing CLI arguments to `submit_workflow`.
+
+        :type workdir: str
+        :param workdir: path to the current working directory
+        :type parameter_file: str
+        :param parameter_file: parameter file name used to instantiate the
+            SeisFlows package
+        """
+        # Copy log files if present to avoid overwriting
+        for src in [self.path.output_log, self.path.par_file]:
+            if os.path.exists(src) and os.path.exists(self.path.log_files):
+                copy_file(src, copy_to=self.path.log_files)
+
+        workdir = workdir or self.path.workdir
+        variables = (f"SEISFLOWS_ENTRY_POINT=submit,"
+                    f"SEISFLOWS_WORKDIR={workdir},"
+                    f"SEISFLOWS_PARAMETER_FILE={parameter_file}")
+        extra = self._extra_qsub_variables()
+        if extra:
+            variables += f",{extra}"
+
+        submit_call = " ".join([
+            self.submit_call_header,
+            f"-v {variables}",
+            f"{self.submit_workflow}",
+        ])
+        logger.debug(submit_call)
+        try:
+            subprocess.run(submit_call, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            logger.critical(f"SeisFlows master job has failed with: {e}")
+            sys.exit(-1)
 
     def run(self, funcs, single=False, tasktime=None, array=None,
             _attempts=0, **kwargs):
@@ -316,13 +392,27 @@ class Pbs(Cluster):
                 level=self.log_level, **kwargs
                 )
 
+        # Pass everything the running task needs via job environment
+        # variables ('-v') rather than as CLI arguments -- see module
+        # docstring note. `SEISFLOWS_TASKID` is only needed for non-array
+        # (single-task) jobs; array (sub)jobs recover it from PBS's own
+        # 'PBS_ARRAY_INDEX' environment variable instead
+        variables = (f"SEISFLOWS_ENTRY_POINT=run,"
+                    f"SEISFLOWS_FUNCS={funcs_fid},"
+                    f"SEISFLOWS_KWARGS={kwargs_fid}")
+        if single or self.ntask == 1:
+            variables += ",SEISFLOWS_TASKID=0"
+        if self.environs:
+            variables += f",{self.environs}"
+        extra = self._extra_qsub_variables()
+        if extra:
+            variables += f",{extra}"
+
         # Get the run call that will be submitted to the system via
         # subprocess
-        run_call = self.run_call(executable=f"{self.run_functions} "
-                                            f"--funcs {funcs_fid} "
-                                            f"--kwargs {kwargs_fid}",
-                                 tasktime=tasktime, array=array, single=single
-                                 )
+        run_call = self.run_call(executable=f"{self.run_functions}",
+                                 tasktime=tasktime, array=array,
+                                 single=single, variables=variables)
         logger.debug(run_call)
 
         # RUN the job by submitting the qsub directive to system

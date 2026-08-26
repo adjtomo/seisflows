@@ -124,7 +124,7 @@ using `TestFlow <cluster_setup.html#testflow>`__:
 .. code:: bash
 
     mkdir testflow_miyabi && cd testflow_miyabi
-    seisflows setup -f
+    seisflows init
 
     seisflows par workflow test_flow
     seisflows par system miyabi
@@ -189,6 +189,14 @@ Monitor progress the same way as on any other system: the main log is
 written to ``sflog.txt``, and each spawned job writes its own log file to
 ``logs/``.
 
+.. warning::
+
+    Do **not** pass ``--direct`` to ``seisflows submit``/``restart`` on
+    Miyabi. That flag is only meaningful for systems (like Wisteria) whose
+    ``submit()`` supports an in-process fallback mode; ``Pbs``/``Miyabi``
+    do not implement it, and the CLI will print a clean "does not accept
+    argument `direct`" error rather than submitting anything.
+
 6. Troubleshooting
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -196,9 +204,21 @@ written to ``sflog.txt``, and each spawned job writes its own log file to
   be one of Miyabi's node-occupied use queues (see Section 4 above, or
   the ``Miyabi`` class docstring for the current list and their node/
   walltime limits).
-- **Jobs immediately fail with a Python/import error** -- check that
-  ``conda_env`` (Section 2 above) is set correctly and can actually be
-  ``conda activate``-d on a compute node.
+- **"qsub: invalid option -- '-'" (or similar, mentioning single
+  characters)** -- this means something is appending extra command line
+  arguments after the submitted script name; PBS's ``qsub`` does not
+  reliably forward those to the script (see the note in ``system.Pbs``'s
+  module docstring). If you see this, you're likely running a modified/
+  older version of the ``Pbs``/``Miyabi`` classes -- update to the current
+  version, which passes all such information via qsub's ``-v`` option
+  instead.
+- **"CondaError: Run 'conda init' before 'conda activate'"** -- the batch
+  job's shell never sourced Conda's shell hook. This is handled
+  automatically by ``runscripts/conda_activate-miyabi`` (via
+  ``eval "$(conda shell.bash hook)"``); if you still see this, confirm
+  ``conda_env`` is set (Section 2 above) so that wrapper is actually being
+  used, and that plain ``conda`` (not just ``python``) is on ``PATH`` once
+  its module is loaded.
 - **Jobs rejected at submission** -- check ``show_token`` for remaining
   allocation, and confirm your ``group`` project code is correct.
 - **Multibyte character errors** -- see the note in Section 1; rename your

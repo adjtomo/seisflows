@@ -1,29 +1,29 @@
 #!/bin/bash -e
 # ==============================================================================
-# Shared Conda-activation wrapper for Miyabi (JCAHPC), used because Miyabi's
-# compute nodes do NOT inherit the login node's Conda environment. Conda
-# itself is loaded as a module by default on Miyabi, so this script only
-# needs to activate the given environment before handing off to the real
-# SeisFlows entry point ('submit' or 'run').
+# Conda-activation wrapper for Miyabi (JCAHPC), used because Miyabi's compute
+# nodes do NOT inherit the login node's Conda environment. Conda itself is
+# loaded as a module by default on Miyabi, but batch jobs run in a
+# non-interactive, non-login shell that has never sourced 'conda init', so
+# the Conda shell hook must be initialized explicitly before 'conda
+# activate' will work.
 #
 # This script is not meant to be edited directly -- the Conda environment is
-# supplied as the second positional argument by `system.Miyabi`, which is set
-# via the `conda_env` parameter in the SeisFlows parameter file, e.g.:
+# supplied via the 'SEISFLOWS_CONDA_ENV' job environment variable (set via
+# qsub's '-v' option) by `system.Miyabi`, which is set via the `conda_env`
+# parameter in the SeisFlows parameter file, e.g.:
 #
 #     seisflows par conda_env /work/<group>/<user>/conda/envs/seisflows
 #
-# Usage: conda_activate-miyabi <submit|run> <conda_env> [entry point args...]
+# After activating Conda, this script delegates to the shared
+# `pbs_entry_point` wrapper (which reads 'SEISFLOWS_ENTRY_POINT', also set
+# via '-v', to decide whether to run 'submit' or 'run' -- see that script
+# for details).
 # ==============================================================================
 
-ENTRY_POINT="$1"; shift
-CONDA_ENV="$1"; shift
+if [ -n "${SEISFLOWS_CONDA_ENV}" ]; then
+    eval "$(conda shell.bash hook)"
+    conda activate "${SEISFLOWS_CONDA_ENV}"
+fi
 
-conda activate "${CONDA_ENV}"
-
-# All remaining arguments are forwarded unchanged to the real entry point
-# script (--workdir/--parameter_file for 'submit', --funcs/--kwargs/
-# --environment for 'run'). Unlike e.g. Wisteria/PJM, PBS's qsub does not
-# conflict with plain command line arguments to the submitted script, so no
-# further argument munging is required here.
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-exec python "${SCRIPT_DIR}/${ENTRY_POINT}" "$@"
+exec "${SCRIPT_DIR}/pbs_entry_point"
