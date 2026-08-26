@@ -41,7 +41,25 @@ https://miyabi.jcahpc.jp/
     (Miyabi's core-hour equivalent) will cause the job to fail at
     submission or execution time. Token usage can be checked on the login
     node with the `show_token` command; SeisFlows does not manage this.
+
+.. note:: Miyabi Caveat 4
+
+    Like Wisteria, Miyabi's compute nodes do NOT inherit the login node's
+    Conda environment, so a bare 'qsub'-submitted job will not have access
+    to the Python environment used to install SeisFlows. If `conda_env` is
+    set, `submit_workflow`/`run_functions` are routed through the shared
+    `runscripts/conda_activate-miyabi` wrapper (handling both entry points),
+    which activates Conda (loaded as a module by default on Miyabi) before
+    handing off to the real SeisFlows entry point. If `conda_env` is not
+    set, jobs are submitted directly and must already have Conda activated
+    some other way (e.g., inherited via `-V`, if your site allows it).
+
+    This mechanism, and this module's defaults more generally, are
+    currently only set up/tested for Miyabi-G (GPU). Miyabi-C support
+    should work by choosing a '-c' `queue`, but has not been exercised.
 """
+import os
+from seisflows import ROOT_DIR
 from seisflows.system.pbs import Pbs
 
 
@@ -90,6 +108,13 @@ class Miyabi(Pbs):
         which is a serial Python task that controls the workflow. Likely
         this should be 'debug-g'/'debug-c' for small jobs. If not given,
         defaults to `queue`.
+    :type conda_env: str
+    :param conda_env: (Optional) name or full path of the Conda environment
+        SeisFlows is installed in. If given, job submission/execution is
+        routed through `runscripts/conda_activate-miyabi`, which activates
+        this environment on the compute node before running SeisFlows (see
+        Caveat 4). Required on Miyabi unless Conda is made available to
+        compute node jobs some other way.
 
     Paths
     -----
@@ -98,7 +123,7 @@ class Miyabi(Pbs):
     __doc__ = Pbs.__doc__ + __doc__
 
     def __init__(self, mpiexec="mpirun", queue="debug-g", group=None,
-                 submit_to=None, **kwargs):
+                 submit_to=None, conda_env=None, **kwargs):
         """Miyabi init"""
         super().__init__(**kwargs)
 
@@ -106,6 +131,7 @@ class Miyabi(Pbs):
         self.queue = queue
         self.group = group
         self.submit_to = submit_to or self.queue
+        self.conda_env = conda_env
 
         # Node-occupied use queues only, see Caveat 2 above. Node sizes
         # (cores/node) are taken from the hardware specs in User's Guide
@@ -143,3 +169,36 @@ class Miyabi(Pbs):
                 f"multibyte characters, but `system.{name}`=='{val}' "
                 f"contains non-ASCII characters"
             )
+
+    @property
+    def submit_workflow(self):
+        """See `_entry_point`. Overwrites `Cluster.submit_workflow`"""
+        return self._entry_point("submit")
+
+    @property
+    def run_functions(self):
+        """See `_entry_point`. Overwrites `Cluster.run_functions`"""
+        return self._entry_point("run")
+
+    def _entry_point(self, name):
+        """
+        Returns the command used to invoke a SeisFlows entry point script
+        ('submit' or 'run'). Miyabi's compute nodes do not inherit the
+        login node's Conda environment (Caveat 4), so if `conda_env` is
+        set, the call is routed through the shared
+        `conda_activate-miyabi` wrapper script, which activates the given
+        Conda environment before executing the real entry point script
+        (with all further arguments forwarded to it unchanged). If
+        `conda_env` is not set, the entry point script is called directly.
+
+        :type name: str
+        :param name: entry point script name, 'submit' or 'run'
+        :rtype: str
+        :return: command used to invoke the given entry point
+        """
+        if not self.conda_env:
+            return os.path.join(ROOT_DIR, "system", "runscripts", name)
+
+        wrapper = os.path.join(ROOT_DIR, "system", "runscripts",
+                               "conda_activate-miyabi")
+        return f"{wrapper} {name} {self.conda_env}"

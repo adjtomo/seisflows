@@ -1,0 +1,65 @@
+#!/bin/bash -e
+# ==============================================================================
+# Shared Conda-activation wrapper for Wisteria (UTokyo HPC), used because
+# Wisteria's compute nodes do NOT inherit the login node's Conda environment
+# (see `system.Wisteria` Caveat 2), and require the relevant modules to be
+# loaded before `module`/`conda` are usable at all.
+#
+# This script is not meant to be edited directly -- the Conda environment and
+# modules to load are supplied as positional arguments by `system.Wisteria`,
+# set via the `conda_env`/`conda_modules` parameters in the SeisFlows
+# parameter file, e.g.:
+#
+#     seisflows par conda_env /work/01/gr58/share/adjtomo/conda/envs/adjtomo
+#
+# `submit` and `run` are handled differently because Wisteria's PJM scheduler
+# does not tolerate ordinary command line arguments being passed to a
+# submitted script (see `system.Wisteria` Caveat 3): `run` arguments are
+# instead read from the 'SEISFLOWS_*' environment variables set via pjsub's
+# '-x' flag by `system.Fujitsu.run()`, and `submit` arguments are derived
+# directly from PJM's own environment variables.
+#
+# Usage: conda_activate-wisteria <submit|run> <conda_env> [modules_csv]
+# ==============================================================================
+
+ENTRY_POINT="$1"
+CONDA_ENV="$2"
+MODULES_CSV="$3"
+
+if [ -n "${MODULES_CSV}" ]; then
+    IFS=',' read -ra MODULES <<< "${MODULES_CSV}"
+    for mod in "${MODULES[@]}"; do
+        module load "${mod}"
+    done
+fi
+
+module load miniconda/py38_4.9.2
+source "${MINICONDA_DIR}/etc/profile.d/conda.sh"
+conda activate "${CONDA_ENV}"
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+case "${ENTRY_POINT}" in
+    submit)
+        # Ensure that we are using the correct Python version. PJM does not
+        # tolerate extra CLI args to the submitted script (Caveat 3), so
+        # --workdir/--parameter_file are derived from PJM's environment
+        exec python "${SCRIPT_DIR}/submit" --workdir "${PJM_O_WORKDIR}" \
+            --parameter_file parameters.yaml
+        ;;
+    run)
+        # Ensure that we are using the correct Python version. Task info is
+        # supplied via the 'SEISFLOWS_*' environment variables (set through
+        # pjsub '-x' by `system.Fujitsu.run()`), not CLI args, for the same
+        # reason -- translate them into CLI flags here
+        exec python "${SCRIPT_DIR}/run" --funcs "${SEISFLOWS_FUNCS}" \
+            --kwargs "${SEISFLOWS_KWARGS}" \
+            --environment \
+            "SEISFLOWS_TASKID=${SEISFLOWS_TASKID},${SEISFLOWS_ENV}"
+        ;;
+    *)
+        echo "conda_activate-wisteria: unknown entry point " \
+             "'${ENTRY_POINT}' (expected 'submit' or 'run')" >&2
+        exit 1
+        ;;
+esac
