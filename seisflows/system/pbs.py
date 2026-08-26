@@ -306,6 +306,26 @@ class Pbs(Cluster):
         """
         return ""
 
+    @property
+    def _runscripts_dir(self):
+        """
+        Absolute path to `system/runscripts/`, passed to submitted jobs as
+        `SEISFLOWS_RUNSCRIPTS_DIR` (see `submit`/`run`).
+
+        .. note::
+            qsub COPIES a submitted script into its own spool directory
+            (e.g. '/var/spool/pbs/mom_priv/jobs/') before executing it, so
+            a running script cannot reliably locate its sibling scripts by
+            self-referencing its own path (e.g. bash's
+            `dirname "${BASH_SOURCE[0]}"`) -- that would resolve to the
+            spool directory, not this one. We therefore pass this path
+            explicitly instead.
+
+        :rtype: str
+        :return: absolute path to the runscripts directory
+        """
+        return os.path.join(ROOT_DIR, "system", "runscripts")
+
     def submit(self, workdir=None, parameter_file="parameters.yaml"):
         """
         Submits the main workflow job as a separate job submitted directly
@@ -330,6 +350,7 @@ class Pbs(Cluster):
 
         workdir = workdir or self.path.workdir
         variables = (f"SEISFLOWS_ENTRY_POINT=submit,"
+                    f"SEISFLOWS_RUNSCRIPTS_DIR={self._runscripts_dir},"
                     f"SEISFLOWS_WORKDIR={workdir},"
                     f"SEISFLOWS_PARAMETER_FILE={parameter_file}")
         extra = self._extra_qsub_variables()
@@ -398,6 +419,7 @@ class Pbs(Cluster):
         # (single-task) jobs; array (sub)jobs recover it from PBS's own
         # 'PBS_ARRAY_INDEX' environment variable instead
         variables = (f"SEISFLOWS_ENTRY_POINT=run,"
+                    f"SEISFLOWS_RUNSCRIPTS_DIR={self._runscripts_dir},"
                     f"SEISFLOWS_FUNCS={funcs_fid},"
                     f"SEISFLOWS_KWARGS={kwargs_fid}")
         if single or self.ntask == 1:

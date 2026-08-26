@@ -18,20 +18,28 @@
 #
 # Reads (set via '-v'):
 #   SEISFLOWS_ENTRY_POINT              'submit' or 'run'
+#   SEISFLOWS_RUNSCRIPTS_DIR            absolute path to this directory
+#                                       (NOT derived from this script's own
+#                                       path -- qsub copies submitted
+#                                       scripts into its own spool
+#                                       directory before execution, e.g.
+#                                       '/var/spool/pbs/mom_priv/jobs/', so
+#                                       self-locating via
+#                                       `dirname "${BASH_SOURCE[0]}"` does
+#                                       not work here)
 #   SEISFLOWS_WORKDIR, SEISFLOWS_PARAMETER_FILE      (for 'submit')
 #   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS                (for 'run')
 # ==============================================================================
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-
 case "${SEISFLOWS_ENTRY_POINT}" in
     submit)
-        exec python "${SCRIPT_DIR}/submit" --workdir "${SEISFLOWS_WORKDIR}" \
+        exec python "${SEISFLOWS_RUNSCRIPTS_DIR}/submit" \
+            --workdir "${SEISFLOWS_WORKDIR}" \
             --parameter_file "${SEISFLOWS_PARAMETER_FILE}"
         ;;
     run)
-        exec python "${SCRIPT_DIR}/run" --funcs "${SEISFLOWS_FUNCS}" \
-            --kwargs "${SEISFLOWS_KWARGS}"
+        exec python "${SEISFLOWS_RUNSCRIPTS_DIR}/run" \
+            --funcs "${SEISFLOWS_FUNCS}" --kwargs "${SEISFLOWS_KWARGS}"
         ;;
     *)
         echo "pbs_entry_point: SEISFLOWS_ENTRY_POINT must be 'submit' or " \
