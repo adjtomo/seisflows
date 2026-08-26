@@ -48,11 +48,16 @@ https://miyabi.jcahpc.jp/
     Conda environment, so a bare 'qsub'-submitted job will not have access
     to the Python environment used to install SeisFlows. If `conda_env` is
     set, `submit_workflow`/`run_functions` are routed through the shared
-    `runscripts/conda_activate-miyabi` wrapper (handling both entry points),
-    which activates Conda (loaded as a module by default on Miyabi) before
-    handing off to the real SeisFlows entry point. If `conda_env` is not
-    set, jobs are submitted directly and must already have Conda activated
-    some other way (e.g., inherited via `-V`, if your site allows it).
+    `runscripts/conda_activate-miyabi` wrapper, which initializes the Conda
+    shell hook and activates the given environment (Conda itself is loaded
+    as a module by default on Miyabi, but batch jobs run in a
+    non-interactive shell that has never sourced 'conda init', so this
+    initialization step is required) before handing off to
+    `runscripts/pbs_entry_point` (see `system.Pbs`) to run the real
+    SeisFlows entry point. If `conda_env` is not set, jobs are submitted
+    directly through `pbs_entry_point` and must already have Conda
+    activated some other way (e.g., inherited via `-V`, if your site
+    allows it).
 
     This mechanism, and this module's defaults more generally, are
     currently only set up/tested for Miyabi-G (GPU). Miyabi-C support
@@ -172,33 +177,43 @@ class Miyabi(Pbs):
 
     @property
     def submit_workflow(self):
-        """See `_entry_point`. Overwrites `Cluster.submit_workflow`"""
-        return self._entry_point("submit")
+        """See `_entry_point`. Overwrites `Pbs.submit_workflow`"""
+        return self._entry_point
 
     @property
     def run_functions(self):
-        """See `_entry_point`. Overwrites `Cluster.run_functions`"""
-        return self._entry_point("run")
+        """See `_entry_point`. Overwrites `Pbs.run_functions`"""
+        return self._entry_point
 
-    def _entry_point(self, name):
+    @property
+    def _entry_point(self):
         """
-        Returns the command used to invoke a SeisFlows entry point script
-        ('submit' or 'run'). Miyabi's compute nodes do not inherit the
-        login node's Conda environment (Caveat 4), so if `conda_env` is
-        set, the call is routed through the shared
-        `conda_activate-miyabi` wrapper script, which activates the given
-        Conda environment before executing the real entry point script
-        (with all further arguments forwarded to it unchanged). If
-        `conda_env` is not set, the entry point script is called directly.
+        Returns the script used to invoke a SeisFlows entry point.
+        Miyabi's compute nodes do not inherit the login node's Conda
+        environment (Caveat 4), so if `conda_env` is set, the call is
+        routed through the shared `conda_activate-miyabi` wrapper script,
+        which activates the given Conda environment before delegating to
+        `Pbs`'s generic `pbs_entry_point` wrapper. If `conda_env` is not
+        set, `pbs_entry_point` is used directly (`Pbs`'s default).
 
-        :type name: str
-        :param name: entry point script name, 'submit' or 'run'
         :rtype: str
-        :return: command used to invoke the given entry point
+        :return: path to the script used to invoke SeisFlows entry points
         """
         if not self.conda_env:
-            return os.path.join(ROOT_DIR, "system", "runscripts", name)
+            return super().submit_workflow
 
-        wrapper = os.path.join(ROOT_DIR, "system", "runscripts",
-                               "conda_activate-miyabi")
-        return f"{wrapper} {name} {self.conda_env}"
+        return os.path.join(ROOT_DIR, "system", "runscripts",
+                            "conda_activate-miyabi")
+
+    def _extra_qsub_variables(self):
+        """
+        Overwrites `Pbs._extra_qsub_variables`. Passes `conda_env` to
+        `runscripts/conda_activate-miyabi` as a job environment variable
+        (see Caveat 4)
+
+        :rtype: str
+        :return: comma-separated 'VAR=val' string, or empty string
+        """
+        if self.conda_env:
+            return f"SEISFLOWS_CONDA_ENV={self.conda_env}"
+        return ""
