@@ -54,7 +54,7 @@ Miyabi-C's compute nodes, and vice versa.
 
     The ``Miyabi`` system module has not yet been run against a live
     allocation. Please run `TestFlow <cluster_setup.html#testflow>`__ first
-    (Section 2 below) to validate job submission/monitoring on your
+    (Section 3 below) to validate job submission/monitoring on your
     account before attempting a full simulation or inversion, and please
     `open a GitHub Issue <https://github.com/adjtomo/seisflows/issues>`__
     with any quirks you run into so the interface can be improved.
@@ -73,9 +73,9 @@ Miyabi-C's compute nodes, and vice versa.
 
 - SeisFlows and SPECFEM2D/3D/3D_GLOBE installed and compiled *on the
   matching login node* (Login-G for Miyabi-G, Login-C for Miyabi-C). See
-  the `main installation instructions <index.html#installation>`__; Miyabi
-  provides Miniforge (``module load miniforge`` or similar -- check
-  ``module avail``) as its supported Conda distribution.
+  the `main installation instructions <index.html#installation>`__. Miyabi
+  loads Conda as a module by default (check ``module avail``), so
+  environment creation should work as normal once the module is loaded.
 
 .. note::
 
@@ -86,7 +86,35 @@ Miyabi-C's compute nodes, and vice versa.
     but this restriction also applies more broadly (e.g., to your working
     directory path).
 
-2. Validate with TestFlow
+2. Set the Conda environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Like Wisteria, Miyabi's compute nodes do **not** inherit the login node's
+Conda environment, so a plain ``qsub``-submitted job will not have access
+to the Python environment SeisFlows is installed in. Set the ``conda_env``
+parameter to your Conda environment name (or full path), and SeisFlows will
+route job submission/execution through the shared
+``runscripts/conda_activate-miyabi`` wrapper script, which activates that
+environment on the compute node before running SeisFlows:
+
+.. code:: bash
+
+    seisflows par conda_env seisflows
+    # or, e.g., a full path:
+    seisflows par conda_env /work/<group>/<user>/conda/envs/seisflows
+
+If ``conda_env`` is left unset, jobs are submitted directly with no
+wrapping -- only appropriate if Conda is made available to compute node
+jobs some other way (e.g., inherited via ``-V``, if your site allows it).
+
+.. note::
+
+    This mechanism (and this module's defaults more generally) is
+    currently only set up/tested for Miyabi-G (GPU). Running on Miyabi-C
+    should work by selecting a ``-c`` ``queue``, but has not been
+    exercised.
+
+3. Validate with TestFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Before running real simulations, confirm SeisFlows can submit array jobs,
@@ -106,7 +134,7 @@ using `TestFlow <cluster_setup.html#testflow>`__:
 
     seisflows configure
 
-3. Configure the ``Miyabi`` parameters
+4. Configure the ``Miyabi`` parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Running ``seisflows configure`` will populate your parameter file with all
@@ -133,7 +161,7 @@ Other parameters worth double-checking against your job size (see the
     seisflows par nproc 72      # cores per task, matches SPECFEM's nproc
     seisflows par tasktime 30   # walltime (minutes) per spawned job
     seisflows par walltime 60   # walltime (minutes) for the main job
-    seisflows par mpiexec mpirun  # or 'mpiexec.hydra' for Intel MPI (Miyabi-C)
+    seisflows par mpiexec mpirun  # default; matches Miyabi-G's NVIDIA HPC SDK
 
 .. note::
 
@@ -142,7 +170,7 @@ Other parameters worth double-checking against your job size (see the
     (``debug-mig``/``short-mig``/``regular-mig``) are not implemented, since
     SPECFEM-style multi-node MPI workflows are expected to use whole nodes.
 
-4. Submit
+5. Submit
 ~~~~~~~~~~
 
 As with any other SeisFlows system, the master job knows how to:
@@ -161,13 +189,16 @@ Monitor progress the same way as on any other system: the main log is
 written to ``sflog.txt``, and each spawned job writes its own log file to
 ``logs/``.
 
-5. Troubleshooting
+6. Troubleshooting
 ~~~~~~~~~~~~~~~~~~~~
 
 - **"PBS 'queue' must match one of [...]"** -- the ``queue`` parameter must
-  be one of Miyabi's node-occupied use queues (see Section 3 above, or
+  be one of Miyabi's node-occupied use queues (see Section 4 above, or
   the ``Miyabi`` class docstring for the current list and their node/
   walltime limits).
+- **Jobs immediately fail with a Python/import error** -- check that
+  ``conda_env`` (Section 2 above) is set correctly and can actually be
+  ``conda activate``-d on a compute node.
 - **Jobs rejected at submission** -- check ``show_token`` for remaining
   allocation, and confirm your ``group`` project code is correct.
 - **Multibyte character errors** -- see the note in Section 1; rename your

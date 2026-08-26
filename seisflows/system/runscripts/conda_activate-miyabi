@@ -1,0 +1,29 @@
+#!/bin/bash -e
+# ==============================================================================
+# Shared Conda-activation wrapper for Miyabi (JCAHPC), used because Miyabi's
+# compute nodes do NOT inherit the login node's Conda environment. Conda
+# itself is loaded as a module by default on Miyabi, so this script only
+# needs to activate the given environment before handing off to the real
+# SeisFlows entry point ('submit' or 'run').
+#
+# This script is not meant to be edited directly -- the Conda environment is
+# supplied as the second positional argument by `system.Miyabi`, which is set
+# via the `conda_env` parameter in the SeisFlows parameter file, e.g.:
+#
+#     seisflows par conda_env /work/<group>/<user>/conda/envs/seisflows
+#
+# Usage: conda_activate-miyabi <submit|run> <conda_env> [entry point args...]
+# ==============================================================================
+
+ENTRY_POINT="$1"; shift
+CONDA_ENV="$1"; shift
+
+conda activate "${CONDA_ENV}"
+
+# All remaining arguments are forwarded unchanged to the real entry point
+# script (--workdir/--parameter_file for 'submit', --funcs/--kwargs/
+# --environment for 'run'). Unlike e.g. Wisteria/PJM, PBS's qsub does not
+# conflict with plain command line arguments to the submitted script, so no
+# further argument munging is required here.
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+exec python "${SCRIPT_DIR}/${ENTRY_POINT}" "$@"
