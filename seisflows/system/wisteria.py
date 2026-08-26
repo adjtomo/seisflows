@@ -62,10 +62,13 @@ class Wisteria(Fujitsu):
 
         - share-debug: Aquarius GPU debug, 30 min max, 1, 2, 4 GPU available
         - share-short: Aquarius GPU short queue, 2 hr. max, 1, 2, 4 GPU avail.
+        - share: Aquarius GPU-exclusive, available 1, 2 and 4 GPU, select 
+          using `gpu`
     :type gpu: int
     :param gpu: if not None, tells SeisFlows to use the GPU version of SPECFEM, 
         the integer value of `gpu` will set the number of requested GPUs for a 
-        simulation on system (i.e., #PJM -L gpu=`gpu`)
+        simulation on system (i.e., #PJM -L gpu=`gpu`). Required if using 
+        GPU-exclusive rscgrps's
 
     Paths
     -----
@@ -82,13 +85,15 @@ class Wisteria(Fujitsu):
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", 
                                  "custom_run-wisteria")   
 
-    def __init__(self, group=None, rscgrp=None, gpu=None, **kwargs):
+    def __init__(self, group=None, rscgrp=None, gpu=None, submit_to=None,
+                 **kwargs):
         """Wisteria init"""
         super().__init__(**kwargs)
 
         self.group = group
         self.rscgrp = rscgrp
         self.gpu = gpu
+        self.submit_to = submit_to or self.rscgrp
 
         # Wisteria resource groups and their cores per node
         self._rscgrps = {
@@ -96,7 +101,8 @@ class Wisteria(Fujitsu):
                 "debug-o": 48, "short-o": 48, "regular-o": 48, "priority-o": 48,
                 # Node-occupied resource allocation (Aquarius)
                 "debug-a": 36, "short-a": 36, "regular-a": 36, 
-                # GPU-exclusive resource allocation
-                "share-debug": 1, "share-short": 2, "share": 5
+                # GPU-exclusive resource allocation. Share will give you access
+                # to N GPUs based on `gpu`
+                "share-debug": 1, "share-short": 2, "share": 1,
                 }
 
