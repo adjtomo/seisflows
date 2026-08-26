@@ -17,7 +17,11 @@
 # After activating Conda, this script delegates to the shared
 # `pbs_entry_point` wrapper (which reads 'SEISFLOWS_ENTRY_POINT', also set
 # via '-v', to decide whether to run 'submit' or 'run' -- see that script
-# for details).
+# for details). Note that `pbs_entry_point` is located via
+# 'SEISFLOWS_RUNSCRIPTS_DIR' (also set via '-v'), NOT by self-referencing
+# this script's own path -- qsub copies submitted scripts into its own
+# spool directory before execution, so `dirname "${BASH_SOURCE[0]}"` would
+# resolve to that spool directory, not the real runscripts directory.
 # ==============================================================================
 
 if [ -n "${SEISFLOWS_CONDA_ENV}" ]; then
@@ -25,5 +29,4 @@ if [ -n "${SEISFLOWS_CONDA_ENV}" ]; then
     conda activate "${SEISFLOWS_CONDA_ENV}"
 fi
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-exec "${SCRIPT_DIR}/pbs_entry_point"
+exec "${SEISFLOWS_RUNSCRIPTS_DIR}/pbs_entry_point"
