@@ -64,6 +64,7 @@ class Fujitsu(Cluster):
         self.group = None
         self.rscgrp = None
         self.gpu = None
+        self.submit_to = None
         self._rscgrps = {}
     
         # Define PJM-dependent job states used for monitoring queue which
@@ -83,6 +84,9 @@ class Fujitsu(Cluster):
             f"the number of cores per node inherent to the compute system.")     
                                                                                  
         assert(self.rscgrp in self._rscgrps), \
+            f"Cluster resource group must match {self._rscgrps}"  
+
+        assert(self.submit_to in self._rscgrps), \
             f"Cluster resource group must match {self._rscgrps}"  
 
     @property
@@ -118,7 +122,7 @@ class Fujitsu(Cluster):
         _call = " ".join([
             f"pjsub",
             f"{self.pjm_args or ''}",
-            f"-L rscgrp={self.rscgrp}",  # resource group
+            f"-L rscgrp={self.submit_to}",  # resource group
             f"-g {self.group}",  # project code
             f"-N {self.title}",  # job name
             f"-o {self.path.output_log}",  # write stdout to file
@@ -156,10 +160,17 @@ class Fujitsu(Cluster):
              f"-o {os.path.join(self.path.log_files, '%j')}", 
              f"-j",  # merge stderr with stdout
              f"-L elapse={tasktime}",  # [[hour:]minute:]second
-             f"-L node={self.nodes}",
              f"--mpi proc={self.nproc}",
-             f"{executable}"
         ])
+
+        # GPU-exclusive vs. hybrid nodes require different submit arugments
+        if self.gpu and self.rscgrp.startswith("share"):
+            _call += f" -L gpu={self.gpu}"
+        else:
+            _call += f" -L node={self.nodes}"
+
+        _call += f" {executable}"
+
         return _call
     
     def submit(self, workdir=None, parameter_file="parameters.yaml", 
@@ -286,7 +297,8 @@ class Fujitsu(Cluster):
             nsubmit = self.ntask_max - len(job_ids)  # number of jobs to submit
             stop = start + nsubmit
             taskids = _ntasks[start:stop]
-            logger.debug(f"submitting task(s) {taskids[0]}-{taskids[-1]}")
+            if taskids:
+                logger.debug(f"submitting task(s) {taskids[0]}-{taskids[-1]}")
 
             # If this is a `single` run, this will only submit a single task_id
             for taskid in taskids:
@@ -310,7 +322,11 @@ class Fujitsu(Cluster):
                 # Submit to system and grab the job ids from each stdout message
                 stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                         text=True, shell=True).stdout
-                job_ids.append(self._stdout_to_job_id(stdout))
+                try:
+                    job_ids.append(self._stdout_to_job_id(stdout))
+                except IndexError:
+                    logger.critical("Job submission failed, see pjsub error")
+                    sys.exit(-1)
             
             # Used to track how many jobs completed each batch
             jobs_pending = len(job_ids)
