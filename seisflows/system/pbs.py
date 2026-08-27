@@ -521,16 +521,23 @@ class Pbs(Cluster):
                 for i, (job, state) in enumerate(zip(jobs, states)):
                     if state in self._failed_states:
                         failed_array.append(i)
-                array_str = ",".join([str(_) for _ in failed_array])
 
                 logger.info(f"attempt {_attempts+1}/{self.rerun} rerun "
                             f"{len(failed_array)} failed jobs")
-                logger.debug(f"task ids to rerun: {array_str}")
 
-                # Recursively 'run' the functions but only with the failed
-                # jobs, assuming that all other jobs completed nominally
-                self.run(funcs=funcs, single=single, tasktime=tasktime,
-                         array=array_str, _attempts=_attempts + 1, **kwargs)
+                # Unlike SLURM's '--array', which accepts an arbitrary
+                # comma-separated list of indices, PBS's '-J' only accepts
+                # a single contiguous '<start>-<end>[:step]' range per
+                # qsub call. Split the failed indices into maximal
+                # contiguous chunks and rerun each with its own submission
+                for start, end in self._contiguous_ranges(failed_array):
+                    array_str = f"{start}-{end}"
+                    logger.debug(f"task ids to rerun: {array_str}")
+                    # Recursively 'run' the functions but only with the
+                    # failed jobs, assuming all others completed nominally
+                    self.run(funcs=funcs, single=single, tasktime=tasktime,
+                             array=array_str, _attempts=_attempts + 1,
+                             **kwargs)
             else:
                 logger.critical(
                     msg.cli(f"Stopping workflow. Please check logs for "
@@ -548,6 +555,37 @@ class Pbs(Cluster):
             # do). Moving on too quickly may result in required files not
             # being available
             time.sleep(5)
+
+    @staticmethod
+    def _contiguous_ranges(indices):
+        """
+        Group a sorted list of integers into maximal contiguous ranges,
+        e.g. [0, 1, 2, 5, 7, 8] -> [(0, 2), (5, 5), (7, 8)].
+
+        Used to convert an arbitrary (possibly non-contiguous) set of
+        failed task indices into PBS '-J'-compatible range strings, since
+        PBS's '-J' only accepts a single contiguous
+        '<start>-<end>[:step]' range per qsub call -- not an arbitrary
+        comma-separated list of indices the way SLURM's '--array' does.
+
+        :type indices: list of int
+        :param indices: task indices, in any order
+        :rtype: list of tuple
+        :return: list of (start, end) tuples, one per contiguous run,
+            in ascending order
+        """
+        indices = sorted(indices)
+        ranges = []
+        start = prev = indices[0]
+        for idx in indices[1:]:
+            if idx == prev + 1:
+                prev = idx
+                continue
+            ranges.append((start, prev))
+            start = prev = idx
+        ranges.append((start, prev))
+
+        return ranges
 
     def task_ids(self, single=False):
         """
@@ -645,11 +683,6 @@ class Pbs(Cluster):
             cmd = f"qstat -H -f {shlex.quote(jid)}"
             result = subprocess.run(cmd, capture_output=True, text=True,
                                     shell=True)
-            logger.debug(f"qstat -H -f cmd: {cmd}")
-            logger.debug(f"qstat -H -f stdout: {result.stdout}")
-            if result.stderr:
-                logger.debug(f"qstat -H -f stderr: {result.stderr}")
-
             match = re.search(r"Exit_status\s*=\s*(-?\d+)", result.stdout)
             job_ids.append(jid)
             if match and int(match.group(1)) == 0:
