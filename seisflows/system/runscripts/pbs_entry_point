@@ -16,6 +16,16 @@
 # out and translates them into the CLI arguments 'submit'/'run' expect.
 # This script is not meant to be edited directly.
 #
+# Unlike SLURM's sbatch (which defaults a batch job's working directory to
+# wherever sbatch was invoked from), PBS does NOT start a job in its
+# submission directory -- PBS User's Guides instead recommend an explicit
+# 'cd ${PBS_O_WORKDIR}' in job scripts. SeisFlows modules fall back to
+# `os.getcwd()` for their own `workdir` parameter if it isn't explicitly
+# provided (which it isn't -- `import_seisflows()` uses its `workdir`
+# argument only to locate the parameter file, it does not forward it into
+# the modules it builds), so we `cd` into `SEISFLOWS_WORKDIR` below before
+# calling 'submit'/'run' to make sure that fallback resolves correctly.
+#
 # Reads (set via '-v'):
 #   SEISFLOWS_ENTRY_POINT              'submit' or 'run'
 #   SEISFLOWS_RUNSCRIPTS_DIR            absolute path to this directory
@@ -27,9 +37,12 @@
 #                                       self-locating via
 #                                       `dirname "${BASH_SOURCE[0]}"` does
 #                                       not work here)
-#   SEISFLOWS_WORKDIR, SEISFLOWS_PARAMETER_FILE      (for 'submit')
-#   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS                (for 'run')
+#   SEISFLOWS_WORKDIR                  working directory to `cd` into
+#   SEISFLOWS_PARAMETER_FILE           (for 'submit')
+#   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS  (for 'run')
 # ==============================================================================
+
+cd "${SEISFLOWS_WORKDIR}"
 
 case "${SEISFLOWS_ENTRY_POINT}" in
     submit)

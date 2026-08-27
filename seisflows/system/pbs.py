@@ -417,9 +417,14 @@ class Pbs(Cluster):
         # variables ('-v') rather than as CLI arguments -- see module
         # docstring note. `SEISFLOWS_TASKID` is only needed for non-array
         # (single-task) jobs; array (sub)jobs recover it from PBS's own
-        # 'PBS_ARRAY_INDEX' environment variable instead
+        # 'PBS_ARRAY_INDEX' environment variable instead. `SEISFLOWS_WORKDIR`
+        # is used by `runscripts/pbs_entry_point` to `cd` into the working
+        # directory before running -- unlike SLURM's sbatch, PBS jobs do NOT
+        # default to the submission directory (PBS User's Guides instead
+        # recommend an explicit 'cd ${PBS_O_WORKDIR}' in job scripts)
         variables = (f"SEISFLOWS_ENTRY_POINT=run,"
                     f"SEISFLOWS_RUNSCRIPTS_DIR={self._runscripts_dir},"
+                    f"SEISFLOWS_WORKDIR={self.path.workdir},"
                     f"SEISFLOWS_FUNCS={funcs_fid},"
                     f"SEISFLOWS_KWARGS={kwargs_fid}")
         if single or self.ntask == 1:
