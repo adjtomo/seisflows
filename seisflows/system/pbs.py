@@ -42,6 +42,7 @@ TODO
 """
 import os
 import re
+import shlex
 import sys
 import time
 import subprocess
@@ -613,11 +614,18 @@ class Pbs(Cluster):
             return None, None
 
         # Determine success/failure of each finished (sub)job via
-        # `tracejob`'s reported 'Exit_status' (0 == success)
+        # `tracejob`'s reported 'Exit_status' (0 == success). Note that
+        # `finished_ids` (via `_parse_qstat_stdout`) already excludes the
+        # array parent/summary row, which has no 'Exit_status' of its own
         for jid in finished_ids:
-            cmd = f"tracejob -n 1 {jid}"
+            cmd = f"tracejob -n 1 {shlex.quote(jid)}"
             result = subprocess.run(cmd, capture_output=True, text=True,
                                     shell=True)
+            logger.debug(f"tracejob cmd: {cmd}")
+            logger.debug(f"tracejob stdout: {result.stdout}")
+            if result.stderr:
+                logger.debug(f"tracejob stderr: {result.stderr}")
+
             match = re.search(r"Exit_status=(-?\d+)", result.stdout)
             job_ids.append(jid)
             if match and int(match.group(1)) == 0:
@@ -637,6 +645,17 @@ class Pbs(Cluster):
         Parse the JOB_ID and STATUS columns out of `qstat`-formatted stdout
         (columns: JOB_ID, JOB_NAME, STATUS, ...)
 
+        .. note::
+            For array jobs, `qstat -t` and `qstat -H -t` both list a
+            'parent'/summary row (e.g. '123456[].opbs', with empty
+            brackets) alongside the individual (sub)job rows (e.g.
+            '123456[0].opbs'). That parent row is a container, not an
+            actual executed job -- it has no 'Exit_status' of its own, and
+            including it would also throw off the index-alignment that
+            rerun logic relies on (sorted first, ahead of every numbered
+            subjob, since it has no array index). We therefore exclude it
+            here so callers never see it.
+
         :type stdout: str
         :param stdout: stdout from a `qstat` call
         :rtype: (list, list)
@@ -652,6 +671,9 @@ class Pbs(Cluster):
             parts = line.split()
             if len(parts) < 3:
                 continue
+            # Skip the array parent/summary row, see note above
+            if re.search(r"\[]", parts[0]):
+                continue
             job_ids.append(parts[0])
             job_states.append(parts[2].upper())
 
@@ -666,7 +688,7 @@ class Pbs(Cluster):
         :rtype: (list, list)
         :return: (list of job ids, list of corresponding job states)
         """
-        cmd = f"qstat -t {job_id}"
+        cmd = f"qstat -t {shlex.quote(job_id)}"
         result = subprocess.run(cmd, capture_output=True, text=True,
                                 shell=True)
         return self._parse_qstat_stdout(result.stdout)
@@ -680,7 +702,7 @@ class Pbs(Cluster):
         :rtype: list
         :return: list of finished (sub)job ids
         """
-        cmd = f"qstat -H -t {job_id}"
+        cmd = f"qstat -H -t {shlex.quote(job_id)}"
         result = subprocess.run(cmd, capture_output=True, text=True,
                                 shell=True)
         finished_ids, _ = self._parse_qstat_stdout(result.stdout)
