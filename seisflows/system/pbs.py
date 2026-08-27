@@ -50,7 +50,8 @@ import numpy as np
 from seisflows import logger, ROOT_DIR
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
-from seisflows.tools.config import pickle_function_list, copy_file
+from seisflows.tools.config import (pickle_function_list, copy_file,
+                                    import_seisflows)
 
 
 class Pbs(Cluster):
@@ -332,7 +333,8 @@ class Pbs(Cluster):
         """
         return os.path.join(ROOT_DIR, "system", "runscripts")
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml"):
+    def submit(self, workdir=None, parameter_file="parameters.yaml",
+              direct=False):
         """
         Submits the main workflow job as a separate job submitted directly
         to the system that is running the master job.
@@ -348,11 +350,39 @@ class Pbs(Cluster):
         :type parameter_file: str
         :param parameter_file: parameter file name used to instantiate the
             SeisFlows package
+        :type direct: bool
+        :param direct: (used for overriding system modules) if True, runs
+            the master job directly in the current Python process (like
+            `system.Workstation`/`system.Fujitsu`) rather than submitting
+            it as a separate qsub job. Intended for use when already
+            logged in to a compute-adjacent interactive node with the
+            Conda environment already active -- e.g., on Miyabi, a
+            'pre-post' queue interactive session (User's Guide Sec.
+            5.2.3) -- avoiding an unnecessary extra qsub hop for the
+            lightweight master/control job. Individual solver/simulation
+            tasks spawned by the workflow are still submitted to compute
+            node queues via `run()` regardless of this setting.
+
+            .. warning::
+                On Miyabi, the User's Guide notes that pre-post sessions
+                do NOT provide "the same environment as the login node"
+                for Miyabi-G specifically -- confirm your Conda
+                environment/binaries are actually usable from your
+                pre-post session before relying on this for real runs.
         """
         # Copy log files if present to avoid overwriting
         for src in [self.path.output_log, self.path.par_file]:
             if os.path.exists(src) and os.path.exists(self.path.log_files):
                 copy_file(src, copy_to=self.path.log_files)
+
+        if direct:
+            logger.info(msg.mjr("SEISFLOWS SUBMIT"))
+            workflow = import_seisflows(workdir=workdir or self.path.workdir,
+                                        parameter_file=parameter_file)
+            workflow.check()
+            workflow.setup()
+            workflow.run()
+            return
 
         workdir = workdir or self.path.workdir
         variables = (f"SEISFLOWS_ENTRY_POINT=submit,"
