@@ -249,6 +249,12 @@ class Pbs(Cluster):
         if self.group:
             _call_list.append(f"-W group_list={self.group}")
         if use_array:
+            # PBS array jobs must be submitted rerunnable ('-r y'), matching
+            # e.g. the Miyabi User's Guide's own array job example ('qsub -r
+            # y -J ...'). Without this, sites that default the 'Rerunable'
+            # job attribute to False will reject array submissions with
+            # "cannot submit non-rerunable Array Job"
+            _call_list.append("-r y")
             _call_list.append(f"-J {array}")
         if variables:
             _call_list.append(f"-v {variables}")
