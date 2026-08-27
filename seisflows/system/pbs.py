@@ -15,11 +15,23 @@ systems.
 
     Because job STATUS values reported by 'qstat' (e.g., 'R', 'Q', 'F')
     typically do not by themselves distinguish a successfully completed job
-    from a failed one, this module additionally relies on 'tracejob' to
-    inspect a finished job's 'Exit_status' attribute (0 == success). If a
-    given PBS deployment does not provide 'tracejob', or reports states in a
-    different vocabulary, `query_job_states` will need to be overwritten by
-    the relevant child class (see e.g., `system.Miyabi`).
+    from a failed one, this module additionally queries 'qstat -H -f
+    <job_id>' for finished jobs to inspect their 'Exit_status' attribute
+    (0 == success). Note this requires a specific job id -- plain 'qstat -f'
+    with no id, or 'qstat -f' on a job that has already left the active
+    queue, will not work; the '-H' (history) scope is required to look up a
+    finished job's full attribute set this way.
+
+    ('tracejob' was tried first, since it's the mechanism the Miyabi User's
+    Guide documents for inspecting a finished job's 'Exit_status', but
+    proved unreliable in practice for array subjobs specifically -- it
+    could not find records for either a subjob id or the bare parent
+    sequence number, even for jobs confirmed (via 'qstat -H -f') to have
+    completed successfully. 'qstat -H -f' worked reliably instead.)
+
+    If a given PBS deployment reports states in a different vocabulary,
+    `query_job_states` will need to be overwritten by the relevant child
+    class (see e.g., `system.Miyabi`).
 
 .. note::
     Unlike SLURM's 'sbatch', PBS's 'qsub' does not reliably forward
@@ -581,7 +593,7 @@ class Pbs(Cluster):
         1) Queries currently active (queued/running/held) jobs with `qstat`
         2) If none are found (i.e., the job has left the active queue),
            queries the finished-job history with `qstat -H`
-        3) For any jobs found to be finished, queries `tracejob` to
+        3) For any jobs found to be finished, queries `qstat -H -f` to
            determine each job's 'Exit_status' (0 == success), and
            synthesizes 'COMPLETED'/'FAILED' states from this
 
@@ -614,19 +626,31 @@ class Pbs(Cluster):
             return None, None
 
         # Determine success/failure of each finished (sub)job via
-        # `tracejob`'s reported 'Exit_status' (0 == success). Note that
-        # `finished_ids` (via `_parse_qstat_stdout`) already excludes the
-        # array parent/summary row, which has no 'Exit_status' of its own
+        # `qstat -H -f`'s reported 'Exit_status' attribute (0 == success).
+        # Note that `finished_ids` (via `_parse_qstat_stdout`) already
+        # excludes the array parent/summary row, which has no 'Exit_status'
+        # of its own.
+        #
+        # .. note::
+        #     `tracejob` was tried first but proved unreliable for array
+        #     subjobs in practice (returned "Couldn't find Job Id" for both
+        #     the subjob and the bare parent sequence number, even though
+        #     the job had clearly completed). `qstat -H -f <job_id>` is a
+        #     standard PBS Professional command that reliably returns a
+        #     finished job's full attribute set, including a line of the
+        #     form 'Exit_status = 0' (note the spaces around '=', unlike
+        #     the compact 'Exit_status=0' form used by `tracejob`/the
+        #     Miyabi User's Guide's `tracejob` example)
         for jid in finished_ids:
-            cmd = f"tracejob -n 1 {shlex.quote(jid)}"
+            cmd = f"qstat -H -f {shlex.quote(jid)}"
             result = subprocess.run(cmd, capture_output=True, text=True,
                                     shell=True)
-            logger.debug(f"tracejob cmd: {cmd}")
-            logger.debug(f"tracejob stdout: {result.stdout}")
+            logger.debug(f"qstat -H -f cmd: {cmd}")
+            logger.debug(f"qstat -H -f stdout: {result.stdout}")
             if result.stderr:
-                logger.debug(f"tracejob stderr: {result.stderr}")
+                logger.debug(f"qstat -H -f stderr: {result.stderr}")
 
-            match = re.search(r"Exit_status=(-?\d+)", result.stdout)
+            match = re.search(r"Exit_status\s*=\s*(-?\d+)", result.stdout)
             job_ids.append(jid)
             if match and int(match.group(1)) == 0:
                 job_states.append("COMPLETED")
