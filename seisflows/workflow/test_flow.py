@@ -105,8 +105,8 @@ class TestFlow:
         logger.info("overwriting internal System parameters from given values")
         self.system.ntask = 3
         self.system.nproc = 1
-        self.system.tasktime = .25  # 15 seconds
-        self.system.walltime = 2.5  # 2.5 minutes
+        self.system.tasktime = 1  # 15 seconds
+        self.system.walltime = 5  # 2.5 minutes
         self.system.rerun = 0
 
     def run(self):

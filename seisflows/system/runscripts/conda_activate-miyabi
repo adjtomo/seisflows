@@ -1,0 +1,32 @@
+#!/bin/bash -e
+# ==============================================================================
+# Conda-activation wrapper for Miyabi (JCAHPC), used because Miyabi's compute
+# nodes do NOT inherit the login node's Conda environment. Conda itself is
+# loaded as a module by default on Miyabi, but batch jobs run in a
+# non-interactive, non-login shell that has never sourced 'conda init', so
+# the Conda shell hook must be initialized explicitly before 'conda
+# activate' will work.
+#
+# This script is not meant to be edited directly -- the Conda environment is
+# supplied via the 'SEISFLOWS_CONDA_ENV' job environment variable (set via
+# qsub's '-v' option) by `system.Miyabi`, which is set via the `conda_env`
+# parameter in the SeisFlows parameter file, e.g.:
+#
+#     seisflows par conda_env /work/<group>/<user>/conda/envs/seisflows
+#
+# After activating Conda, this script delegates to the shared
+# `pbs_entry_point` wrapper (which reads 'SEISFLOWS_ENTRY_POINT', also set
+# via '-v', to decide whether to run 'submit' or 'run' -- see that script
+# for details). Note that `pbs_entry_point` is located via
+# 'SEISFLOWS_RUNSCRIPTS_DIR' (also set via '-v'), NOT by self-referencing
+# this script's own path -- qsub copies submitted scripts into its own
+# spool directory before execution, so `dirname "${BASH_SOURCE[0]}"` would
+# resolve to that spool directory, not the real runscripts directory.
+# ==============================================================================
+
+if [ -n "${SEISFLOWS_CONDA_ENV}" ]; then
+    eval "$(conda shell.bash hook)"
+    conda activate "${SEISFLOWS_CONDA_ENV}"
+fi
+
+exec "${SEISFLOWS_RUNSCRIPTS_DIR}/pbs_entry_point"

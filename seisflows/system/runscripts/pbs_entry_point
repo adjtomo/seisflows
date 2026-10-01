@@ -1,0 +1,62 @@
+#!/bin/bash -e
+# ==============================================================================
+# Generic entry-point wrapper for `system.Pbs`.
+#
+# Unlike SLURM's sbatch, PBS's qsub does not reliably forward trailing
+# command line arguments to the submitted script -- some qsub builds scan
+# the entire command line for dash-prefixed tokens (GNU getopt 'permute'
+# behavior) rather than stopping at the first non-option argument, so
+# anything appended after the script name (e.g. '--workdir /path') gets fed
+# back into qsub's own option parser and rejected as an unrecognized
+# option.
+#
+# `system.Pbs.submit()`/`system.Pbs.run()` therefore pass everything the
+# real SeisFlows entry point ('submit' or 'run') needs as job environment
+# variables via qsub's '-v' option instead, and this script reads them back
+# out and translates them into the CLI arguments 'submit'/'run' expect.
+# This script is not meant to be edited directly.
+#
+# Unlike SLURM's sbatch (which defaults a batch job's working directory to
+# wherever sbatch was invoked from), PBS does NOT start a job in its
+# submission directory -- PBS User's Guides instead recommend an explicit
+# 'cd ${PBS_O_WORKDIR}' in job scripts. SeisFlows modules fall back to
+# `os.getcwd()` for their own `workdir` parameter if it isn't explicitly
+# provided (which it isn't -- `import_seisflows()` uses its `workdir`
+# argument only to locate the parameter file, it does not forward it into
+# the modules it builds), so we `cd` into `SEISFLOWS_WORKDIR` below before
+# calling 'submit'/'run' to make sure that fallback resolves correctly.
+#
+# Reads (set via '-v'):
+#   SEISFLOWS_ENTRY_POINT              'submit' or 'run'
+#   SEISFLOWS_RUNSCRIPTS_DIR            absolute path to this directory
+#                                       (NOT derived from this script's own
+#                                       path -- qsub copies submitted
+#                                       scripts into its own spool
+#                                       directory before execution, e.g.
+#                                       '/var/spool/pbs/mom_priv/jobs/', so
+#                                       self-locating via
+#                                       `dirname "${BASH_SOURCE[0]}"` does
+#                                       not work here)
+#   SEISFLOWS_WORKDIR                  working directory to `cd` into
+#   SEISFLOWS_PARAMETER_FILE           (for 'submit')
+#   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS  (for 'run')
+# ==============================================================================
+
+cd "${SEISFLOWS_WORKDIR}"
+
+case "${SEISFLOWS_ENTRY_POINT}" in
+    submit)
+        exec python "${SEISFLOWS_RUNSCRIPTS_DIR}/submit" \
+            --workdir "${SEISFLOWS_WORKDIR}" \
+            --parameter_file "${SEISFLOWS_PARAMETER_FILE}"
+        ;;
+    run)
+        exec python "${SEISFLOWS_RUNSCRIPTS_DIR}/run" \
+            --funcs "${SEISFLOWS_FUNCS}" --kwargs "${SEISFLOWS_KWARGS}"
+        ;;
+    *)
+        echo "pbs_entry_point: SEISFLOWS_ENTRY_POINT must be 'submit' or " \
+             "'run', got '${SEISFLOWS_ENTRY_POINT}'" >&2
+        exit 1
+        ;;
+esac
