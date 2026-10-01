@@ -93,23 +93,24 @@ def test_edited_parameter_file_name(tmpdir, par_file, par_file_dict):
     assert(out.stdout.strip() == f"{check_key.lower()}: {check_val}")
 
 
-def test_cmd_setup(tmpdir):
+def test_cmd_init(tmpdir):
     """
-    Test setting up the SeisFlows working directory
+    Test initializing a blank SeisFlows parameter file in a working directory
+
+    .. note::
+        `SeisFlows.setup()` used to create the parameter file itself (via
+        `symlink`/`overwrite` kwargs), but that responsibility now belongs
+        entirely to `SeisFlows.init()` -- `setup()` today assumes a
+        (configured) parameter file already exists and instead runs
+        `workflow.check()` + `workflow.setup()` on it (see
+        `test_cmd_setup` below).
     """
     os.chdir(tmpdir)
     par_file = os.path.join(tmpdir, "parameters.yaml")
 
-    # Check with anmd without symlinking as well as with overwriting
     with patch.object(sys, "argv", ["seisflows"]):
-        # Without symlinking
         sf = SeisFlows()
-        sf.setup(symlink=False, overwrite=False)
-        assert(os.path.exists(par_file))
-        os.remove(par_file)
-
-        # With symlinking
-        sf.setup(symlink=True, overwrite=False)
+        sf.init()
         assert(os.path.exists(par_file))
 
         # Edit the current par file in a noticeable way so we can check
@@ -120,12 +121,36 @@ def test_cmd_setup(tmpdir):
         with open(par_file, "r") as f:
             assert(test_phrase in f.read())
 
-        # With overwriting
-        sf.setup(symlink=False, overwrite=True, force=True)
+        # Without `force`, an existing parameter file is left alone unless
+        # the user confirms interactively (which we don't simulate here) --
+        # with `force=True` it's silently overwritten
+        sf.init(force=True)
         assert(os.path.exists(par_file))
         with open(par_file, "r") as f:
             text = f.read()
             assert(test_phrase not in text)
+
+
+def test_cmd_setup_reports_parameter_errors(tmpdir):
+    """
+    `SeisFlows.setup()` runs `workflow.check()` + `workflow.setup()` against
+    an already-configured parameter file (unlike `init()`, it does not
+    create one). Exercising the full check+setup pipeline needs real solver
+    binaries/data, which is out of scope for a fast unit test (see the
+    'sfexample2d'-style integration tests instead) -- here we only check
+    that an incomplete configuration is caught as a parameter error and
+    reported rather than raising an uncaught traceback.
+    """
+    os.chdir(tmpdir)
+
+    with patch.object(sys, "argv", ["seisflows"]):
+        sf = SeisFlows()
+        sf.init()
+        sf.configure()
+        # A freshly configured parameter file points `path_specfem_data`/
+        # `path_specfem_bin` at nothing -- `setup()` should catch this as an
+        # `AssertionError` and print a message rather than crash
+        sf.setup()
 
 
 def test_cmd_configure(tmpdir, par_file):

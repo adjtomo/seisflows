@@ -5,10 +5,12 @@ import os
 import pytest
 import numpy as np
 from glob import glob
+from obspy import Trace
 from seisflows import ROOT_DIR
 from seisflows.tools.config import Dict
 from seisflows.tools.model import Model
 from seisflows.tools.config import custom_import
+from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
 
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
@@ -44,18 +46,22 @@ def test_model_functions():
 
 def test_model_io(tmpdir):
     """
-    Check that saving and loading npz file works
+    Check that writing and re-reading a model in Fortran binary format works
+    (round-trips through disk the same way SeisFlows <-> SPECFEM does)
     """
     m = Model(path=TEST_MODEL, fmt=".bin")
 
-    m.save(path=os.path.join(tmpdir, "test.npz"))
-    m_new = Model(path=os.path.join(tmpdir, "test.npz"))
-    assert(m_new.ngll[0] == m.ngll[0])
-    assert(m_new.fmt == m.fmt)
-
-    # Check that writing fortran binary works
+    # `Model` only knows how to write real SPECFEM-recognized parameter names
+    # in Fortran binary format, so round-trip through that rather than a
+    # (no-longer-supported) generic npz save
     m.write(path=tmpdir)
     assert(len(glob(os.path.join(tmpdir, f"*{m.fmt}"))) == 2)
+
+    m_new = Model(path=tmpdir, fmt=".bin")
+    assert(m_new.ngll[0] == m.ngll[0])
+    assert(m_new.fmt == m.fmt)
+    assert(np.asarray(m_new.vector, dtype=float) ==
+           pytest.approx(np.asarray(m.vector, dtype=float), rel=1e-6))
 
 
 def test_model_from_input_vector():
@@ -85,3 +91,81 @@ def test_custom_import():
     module = custom_import(name="preprocess", module="default")
     assert(module.__name__ == "Default")
     assert(module.__module__ == "seisflows.preprocess.default")
+
+
+def _trace(data):
+    """Convenience function to build a minimal ObsPy Trace for rotation tests"""
+    return Trace(data=np.array(data, dtype=float))
+
+
+def test_rotate_ne_trace_to_rt_theta_zero():
+    """
+    At theta==theta_p==0, Wang et al. (2019) Eqs. 9/10 reduce to TT==EE and
+    RR==NN (all other terms drop out via sin(0)==0/cos(0)==1)
+    """
+    tr_ee, tr_ne = _trace([1., 2., 3.]), _trace([10., 20., 30.])
+    tr_en, tr_nn = _trace([100., 200., 300.]), _trace([4., 5., 6.])
+
+    tr_rr, tr_tt = rotate_ne_trace_to_rt(tr_ee=tr_ee, tr_ne=tr_ne, tr_en=tr_en,
+                                         tr_nn=tr_nn, theta=0., theta_p=0.)
+
+    assert(tr_tt.data == pytest.approx(tr_ee.data))
+    assert(tr_rr.data == pytest.approx(tr_nn.data))
+    assert(tr_tt.stats.component == "T")
+    assert(tr_rr.stats.component == "R")
+
+
+def test_rotate_ne_trace_to_rt_theta_quarter_turn():
+    """
+    At theta==pi/2, theta_p==0: cos(theta)==0, sin(theta)==1, cos(theta_p)==1,
+    sin(theta_p)==0, so Eq. 9 reduces to TT==-EN and Eq. 10 reduces to RR==NE
+    """
+    tr_ee, tr_ne = _trace([1., 2., 3.]), _trace([10., 20., 30.])
+    tr_en, tr_nn = _trace([100., 200., 300.]), _trace([4., 5., 6.])
+
+    tr_rr, tr_tt = rotate_ne_trace_to_rt(tr_ee=tr_ee, tr_ne=tr_ne, tr_en=tr_en,
+                                         tr_nn=tr_nn, theta=np.pi / 2,
+                                         theta_p=0.)
+
+    assert(tr_tt.data == pytest.approx(-tr_en.data))
+    assert(tr_rr.data == pytest.approx(tr_ne.data))
+
+
+def test_rotate_rt_adjsrc_to_ne_invalid_component():
+    """Only 'R' or 'T' component adjoint sources can be rotated"""
+    tr = _trace([1., 2., 3.])
+    tr.stats.component = "Z"
+    with pytest.raises(AssertionError):
+        rotate_rt_adjsrc_to_ne(tr=tr, theta=0., theta_p=0.)
+
+
+def test_rotate_rt_adjsrc_to_ne_t_component():
+    """
+    At theta==theta_p==0, Eq. 16 reduces to: EE==input, EN==NE==NN==0
+    """
+    tr = _trace([1., 2., 3.])
+    tr.stats.component = "T"
+
+    tr_ee, tr_ne, tr_en, tr_nn = rotate_rt_adjsrc_to_ne(tr=tr, theta=0.,
+                                                        theta_p=0.)
+
+    assert(tr_ee.data == pytest.approx(tr.data))
+    assert(tr_ne.data == pytest.approx(np.zeros(3)))
+    assert(tr_en.data == pytest.approx(np.zeros(3)))
+    assert(tr_nn.data == pytest.approx(np.zeros(3)))
+
+
+def test_rotate_rt_adjsrc_to_ne_r_component():
+    """
+    At theta==theta_p==0, Eq. 18 reduces to: NN==input, EE==NE==EN==0
+    """
+    tr = _trace([1., 2., 3.])
+    tr.stats.component = "R"
+
+    tr_ee, tr_ne, tr_en, tr_nn = rotate_rt_adjsrc_to_ne(tr=tr, theta=0.,
+                                                        theta_p=0.)
+
+    assert(tr_nn.data == pytest.approx(tr.data))
+    assert(tr_ee.data == pytest.approx(np.zeros(3)))
+    assert(tr_ne.data == pytest.approx(np.zeros(3)))
+    assert(tr_en.data == pytest.approx(np.zeros(3)))

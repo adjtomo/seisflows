@@ -69,10 +69,10 @@ class NLCG(Gradient):
         """
         super().checkpoint()
 
-        checkpoint_dict = np.load(self.path._checkpoint)
+        checkpoint_dict = dict(np.load(self.path._checkpoint))
         checkpoint_dict["NLCG_iter"] = self._NLCG_iter
 
-        np.savez(file=self.path._checkpoint, **dict_out)  # NOQA
+        np.savez(file=self.path._checkpoint, **checkpoint_dict)  # NOQA
 
     def compute_direction(self):
         """

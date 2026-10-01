@@ -10,16 +10,22 @@ from seisflows.system.workstation import Workstation
 from seisflows.system.cluster import Cluster
 
 
-def _test_function_a(tmpdir):
+def _test_function_a(tmpdir, **kwargs):
     """
     A test function that simply prints, used to check run
+
+    .. note::
+        Must accept `**kwargs` because `Cluster.run()` pickles `verbose` and
+        `log_level` alongside any user-provided kwargs and passes the full
+        set to every function in the run list (see `system.cluster.Cluster.
+        run()` and `system/runscripts/run`)
     """
     test_dir = os.path.join(tmpdir, "test_dir")
     if not os.path.exists(test_dir):
         unix.mkdir(test_dir)
 
 
-def _test_function_b(tmpdir):
+def _test_function_b(tmpdir, **kwargs):
     """
     A test function that simply prints
     """

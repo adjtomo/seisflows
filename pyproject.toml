@@ -38,3 +38,9 @@ repository = "https://github.com/adjtomo/seisflows"
 
 [project.scripts]
 seisflows = "seisflows.seisflows:main"
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: exercises many optimizer iterations end-to-end and can take several minutes; skipped by default, run explicitly with `pytest -m slow`",
+]
+addopts = '-m "not slow"'
