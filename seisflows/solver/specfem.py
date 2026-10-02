@@ -414,6 +414,63 @@ class Specfem:
             )
             sys.exit(-1)
 
+    def check_model_files(self, path):
+        """
+        Cheap, structural counterpart to `check_model_values`: only looks at
+        file names, so it never reads model values and is safe to run in the
+        (small, short-lived) master job. Catches the common mistakes (wrong
+        path, missing parameter, files from an incomplete write) before any
+        work is queued. The value checks it skips are done on the compute
+        nodes instead, see `validate_model_values`.
+
+        :type path: str
+        :param path: path to model file(s) that should be in the format
+            expected by the Model class (FORTRAN binary, ADIOS etc.)
+        """
+        ext = self._ext or ".bin"
+        try:
+            assert os.path.exists(path), \
+                f"Model check path does not exist: {path}"
+
+            counts = {}
+            for par in self._parameters:
+                # '*' also matches the region tag of SPECFEM3D_GLOBE files
+                counts[par] = len(glob(os.path.join(path, f"*_{par}{ext}")))
+                assert counts[par] > 0, (
+                    f"No '{par}' model files (*_{par}{ext}) found in: {path}"
+                )
+            assert len(set(counts.values())) == 1, (
+                f"Model parameters have differing numbers of files, the "
+                f"model may be incomplete: {counts}"
+            )
+        except AssertionError as e:
+            logger.critical(
+                msg.cli(str(e), header="model files error", border="=")
+            )
+            sys.exit(-1)
+
+    def validate_model_values(self, path):
+        """
+        Reads a model and checks its values (e.g., Poisson's ratio bounds),
+        raising rather than exiting so the caller decides how to fail. This
+        is the expensive half of `check_model_values`, meant to run inside a
+        compute task; the master job only runs `check_model_files`.
+
+        Model statistics are only printed by task 0, otherwise every task
+        would repeat the same output.
+
+        :type path: str
+        :param path: path to model file(s)
+        :raises AssertionError: if the model is missing or has invalid values
+        """
+        assert os.path.exists(path), f"Model check path does not exist: {path}"
+
+        _model = Model(path=path, parameters=self._parameters,
+                       regions=self._regions)
+        _model.check()
+        if get_task_id() == 0:
+            _model.print_stats()
+
     def set_parameters(self, keys, vals, file, delim, **kwargs):
         """
         Public API that allows other modules modify solver-specific files with

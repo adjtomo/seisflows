@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total: `pytest seisflows/tests` → 92 passed, 4 deselected (`slow`)**
+**Current total:** `pytest seisflows/tests` → 107 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -81,10 +81,11 @@ viable once the master job stops blocking.
     returns `job_id` immediately, skipping `monitor_job_status()` entirely.
     **Does not yet handle failure** — see Not Done.
 - **`seisflows/workflow/forward.py`**
-  - `WorkflowSuspended` (new exception) — the sentinel a task-list function
-    raises after dispatching non-blockingly. Contract (see its docstring):
-    persist `self._states[task_name] = f"PENDING:{job_id}"`, checkpoint,
-    call `self.system.submit(depends_on=job_id)`, then raise it.
+  - `WorkflowSuspended` (new exception, now in `dispatch.py`) — the
+    sentinel raised after dispatching non-blockingly. Contract: persist
+    `PENDING:<job_id>` as the task's state, checkpoint, call
+    `self.system.submit(depends_on=job_id)`, then raise it. `Dispatcher.run`
+    does all of this; tasks never raise it by hand.
   - `Forward.run()` catches `WorkflowSuspended`, exits cleanly (not a task
     failure), and now **returns a status string** (`"COMPLETE"`/
     `"STOPPED"`/`"SUSPENDED"`) instead of `None`.
@@ -141,8 +142,12 @@ viable once the master job stops blocking.
     dependent job is still pending. Revisit only if real-cluster testing on
     Chinook actually surfaces this.
 - **Phase 1 pilot: non-blocking dispatch wired into real tasks.**
-  - `Forward._run_on_system(funcs, **kwargs)` — the one call that task-list
-    functions use instead of `system.run()`. Blocking systems: identical to
+  (Originally written as methods on `Forward`; since moved into a
+  `Dispatcher` class, see the "Dispatcher extracted" entry below. Names in
+  this entry are the current ones.)
+  - `Dispatcher.run(funcs, **kwargs)` (`seisflows/workflow/dispatch.py`) —
+    the one call that task-list functions use instead of `system.run()`, as
+    `self.dispatcher.run(...)`. Blocking systems: identical to
     `system.run()`. Non-blocking (`system.blocking == False`): the calling
     task is simply *entered twice*. First entry dispatches
     (`run(blocking=False)`), records `PENDING:<job_id>:<attempt>` as the
@@ -158,7 +163,7 @@ viable once the master job stops blocking.
     attempt count lives in the state file.
   - State value is now `PENDING:<job_id>:<attempt>` (attempt optional when
     parsing, so the earlier `PENDING:<job_id>` form still reads as attempt
-    0). Parsed/validated by `_parse_pending_state`; a malformed value gets
+    0). Parsed/validated by `parse_pending_state`; a malformed value gets
     the same clear state-file error as any other bad line.
   - Converted call sites: `Forward.generate_synthetic_data`,
     `Forward.evaluate_initial_misfit` (so `Inversion`/`NoiseInversion`
@@ -166,14 +171,14 @@ viable once the master job stops blocking.
     re-runs, and its post-processing after `super()` is the finish half),
     `Migration.run_adjoint_simulations`, and
     `Migration.postprocess_event_kernels`.
-  - `Forward._resuming`: True when the running task is re-entering to
+  - `Dispatcher.resuming`: True when the running task is re-entering to
     collect a dispatch. Needed because re-entry re-runs everything before
     the dispatch call: `postprocess_event_kernels` deletes the
     `misfit_kernel`/`mk_nosmooth` dirs *before* dispatching, which on resume
     would have destroyed the finished job's output, so that cleanup is now
     skipped when resuming. **Any task converted in future must be audited
     for this** (a pre-dispatch step that isn't safe to repeat).
-  - Safety rails: a task may make at most ONE `_run_on_system` call per
+  - Safety rails: a task may make at most ONE `dispatcher.run` call per
     invocation (a single PENDING state can't tell two dispatches apart) —
     a second raises `AssertionError` rather than silently skipping it on
     resume. `Forward._supports_nonblocking` (True) /
@@ -208,14 +213,111 @@ viable once the master job stops blocking.
     module's `setup()` and they are idempotent (mkdir / skip-if-exists;
     `Specfem._initialize_working_directories` skips existing source dirs),
     so a resume does not wipe a dispatched job's results.
-  - Tests: `test_workflow.py` drives `_run_on_system` against a
+  - Tests: `test_workflow.py` drives `Dispatcher.run` against a
     `_FakeSystem` (records dispatches/submits, replays scripted
     `job_outcome`s) — dispatch+suspend, resume success runs only the finish
     half, resume failure re-dispatches only failed ids, retry cap honored
     across restarts, fresh dispatch after exhaustion, second-dispatch
-    assertion, `_resuming` guard, `check()` gating. `test_system.py`:
+    assertion, `resuming` guard, `check()` gating. `test_system.py`:
     append/backup behavior, fatal failed resume submit, `job_outcome`
     (incl. partial re-run), support flags, `check()` gating.
+- **Model validation moved off the master job (non-blocking mode only).**
+  `solver.check_model_values` reads the whole model, which doesn't belong in
+  a 1-core, short-walltime master (or on the login node under `--direct`).
+  Split in two:
+  - Master: `Specfem.check_model_files(path)` — file names only (path
+    exists, every solver parameter has files, equal file counts across
+    parameters). Never reads values; catches the common mistakes (wrong
+    path, missing parameter, incomplete write) *before anything queues*.
+  - Compute: `Specfem.validate_model_values(path)` — the expensive
+    `Model.check()`; raises instead of exiting; stats printed by task 0
+    only. Run as the first function of the dispatch
+    (`Forward._check_model_single`, inserted at the top of the function list
+    inline in each task, see the pattern below), told which model via
+    `path_model`.
+  - **Non-retryable failure.** A failed check writes its error to
+    `<scratch>/preflight_failed.txt` and re-raises. After a failed job the
+    master looks for that file *before* applying `rerun`: if present it
+    exits with the check's own message, marks the task `-1`, and does NOT
+    re-dispatch (a deterministic failure would just repeat and burn retries).
+    The marker is cleared before every fresh dispatch and consumed when
+    used, so a stale one can't be mistaken for a new failure. Scheduler
+    agnostic (no exit-code parsing).
+  - `Dispatcher.nonblocking` is the single definition of "dispatch is
+    non-blocking right now" (a task is running AND `system.blocking` is
+    False), shared by `Dispatcher.run` and the tasks' model checks.
+  - The pattern, repeated inline in each task that checks a model (a few
+    times, deliberately explicit rather than hidden behind a helper):
+    ```python
+    if self.dispatcher.nonblocking:
+        self.solver.check_model_files(path=path_model)  # values on compute
+        run_list.insert(0, self._check_model_single)
+    else:
+        self.solver.check_model_values(path=path_model)
+    ```
+  - Applied to `generate_synthetic_data` and `evaluate_initial_misfit`
+    (`generate_synthetic_data` now passes `path_model` explicitly; same
+    default it used before). **Blocking mode is untouched**: still the full
+    `check_model_values` on the master, which stays the known-good baseline.
+  - Costs to know about: in non-blocking mode every task reads the model to
+    check it (they read it anyway in `import_model`, but watch the I/O at
+    hundreds of tasks); and the model statistics now land in task 0's log
+    under `logs/`, not in `sflog.txt`. A bad model that passes the file
+    check now costs the queue wait before it is caught.
+  - Tests: `test_workflow.py` (blocking vs non-blocking check placement,
+    marker written/raised on failure, preflight failure not retried, other
+    failures still retried, stale marker cleared), `test_solver.py`
+    (structural check passes/catches missing path, missing parameter,
+    incomplete write; never reads values; `validate_model_values` passes on
+    a real model and raises rather than exits).
+- **Decision: what NOT to move off the master.** Considered fusing
+  master-side compute (e.g. gradient evaluation) into an adjacent
+  `single=True` dispatch, and a separate preflight job with an `afterok`
+  dependency. Both rejected: the master-side steps are small serial tasks, so
+  a compute node is overkill and putting them on debug/prepost is too
+  complicated; and `afterok` leaves the dependent array pending forever on
+  failure unless the site sets `kill_invalid_depend`, with no clean PBS
+  equivalent. Steps that mutate in-memory state (the optimizer) can't be
+  offloaded transparently anyway. Optimizer and gradient evaluation stay on
+  the master; if they prove too heavy, size the master through `walltime` and
+  `slurm_args` (e.g. `--mem`) rather than moving them.
+
+- **Dispatcher extracted from `Forward`.** The submission machinery was
+  cluttering the workflow class, whose job is the science. It now lives in
+  `seisflows/workflow/dispatch.py`:
+  - `Dispatcher` (one per workflow, `self.dispatcher`, created in
+    `Forward.__init__`): `run()`, `nonblocking`, `resuming`, the preflight
+    marker (`marker`, `flag_preflight_failure`, `clear_preflight_failure`),
+    and the suspend/resume/retry logic. `task(name)` is a context manager
+    that `Forward.run()` wraps each task in, replacing the manual
+    current-task/dispatch-count bookkeeping.
+  - `WorkflowSuspended`, `pending_state()` and `parse_pending_state()` moved
+    there too (`WorkflowSuspended` is still imported into `forward.py`).
+  - `Forward` keeps `run()`, the `WorkflowSuspended` catch, the
+    `_supports_nonblocking` gate in `check()`, and `_check_model_single`
+    (it needs `self.solver`). `Migration` calls `self.dispatcher.run()` /
+    `.resuming`.
+  - The dispatcher holds a reference to its workflow and reads/writes task
+    state through `workflow._states` / `workflow.checkpoint()` instead of
+    owning any state. Chosen over passing getter/setter callables because
+    `Inversion.run()` *reassigns* `self._states` each iteration (a held
+    reference would go stale) and callables would add lambdas or tiny
+    forwarding methods. The workflow<->dispatcher cycle pickles fine (tested:
+    compute-side functions are bound methods of the workflow, which `dill`
+    sends whole).
+  - Removed `_with_model_check` / `_check_model`: the model-check branch is
+    inline in `generate_synthetic_data` and `evaluate_initial_misfit`.
+  - **The checkpoint system deliberately did NOT move into the dispatcher.**
+    The state file records the progress of every task, blocking or not
+    (`Forward.run()`'s skip-completed logic, `Inversion`'s iteration line,
+    `NoiseInversion`'s sub-states); the dispatcher only needs to read and
+    write one task's `PENDING` value. If it is ever extracted it should be
+    its own object (a `Checkpoint`/state class owning read, validate,
+    atomic write and reset) that both `Forward` and the `Dispatcher` take.
+    Not done now: `_states` is touched in ~26 places across `forward.py`,
+    `inversion.py` and `noise_inversion.py` plus the tests, which makes it a
+    change of its own. The dispatcher's use of `workflow._states` is the one
+    thing that would change.
 
 ## Not done / come back to this
 
@@ -235,7 +337,7 @@ viable once the master job stops blocking.
   `super().evaluate_initial_misfit` twice; `postprocess_event_kernels` does
   two `single=True` runs). Needs per-dispatch sub-keys in the state file
   (the idiom `_run_rt_adjoint_simulations_separate` already uses for
-  blocking crash-recovery) and a `key=` argument on `_run_on_system`.
+  blocking crash-recovery) and a `key=` argument on `Dispatcher.run`.
   `NoiseInversion` currently inherits `Inversion._supports_nonblocking =
   False`, so `check()` refuses it — flip only once converted.
 - **Phase 2 (hard): the line search.** `Inversion.update_line_search()` is
@@ -282,6 +384,12 @@ viable once the master job stops blocking.
 - **Master-job `walltime` guidance.** In non-blocking mode a master job
   only does bookkeeping, so `walltime` can be short (the point is to fit
   `debug`). Not yet documented for users; worth a docs note once validated.
+  Measure first: the master still does gradient evaluation and optimizer
+  vector operations, which scale with model size (see the decision above).
+- **Line-search model checks.** `Inversion.evaluate_line_search_misfit` (and
+  the `NoiseInversion` override) still call `check_model_values` on the
+  master. Convert them with the rest of the line search in Phase 2, using
+  the same inline `dispatcher.nonblocking` pattern shown above.
 - **`Miyabi.submit_to`/`Chinook.submit_to`** (routing the master job to a
   cheap queue/partition) already exists and needs no changes — just a
   reminder that `submit_to="debug"` on Chinook is the real-world validation
