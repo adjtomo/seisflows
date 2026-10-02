@@ -9,7 +9,7 @@ from obspy import Trace
 from seisflows import ROOT_DIR
 from seisflows.tools.config import Dict
 from seisflows.tools.model import Model
-from seisflows.tools.config import custom_import
+from seisflows.tools.config import custom_import, atomic_write_lines
 from seisflows.tools.noise import rotate_ne_trace_to_rt, rotate_rt_adjsrc_to_ne
 
 
@@ -153,6 +153,55 @@ def test_rotate_rt_adjsrc_to_ne_t_component():
     assert(tr_ne.data == pytest.approx(np.zeros(3)))
     assert(tr_en.data == pytest.approx(np.zeros(3)))
     assert(tr_nn.data == pytest.approx(np.zeros(3)))
+
+
+def test_atomic_write_lines_round_trip(tmpdir):
+    """Basic sanity check: writes exactly the given lines, nothing more"""
+    fid = os.path.join(tmpdir, "state.txt")
+    atomic_write_lines(fid, ["a: 1\n", "b: 2\n"])
+    with open(fid) as f:
+        assert(f.readlines() == ["a: 1\n", "b: 2\n"])
+
+
+def test_atomic_write_lines_overwrites_existing(tmpdir):
+    """A second write should fully replace the first, not append/merge"""
+    fid = os.path.join(tmpdir, "state.txt")
+    atomic_write_lines(fid, ["a: 1\n"])
+    atomic_write_lines(fid, ["b: 2\n"])
+    with open(fid) as f:
+        assert(f.readlines() == ["b: 2\n"])
+
+
+def test_atomic_write_lines_no_leftover_tmp_file(tmpdir):
+    """
+    The temp file used internally should never remain after a successful
+    write -- only the real target file should be left in the directory
+    """
+    fid = os.path.join(tmpdir, "state.txt")
+    atomic_write_lines(fid, ["a: 1\n"])
+    assert(glob(os.path.join(tmpdir, "*")) == [fid])
+
+
+def test_atomic_write_lines_preserves_original_on_failure(tmpdir, monkeypatch):
+    """
+    If writing fails partway through, the ORIGINAL file must be left
+    untouched (not truncated/corrupted) -- this is the whole point of
+    writing to a temp file first rather than overwriting in place
+    """
+    fid = os.path.join(tmpdir, "state.txt")
+    atomic_write_lines(fid, ["original: 1\n"])
+
+    def _boom(*args, **kwargs):
+        raise OSError("simulated crash mid-write")
+
+    monkeypatch.setattr(os, "replace", _boom)
+    with pytest.raises(OSError):
+        atomic_write_lines(fid, ["new: 2\n"])
+
+    # Original file is untouched, and no stray temp file left behind
+    with open(fid) as f:
+        assert(f.readlines() == ["original: 1\n"])
+    assert(glob(os.path.join(tmpdir, "*")) == [fid])
 
 
 def test_rotate_rt_adjsrc_to_ne_r_component():

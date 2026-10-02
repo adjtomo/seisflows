@@ -63,6 +63,8 @@ viable once the master job stops blocking.
 
 ## Done
 
+**Current total: `pytest seisflows/tests` → 65 passed, 4 deselected (`slow`)**
+
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
     (generic `Cluster` mimics a scheduler locally via `subprocess`/
@@ -106,6 +108,38 @@ viable once the master job stops blocking.
   - `test_workflow.py`: 3 new tests, dummy-subclass pattern (no real
     system/solver) — suspend/resume round-trip through the state file,
     `Inversion.run()` not advancing iteration on suspension.
+- **State-file hardening** (prompted by a review of the checkpoint system
+  before building Phase 1 on top of it — found that a single stray blank
+  line in the file crashed the whole workflow load with a raw `ValueError`,
+  confirmed by reproducing it):
+  - `tools/config.py`: new `atomic_write_lines(path, lines)` — writes to a
+    temp file in the same directory then `os.replace()`s it over the
+    target, so a process killed mid-checkpoint (scheduler walltime limit,
+    OOM) can't leave a truncated/unreadable state file. `Forward.checkpoint()`
+    and `Inversion.checkpoint()` both switched to use it instead of
+    overwriting in place.
+  - `Forward.__init__`'s state-file reader now tolerates blank lines
+    (harmless, e.g. a stray trailing newline from hand-editing) and raises
+    a clear `logger.critical` + `sys.exit(-1)` naming the file and exact
+    line for genuinely malformed content, instead of an unguarded
+    `ValueError`/`int()` traceback.
+  - Fixed the state file's self-written header comment, which still only
+    documented `0`/`1`/`-1` and had gone stale the moment `PENDING:<job_id>`
+    was introduced earlier in this same project.
+  - Also fixed a latent one-character bug noticed in passing:
+    `Inversion.checkpoint()`'s appended `iteration: N` line was missing its
+    trailing `\n`.
+  - 6 new tests: `test_tools.py` (`atomic_write_lines` round-trip, no
+    leftover temp file, original file preserved if the replace step fails)
+    and `test_workflow.py` (blank-line tolerance, clear error on a
+    malformed value).
+  - **Deliberately not done**: a lock/PID-stamp guard against two processes
+    touching the state file concurrently. The non-blocking hand-off is
+    sequential by design (dispatch → exit → *then* the dependent job can
+    even be released), so this shouldn't occur in normal operation — the
+    realistic risk is a user manually re-running `seisflows submit` while a
+    dependent job is still pending. Revisit only if real-cluster testing on
+    Chinook actually surfaces this.
 
 ## Not done / come back to this
 

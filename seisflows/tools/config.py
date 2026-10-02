@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 import re
+import tempfile
 import yaml
 import numpy as np
 import traceback
@@ -400,6 +401,40 @@ def pickle_function_list(functions, path=os.getcwd(), **kwargs):
         dill.dump(obj=kwargs, file=f)
 
     return fid_funcs_pickle, fid_kwargs_pickle
+
+def atomic_write_lines(path, lines):
+    """
+    Overwrite a text file's contents without risking a half-written (and
+    therefore unreadable/data-losing) file if the process is killed
+    mid-write, e.g. by a scheduler walltime limit or an OOM kill. Writes to
+    a temporary file in the same directory as `path`, then `os.replace()`s
+    it over `path` -- that rename is atomic on POSIX filesystems, so a
+    reader of `path` only ever sees either the old content or the fully
+    written new content, never a truncated in-between state.
+
+    Used for checkpointing the SeisFlows state file
+    (`workflow.forward.Forward.checkpoint`), which is rewritten frequently
+    during a workflow and needs to survive an unclean process exit.
+
+    :type path: str
+    :param path: full path to the file to (re)write
+    :type lines: list of str
+    :param lines: lines to write, in order. Include a trailing '\\n' on
+        each line that should have one (as `readlines()` returns them);
+        this function does not add one
+    """
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".tmp_",
+                                    suffix=f"_{os.path.basename(path)}")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.writelines(lines)
+        os.replace(tmp_path, path)
+    except BaseException:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
 
 def copy_file(fid, copy_to="./"):
     """

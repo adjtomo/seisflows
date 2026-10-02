@@ -12,7 +12,7 @@ from time import asctime
 
 from seisflows import logger
 from seisflows.tools import msg, unix
-from seisflows.tools.config import Dict
+from seisflows.tools.config import Dict, atomic_write_lines
 
 
 class WorkflowSuspended(Exception):
@@ -141,21 +141,38 @@ class Forward:
         # Read in any existing state file which keeps track of workflow tasks
         self._states = {task.__name__: 0 for task in self.task_list}
         if os.path.exists(self.path.state_file):
-            for line in open(self.path.state_file, "r").readlines():
-                if line.startswith("#"):
+            with open(self.path.state_file, "r") as f:
+                state_lines = f.readlines()
+            for i, line in enumerate(state_lines, start=1):
+                line = line.strip()
+                # Comment lines and blank lines (e.g. a stray trailing
+                # newline from hand-editing the file) are not an error
+                if not line or line.startswith("#"):
                     continue
-                # Split only on the first ':' -- a PENDING state's value
-                # (e.g. 'PENDING:12345') contains a ':' of its own
-                key, val = line.strip().split(":", 1)
-                val = val.strip()
-                # PENDING states are kept as strings (see `WorkflowSuspended`
-                # docstring); every other state is a plain int (0/1/-1), as
-                # is the (unrelated) 'iteration' line written by
-                # `workflow.inversion.Inversion.checkpoint()`
-                if val.startswith("PENDING"):
-                    self._states[key] = val
-                else:
-                    self._states[key] = int(val)
+                try:
+                    # Split only on the first ':' -- a PENDING state's
+                    # value (e.g. 'PENDING:12345') contains a ':' of its own
+                    key, val = line.split(":", 1)
+                    val = val.strip()
+                    # PENDING states are kept as strings (see
+                    # `WorkflowSuspended` docstring); every other state is
+                    # a plain int (0/1/-1), as is the (unrelated)
+                    # 'iteration' line written by
+                    # `workflow.inversion.Inversion.checkpoint()`
+                    self._states[key] = (
+                        val if val.startswith("PENDING") else int(val)
+                    )
+                except ValueError:
+                    logger.critical(msg.cli(
+                        f"State file contains a line SeisFlows cannot "
+                        f"parse (line {i}): '{line}'. This file is only "
+                        f"ever meant to be written by SeisFlows itself; "
+                        f"if it was hand-edited, check for a value that "
+                        f"is not '0', '1', '-1', or 'PENDING:<job_id>'",
+                        items=[f"STATE FILE: {self.path.state_file}"],
+                        header="state file error", border="=")
+                    )
+                    sys.exit(-1)
 
     @property
     def task_list(self):
@@ -265,7 +282,9 @@ class Forward:
             with open(self.path.state_file, "w") as f:
                 f.write(f"# SeisFlows State File\n")
                 f.write(f"# {asctime()}\n")
-                f.write(f"#'1: complete', '0: pending', '-1: failed'\n")
+                f.write(f"#'1: complete', '0: pending', '-1: failed', "
+                       f"'PENDING:<job_id>: dispatched non-blockingly, "
+                       f"waiting on job'\n")
                 f.write(f"# ========================================\n")
 
         # Distribute modules to the class namespace. We don't do this at init
@@ -279,6 +298,13 @@ class Forward:
         Saves active SeisFlows working state to disk as a text files such that
         the workflow can be resumed following a crash, pause or termination of
         workflow.
+
+        .. note::
+            Written via `atomic_write_lines` (temp file + `os.replace`)
+            rather than an in-place overwrite, so a process killed
+            mid-checkpoint (e.g. a scheduler walltime limit) can't leave
+            behind a truncated, unreadable state file -- the reader only
+            ever sees the old content or the fully written new content.
         """
         logger.debug("checkpointing workflow to seisflows state file")
 
@@ -286,13 +312,11 @@ class Forward:
         with open(self.path.state_file, "r") as f:
             lines = f.readlines()
 
-        with open(self.path.state_file, "w") as f:
-            # Rewrite header values
-            for line in lines:
-                if line.startswith("#"):
-                    f.write(line)
-            for key, val in self._states.items():
-                f.write(f"{key}: {val}\n")
+        out_lines = [line for line in lines if line.startswith("#")]
+        for key, val in self._states.items():
+            out_lines.append(f"{key}: {val}\n")
+
+        atomic_write_lines(self.path.state_file, out_lines)
 
     def run(self):
         """

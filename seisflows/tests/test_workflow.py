@@ -58,6 +58,38 @@ class _DummyForward(Forward):
         self.calls.append("task_c")
 
 
+def test_forward_init_tolerates_blank_lines_in_state_file(tmpdir):
+    """
+    A stray blank line (e.g. a trailing newline added by a text editor) in
+    the state file should be silently ignored, not crash the whole
+    workflow -- it carries no data, unlike a genuinely malformed line
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+        f.write("task_a: 1\n")
+        f.write("\n")  # stray blank line
+
+    workflow = _DummyForward(workdir=str(tmpdir), path_state_file=state_file)
+    assert(workflow._states["task_a"] == 1)
+
+
+def test_forward_init_raises_clear_error_on_malformed_state_file(tmpdir):
+    """
+    A non-blank line SeisFlows can't parse (e.g. a hand-edited value that
+    isn't '0'/'1'/'-1'/'PENDING:<job_id>') should raise a clear, actionable
+    error naming the file and line -- not a raw traceback from deep inside
+    `int()`/tuple-unpacking
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+        f.write("task_a: banana\n")
+
+    with pytest.raises(SystemExit):
+        _DummyForward(workdir=str(tmpdir), path_state_file=state_file)
+
+
 def test_forward_run_executes_all_tasks_in_order(tmpdir):
     """A fresh workflow should run every task, in order, exactly once"""
     workflow = _DummyForward(workdir=str(tmpdir))

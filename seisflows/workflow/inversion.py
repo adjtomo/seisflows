@@ -26,6 +26,7 @@ from glob import glob
 from seisflows import logger
 from seisflows.workflow.migration import Migration
 from seisflows.tools import msg, unix
+from seisflows.tools.config import atomic_write_lines
 from seisflows.tools.model import Model
 
 
@@ -263,11 +264,11 @@ class Inversion(Migration):
         for i in range(len(lines)-1, -1, -1):
             if lines[i].startswith("iteration"):
                 lines.pop(i)
-        lines.append(f"iteration: {self.iteration}")
+        lines.append(f"iteration: {self.iteration}\n")
 
-        # Rewrite checkpoint file with new iteration line
-        with open(self.path.state_file, "w") as f:
-            f.writelines(lines)
+        # Rewrite checkpoint file with new iteration line (atomically, see
+        # `Forward.checkpoint`)
+        atomic_write_lines(self.path.state_file, lines)
 
     def generate_synthetic_data(self, **kwargs):
         """
