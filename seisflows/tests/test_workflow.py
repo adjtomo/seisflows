@@ -13,7 +13,7 @@ beyond the state file itself.
 import os
 import pytest
 
-from seisflows.workflow.forward import Forward
+from seisflows.workflow.forward import Forward, WorkflowSuspended
 from seisflows.workflow.inversion import Inversion
 
 
@@ -23,9 +23,10 @@ class _DummyForward(Forward):
     `Forward.run()`'s checkpoint/resume/failure logic can be tested without
     any real system/solver modules.
     """
-    def __init__(self, fail_on=None, **kwargs):
+    def __init__(self, fail_on=None, suspend_on=None, **kwargs):
         self.calls = []
         self._fail_on = fail_on or set()
+        self._suspend_on = suspend_on or set()
         super().__init__(**kwargs)
 
     @property
@@ -41,6 +42,17 @@ class _DummyForward(Forward):
         self.calls.append("task_b")
         if "task_b" in self._fail_on:
             raise RuntimeError("task_b intentionally failed")
+        # Mimics a task-list function that calls `system.run(blocking=False)`,
+        # gets back a job_id, and suspends the workflow to wait on it -- but
+        # only the first time around; a resumed run (task_b already PENDING)
+        # goes straight through, as the real `evaluate_initial_misfit`-style
+        # dispatch/finish split would (finish-half logic isn't modeled here
+        # since this harness only tests the suspend/resume control flow)
+        if ("task_b" in self._suspend_on and
+                self._states.get("task_b") != "PENDING:99999"):
+            self._states["task_b"] = "PENDING:99999"
+            self.checkpoint()
+            raise WorkflowSuspended()
 
     def task_c(self):
         self.calls.append("task_c")
@@ -57,10 +69,11 @@ def test_forward_run_executes_all_tasks_in_order(tmpdir):
     with open(workflow.path.state_file, "w") as f:
         f.write("# SeisFlows State File\n")
 
-    workflow.run()
+    status = workflow.run()
 
     assert(workflow.calls == ["task_a", "task_b", "task_c"])
     assert(workflow._states == {"task_a": 1, "task_b": 1, "task_c": 1})
+    assert(status == "COMPLETE")
 
 
 def test_forward_run_skips_completed_tasks_on_resume(tmpdir):
@@ -140,12 +153,67 @@ def test_forward_stop_after(tmpdir):
 
     workflow = _DummyForward(workdir=str(tmpdir), path_state_file=state_file,
                              stop_after="task_b")
-    workflow.run()
+    status = workflow.run()
 
     assert(workflow.calls == ["task_a", "task_b"])
     assert(workflow._states["task_a"] == 1)
     assert(workflow._states["task_b"] == 1)
     assert(workflow._states["task_c"] == 0)
+    assert(status == "STOPPED")
+
+
+def test_forward_run_suspends_non_blocking_dispatch(tmpdir):
+    """
+    A task that raises `WorkflowSuspended` (mimicking `system.run(
+    blocking=False)` dispatching work and the task persisting its own
+    'PENDING:<job_id>' state) should stop the workflow cleanly -- not as a
+    failure, and without touching tasks after it
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+
+    workflow = _DummyForward(workdir=str(tmpdir), path_state_file=state_file,
+                             suspend_on={"task_b"})
+    status = workflow.run()
+
+    assert(workflow.calls == ["task_a", "task_b"])  # task_c never ran
+    assert(status == "SUSPENDED")
+    assert(workflow._states["task_a"] == 1)
+    assert(workflow._states["task_b"] == "PENDING:99999")  # not failed (-1)
+    assert(workflow._states["task_c"] == 0)
+
+
+def test_forward_run_resumes_pending_task_after_suspension(tmpdir):
+    """
+    Re-reading a state file with a 'PENDING:<job_id>' task should round-trip
+    correctly (not raise/crash on `int()`-parsing a job ID), and a fresh
+    process picking it back up should be able to tell 'this task already
+    dispatched work' apart from 'this task hasn't started yet'
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+
+    first_run = _DummyForward(workdir=str(tmpdir), path_state_file=state_file,
+                              suspend_on={"task_b"})
+    first_run.run()
+
+    # Simulate the dependent job re-invoking `seisflows submit`: a fresh
+    # process re-reads the same state file
+    resumed = _DummyForward(workdir=str(tmpdir), path_state_file=state_file,
+                            suspend_on={"task_b"})
+    assert(resumed._states["task_a"] == 1)
+    assert(resumed._states["task_b"] == "PENDING:99999")
+
+    status = resumed.run()
+
+    # task_a already complete (skipped); task_b's dummy "finish half" (see
+    # `_DummyForward.task_b`) runs without re-suspending since it's already
+    # PENDING; task_c runs for the first time
+    assert(resumed.calls == ["task_b", "task_c"])
+    assert(status == "COMPLETE")
+    assert(resumed._states == {"task_a": 1, "task_b": 1, "task_c": 1})
 
 
 class _DummyInversion(Inversion):
@@ -154,8 +222,9 @@ class _DummyInversion(Inversion):
     per-iteration bookkeeping in `Inversion.run()`/`Inversion.checkpoint()`
     without needing real system/solver/preprocess/optimize modules
     """
-    def __init__(self, **kwargs):
+    def __init__(self, suspend_on_iteration=None, **kwargs):
         self.calls = []
+        self._suspend_on_iteration = suspend_on_iteration
         super().__init__(**kwargs)
 
     @property
@@ -164,6 +233,11 @@ class _DummyInversion(Inversion):
 
     def only_task(self):
         self.calls.append(self.iteration)
+        if (self.iteration == self._suspend_on_iteration and
+                self._states.get("only_task") != "PENDING:99999"):
+            self._states["only_task"] = "PENDING:99999"
+            self.checkpoint()
+            raise WorkflowSuspended()
 
 
 def test_inversion_run_increments_iteration_and_resets_states(tmpdir):
@@ -186,6 +260,39 @@ def test_inversion_run_increments_iteration_and_resets_states(tmpdir):
     # next iteration
     assert(workflow.iteration == 4)
     assert(workflow._states["only_task"] == 0)
+
+
+def test_inversion_run_does_not_advance_iteration_on_suspension(tmpdir):
+    """
+    If a task-list function suspends the workflow mid-iteration (non-blocking
+    dispatch), `Inversion.run()` must NOT increment `self.iteration` or reset
+    states for a next iteration -- that would silently skip re-checking the
+    in-progress (suspended) iteration when a dependent job resumes it
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+
+    workflow = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file,
+                               start=1, end=3, suspend_on_iteration=2)
+    workflow.iteration = workflow.start
+    workflow.run()
+
+    # Stopped mid-iteration 2, having completed iteration 1 in full
+    assert(workflow.calls == [1, 2])
+    assert(workflow.iteration == 2)  # NOT advanced to 3
+    assert(workflow._states["only_task"] == "PENDING:99999")
+
+    # A dependent job re-invoking `seisflows submit` resumes from here: a
+    # fresh instance re-reads iteration==2 and the PENDING task state, picks
+    # back up in the same (not-yet-advanced) iteration, and proceeds normally
+    resumed = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file,
+                              start=1, end=3, suspend_on_iteration=2)
+    assert(resumed.iteration == 2)
+    resumed.run()
+
+    assert(resumed.calls == [2, 3])
+    assert(resumed.iteration == 4)
 
 
 @pytest.mark.parametrize(

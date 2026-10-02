@@ -236,17 +236,19 @@ class Inversion(Migration):
         """Call the forward.run() function iteratively, from `start` to `end`"""
         while self.iteration < self.end + 1:
             logger.info(msg.mjr(f"RUNNING ITERATION {self.iteration:0>2}"))
-            super().run()  # Runs task list
-            # Assuming that if `stop_after` is used, that we are NOT iterating
-            if self.stop_after is None:
-                logger.info(msg.mjr(f"COMPLETE ITERATION {self.iteration:0>2}"))
-                self.iteration += 1
-                logger.info(f"setting current iteration to: {self.iteration}")
-                # Set the state file to pending for new iteration
-                self._states = {key: 0 for key in self._states}
-                self.checkpoint()
-            else:
+            status = super().run()  # Runs task list
+            # A 'STOPPED' (`stop_after`) or 'SUSPENDED' (non-blocking
+            # dispatch, to be resumed by a dependent job) pass is not a
+            # completed iteration -- don't advance `iteration` or reset
+            # task states for a next one that hasn't started yet
+            if status != "COMPLETE":
                 break
+            logger.info(msg.mjr(f"COMPLETE ITERATION {self.iteration:0>2}"))
+            self.iteration += 1
+            logger.info(f"setting current iteration to: {self.iteration}")
+            # Set the state file to pending for new iteration
+            self._states = {key: 0 for key in self._states}
+            self.checkpoint()
 
     def checkpoint(self):
         """

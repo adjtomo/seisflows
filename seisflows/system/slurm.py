@@ -223,15 +223,29 @@ class Slurm(Cluster):
 
         return job_id
 
-    def run(self, funcs, single=False, tasktime=None, array=None, _attempts=0, 
-            **kwargs):
+    def _dependency_flag(self, job_id):
+        """
+        Overwrites `system.cluster.Cluster._dependency_flag`. SLURM's
+        'afterany' dependency type releases the dependent submission once
+        `job_id` finishes, successfully or not.
+
+        :type job_id: str
+        :param job_id: ID of the job that must finish before the dependent
+            submission is released by the scheduler
+        :rtype: str
+        :return: the sbatch dependency flag
+        """
+        return f"--dependency=afterany:{job_id}"
+
+    def run(self, funcs, single=False, tasktime=None, array=None, _attempts=0,
+            blocking=True, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fasion on a SLURM
         cluster. Executes the list of functions (`funcs`) NTASK times with each
         task occupying NPROC cores.
 
         .. note::
-            
+
             Completely overwrites the `Cluster.run()` command
 
         :type funcs: list of methods
@@ -246,17 +260,30 @@ class Slurm(Cluster):
         :type tasktime: float
         :param tasktime: Custom tasktime in units minutes for running the given
             functions `funcs`. If not given, defaults to the System variable
-            `tasktime`. If tasks exceed the given `tasktime`, the program will 
+            `tasktime`. If tasks exceed the given `tasktime`, the program will
             exit
         :type array: str
         :param array: overwrite the `array` variable to run specific jobs. If
-            not provided, then we will run jobs 0-{ntask}%{ntask_max}. Jobs 
-            should be submitted in the format of a SLURM array string, 
+            not provided, then we will run jobs 0-{ntask}%{ntask_max}. Jobs
+            should be submitted in the format of a SLURM array string,
             something like: 0,1,3,5 or 2-4,8-22
         :type _attempts: int
-        :param _attempts: a recursive counter for failed job runs that allows 
+        :param _attempts: a recursive counter for failed job runs that allows
             the `run` function to re-attempt failed jobs up to `rerun` number
             of times
+        :type blocking: bool
+        :param blocking: if True (default), submit the job and poll/wait
+            (`monitor_job_status`) until it finishes before returning, as
+            today. If False, submit the job and return its `job_id`
+            immediately without waiting -- the caller is then responsible
+            for persisting `job_id` and resuming the workflow later (e.g.,
+            via `submit(depends_on=job_id)`, which schedules a dependent
+            job that the scheduler will not release until this one
+            finishes). Failure recovery (`rerun`) does not apply in this
+            mode since nothing here waits to see the outcome.
+        :rtype: NoneType or str
+        :return: None if `blocking` (as today); the submitted job's ID if
+            not `blocking`
         """
         logger.info(f"running functions {[_.__name__ for _ in funcs]}")
 
@@ -278,6 +305,11 @@ class Slurm(Cluster):
         stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
         job_id = self._stdout_to_job_id(stdout)
+
+        if not blocking:
+            logger.info(f"dispatched job {job_id} without waiting "
+                        f"(blocking=False)")
+            return job_id
 
         # Monitor the job queue until all jobs have finished
         status = self.monitor_job_status(job_id)

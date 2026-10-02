@@ -118,8 +118,8 @@ class Cluster(Workstation):
         return ""
 
 
-    def submit(self, workdir=None, parameter_file="parameters.yaml", 
-               direct=False):
+    def submit(self, workdir=None, parameter_file="parameters.yaml",
+               direct=False, depends_on=None):
         """
         Submits the main workflow job as a separate job submitted directly to
         the system that is running the master job
@@ -135,11 +135,21 @@ class Cluster(Workstation):
         :param parameter_file: paramter file file name used to instantiate
             the SeisFlows package
         :type direct: bool
-        :param direct: (used for overriding system modules) submits the main 
-            workflow job directly to the login node rather than as a separate 
-            process on a compute node. Avoids queue times and walltimes but may 
-            be discouraged by sys admins as some  array processing will take 
-            place on the shared login node. 
+        :param direct: (used for overriding system modules) submits the main
+            workflow job directly to the login node rather than as a separate
+            process on a compute node. Avoids queue times and walltimes but may
+            be discouraged by sys admins as some  array processing will take
+            place on the shared login node.
+        :type depends_on: str
+        :param depends_on: (used by `run(blocking=False)`) if given, the
+            scheduler will not release this submission until the job with
+            this ID has finished (successfully or not). This is how a
+            non-blocking master job re-submits itself to resume a workflow
+            after dispatching work, without needing to poll/block in the
+            meantime. Requires the system class to implement
+            `_dependency_flag()`. Ignored if `direct` is True, since a
+            direct submission runs immediately in-process and has no
+            scheduler to defer it.
         """
         # Copy log files if present to avoid overwriting
         for src in [self.path.output_log, self.path.par_file]:
@@ -152,6 +162,8 @@ class Cluster(Workstation):
             print("submit 'SeisFlows Main Job' directly to cluster login node")
         else:
             header = self.submit_call_header
+            if depends_on is not None:
+                header = f"{header} {self._dependency_flag(depends_on)}"
 
         # e.g., submit -w ./ -p parameters.yaml
         submit_call = " ".join([
@@ -167,6 +179,36 @@ class Cluster(Workstation):
         except subprocess.CalledProcessError as e:
             print(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
+
+    def _dependency_flag(self, job_id):
+        """
+        Scheduler-specific flag/argument that makes a submission depend on a
+        previously submitted job finishing, successfully or not (i.e., an
+        'afterany'-style dependency). Required by `submit(depends_on=...)`
+        and `run(blocking=False)`.
+
+        .. note::
+
+            Generalized `Cluster` has no real external scheduler to depend
+            on (it mimics one locally via `subprocess`/`ProcessPoolExecutor`,
+            see module docstring), so non-blocking dispatch is not
+            meaningful here. Child classes backed by a real scheduler that
+            supports job dependencies (e.g., `system.Slurm`) must overwrite
+            this.
+
+        :type job_id: str
+        :param job_id: ID of the job that must finish before the dependent
+            submission is released by the scheduler
+        :rtype: str
+        :return: the system-dependent dependency flag/argument
+        :raises NotImplementedError: if the system class does not support
+            scheduler-native job dependencies
+        """
+        raise NotImplementedError(
+            f"system '{self.__class__.__name__}' does not support "
+            f"scheduler-native job dependencies, required for "
+            f"`run(blocking=False)` / `submit(depends_on=...)`"
+        )
 
     def run(self, funcs, single=False, tasktime=None, _retry=0, **kwargs):
         """

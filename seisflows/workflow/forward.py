@@ -15,6 +15,30 @@ from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict
 
 
+class WorkflowSuspended(Exception):
+    """
+    Raised by a task-list function to suspend the workflow non-blockingly
+    instead of completing: `system.run(blocking=False)` dispatches work and
+    returns a job ID immediately rather than waiting for it to finish, and
+    the calling task-list function is then responsible for:
+
+    1. Persisting a 'PENDING:<job_id>' state for itself (e.g.
+       ``self._states[self.some_task.__name__] = f"PENDING:{job_id}"``)
+       and checkpointing, so a resumed process knows this task already
+       dispatched work and should check on/collect its results rather than
+       re-dispatching
+    2. Submitting a dependent job that the scheduler will not release until
+       `job_id` finishes (``self.system.submit(depends_on=job_id)``), which
+       re-invokes ``seisflows submit`` to resume the workflow later
+    3. Raising `WorkflowSuspended`, which `Forward.run()` catches to exit
+       the current process cleanly (NOT as a task failure -- the task
+       itself has not failed, it is simply still in progress elsewhere)
+
+    A task-list function that does not call `system.run(blocking=False)`
+    never raises this and behaves exactly as it does today.
+    """
+
+
 class Forward:
     """
     Forward Workflow [Workflow Base]
@@ -120,8 +144,18 @@ class Forward:
             for line in open(self.path.state_file, "r").readlines():
                 if line.startswith("#"):
                     continue
-                key, val = line.strip().split(":")
-                self._states[key] = int(val.strip())
+                # Split only on the first ':' -- a PENDING state's value
+                # (e.g. 'PENDING:12345') contains a ':' of its own
+                key, val = line.strip().split(":", 1)
+                val = val.strip()
+                # PENDING states are kept as strings (see `WorkflowSuspended`
+                # docstring); every other state is a plain int (0/1/-1), as
+                # is the (unrelated) 'iteration' line written by
+                # `workflow.inversion.Inversion.checkpoint()`
+                if val.startswith("PENDING"):
+                    self._states[key] = val
+                else:
+                    self._states[key] = int(val)
 
     @property
     def task_list(self):
@@ -265,8 +299,17 @@ class Forward:
         Call the Task List in order to 'run' the workflow. Contains logic for
         to keep track of completed tasks and avoids re-running tasks that have
         previously been completed (e.g., if you are restarting your workflow)
+
+        :rtype: str
+        :return: 'COMPLETE' if every task in `task_list` ran (or was already
+            marked complete); 'STOPPED' if `stop_after` cut the task list
+            short; 'SUSPENDED' if a task raised `WorkflowSuspended` to
+            dispatch work non-blockingly. Callers that loop over `run()`
+            (e.g. `workflow.inversion.Inversion.run()`) use this to tell a
+            fully completed pass apart from an early exit.
         """
         n = 0  # To keep track of number of tasks completed
+        status = "COMPLETE"
         for func in self.task_list:
             # Skip over functions which have already been completed
             if (func.__name__ in self._states.keys()) and (
@@ -284,6 +327,18 @@ class Forward:
                     n += 1
                     self._states[func.__name__] = 1  # completed
                     self.checkpoint()
+                except WorkflowSuspended:
+                    # Not a failure -- `func` has already dispatched work
+                    # non-blockingly, persisted its own 'PENDING:<job_id>'
+                    # state, and submitted a dependent job to resume this
+                    # workflow later. Exit cleanly now; do not mark `func`
+                    # failed or raise
+                    logger.info(
+                        f"'{func.__name__}' suspended the workflow to wait "
+                        f"on dispatched work; a dependent job will resume it"
+                    )
+                    status = "SUSPENDED"
+                    break
                 except Exception as e:
                     self._states[func.__name__] = -1  # failed
                     self.checkpoint()
@@ -293,10 +348,12 @@ class Forward:
                 logger.info(
                     msg.mjr(f"STOP WORKFLOW (`stop_after`={self.stop_after})")
                     )
+                status = "STOPPED"
                 break
 
         self.checkpoint()
         logger.info(f"completed {n} tasks from task list")
+        return status
 
     def generate_synthetic_data(self, **kwargs):
         """
