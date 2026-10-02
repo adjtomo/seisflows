@@ -13,7 +13,9 @@ beyond the state file itself.
 import os
 import pytest
 
-from seisflows.workflow.forward import Forward, WorkflowSuspended
+from seisflows.tools.config import Dict
+from seisflows.workflow.forward import (Forward, WorkflowSuspended,
+                                        _pending_state, _parse_pending_state)
 from seisflows.workflow.inversion import Inversion
 
 
@@ -378,3 +380,268 @@ def test_inversion_evaluation_string(tmpdir):
     workflow.optimize = _StubOptimize()
 
     assert(workflow.evaluation == "i03s07")
+
+
+# -----------------------------------------------------------------------------
+# `Forward._run_on_system()`: non-blocking dispatch, resume, and retry
+# -----------------------------------------------------------------------------
+
+class _FakeSystem:
+    """
+    Stand-in for a system module that records what the workflow asks of it
+    and replays scripted job outcomes, so the dispatch/resume/retry logic can
+    be exercised without a scheduler
+    """
+    def __init__(self, par_file, blocking=False, rerun=0, outcomes=None):
+        self.blocking = blocking
+        self.rerun = rerun
+        self.path = Dict(par_file=par_file)
+        self.outcomes = list(outcomes or [])  # [(success, failed_ids), ...]
+        self.runs = []  # (blocking kwarg or None, array kwarg or None)
+        self.submits = []  # depends_on of each resume job scheduled
+        self._next_job_id = 1000
+
+    def check(self):
+        pass
+
+    def run(self, funcs, blocking=None, array=None, **kwargs):
+        self.runs.append((blocking, array))
+        if blocking is False:
+            self._next_job_id += 1
+            return str(self._next_job_id)
+
+    def submit(self, workdir=None, parameter_file=None, depends_on=None):
+        self.submits.append(depends_on)
+
+    def job_outcome(self, job_id):
+        return self.outcomes.pop(0)
+
+
+class _DummySystemWorkflow(Forward):
+    """
+    Workflow whose second task dispatches to the system through
+    `_run_on_system()` and then does some 'finish' work, mirroring e.g.
+    `Forward.evaluate_initial_misfit`
+    """
+    def __init__(self, **kwargs):
+        self.calls = []
+        super().__init__(**kwargs)
+
+    @property
+    def task_list(self):
+        return [self.before, self.dispatching_task, self.after]
+
+    def before(self):
+        self.calls.append("before")
+
+    def dispatching_task(self):
+        self.calls.append("dispatching_task:start")
+        self._run_on_system([self.before], x=1)
+        self.calls.append("dispatching_task:finish")
+
+    def after(self):
+        self.calls.append("after")
+
+
+def _make_workflow(tmpdir, **system_kwargs):
+    """Build a `_DummySystemWorkflow` wired to a `_FakeSystem`"""
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    if not os.path.exists(state_file):
+        with open(state_file, "w") as f:
+            f.write("# SeisFlows State File\n")
+    workflow = _DummySystemWorkflow(workdir=str(tmpdir),
+                                    path_state_file=state_file)
+    workflow.system = _FakeSystem(par_file=os.path.join(str(tmpdir), "p.yaml"),
+                                  **system_kwargs)
+    return workflow
+
+
+def test_pending_state_round_trip():
+    """PENDING values carry the job id and retry count, and parse back"""
+    assert(_parse_pending_state(_pending_state("123", 2)) == ("123", 2))
+    assert(_parse_pending_state("PENDING:123") == ("123", 0))
+    assert(_parse_pending_state("PENDING:123[].opbs:1") == ("123[].opbs", 1))
+
+
+@pytest.mark.parametrize("val", ["PENDING", "PENDING:", "PENDING:1:2:3",
+                                 "PENDING:1:x", "OTHER:1:0"])
+def test_parse_pending_state_rejects_malformed(val):
+    with pytest.raises(ValueError):
+        _parse_pending_state(val)
+
+
+def test_state_file_with_malformed_pending_raises_clear_error(tmpdir):
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("task_a: PENDING:\n")
+    with pytest.raises(SystemExit):
+        _DummyForward(workdir=str(tmpdir), path_state_file=state_file)
+
+
+def test_run_on_system_blocking_is_plain_system_run(tmpdir):
+    """With `system.blocking` True nothing about dispatch changes"""
+    workflow = _make_workflow(tmpdir, blocking=True)
+    status = workflow.run()
+
+    assert(status == "COMPLETE")
+    assert(workflow.calls == ["before", "dispatching_task:start",
+                              "dispatching_task:finish", "after"])
+    assert(workflow.system.runs == [(None, None)])  # no `blocking` kwarg
+    assert(workflow.system.submits == [])
+
+
+def test_run_on_system_outside_a_task_is_blocking(tmpdir):
+    """
+    Called directly (e.g. from `seisflows debug`) rather than from
+    `Forward.run()`, there's no task to suspend, so it just blocks
+    """
+    workflow = _make_workflow(tmpdir, blocking=False)
+    workflow._run_on_system([workflow.before])
+
+    assert(workflow.system.runs == [(None, None)])
+    assert(workflow.system.submits == [])
+
+
+def test_run_on_system_nonblocking_dispatches_and_suspends(tmpdir):
+    workflow = _make_workflow(tmpdir)
+    status = workflow.run()
+
+    assert(status == "SUSPENDED")
+    # Stopped at the dispatch: nothing after it ran, not even the finish half
+    assert(workflow.calls == ["before", "dispatching_task:start"])
+    assert(workflow.system.runs == [(False, None)])
+    # Resume job scheduled behind the dispatched job
+    assert(workflow.system.submits == ["1001"])
+    assert(workflow._states["dispatching_task"] == "PENDING:1001:0")
+    # ...and the state file already says so, for the resumed process to read
+    resumed = _make_workflow(tmpdir)
+    assert(resumed._states["dispatching_task"] == "PENDING:1001:0")
+
+
+def test_run_on_system_resume_success_runs_finish_half_only(tmpdir):
+    _make_workflow(tmpdir).run()
+
+    resumed = _make_workflow(tmpdir, outcomes=[(True, "")])
+    status = resumed.run()
+
+    assert(status == "COMPLETE")
+    # `before` already complete (skipped); the dispatching task is re-entered
+    # but does NOT dispatch again; its finish half and `after` then run
+    assert(resumed.calls == ["dispatching_task:start",
+                             "dispatching_task:finish", "after"])
+    assert(resumed.system.runs == [])
+    assert(resumed.system.submits == [])
+    assert(resumed._states["dispatching_task"] == 1)
+
+
+def test_run_on_system_resume_failure_reruns_only_failed_tasks(tmpdir):
+    _make_workflow(tmpdir, rerun=2).run()
+
+    # Resumed process finds tasks 1 and 3 failed: re-dispatch just those
+    second = _make_workflow(tmpdir, rerun=2, outcomes=[(False, "1,3")])
+    assert(second.run() == "SUSPENDED")
+    assert(second.system.runs == [(False, "1,3")])
+    assert(second.system.submits == ["1001"])
+    assert(second._states["dispatching_task"] == "PENDING:1001:1")
+
+    # ...and the retry succeeds
+    third = _make_workflow(tmpdir, rerun=2, outcomes=[(True, "")])
+    assert(third.run() == "COMPLETE")
+    assert(third.system.runs == [])
+
+
+def test_run_on_system_retries_are_capped_across_restarts(tmpdir):
+    """
+    The retry count lives in the state file, so `system.rerun` is honored
+    even though every attempt happens in a different process. Once spent,
+    the workflow exits and marks the task failed (not PENDING) so that
+    fixing the cause and re-running `seisflows submit` dispatches fresh
+    """
+    _make_workflow(tmpdir, rerun=1).run()  # original dispatch
+    second = _make_workflow(tmpdir, rerun=1, outcomes=[(False, "0")])
+    assert(second.run() == "SUSPENDED")  # attempt 1 of 1
+
+    third = _make_workflow(tmpdir, rerun=1, outcomes=[(False, "0")])
+    with pytest.raises(SystemExit):
+        third.run()
+    assert(third._states["dispatching_task"] == -1)
+
+    fresh = _make_workflow(tmpdir, rerun=1)
+    assert(fresh._states["dispatching_task"] == -1)
+    assert(fresh.run() == "SUSPENDED")
+    assert(fresh.system.runs == [(False, None)])  # a fresh dispatch
+
+
+def test_run_on_system_rejects_second_dispatch_in_one_task(tmpdir):
+    """
+    One PENDING state can't tell two dispatches apart, so a task making a
+    second non-blocking dispatch must fail loudly rather than silently skip
+    the second one on resume
+    """
+    class _TwoDispatches(_DummySystemWorkflow):
+        def dispatching_task(self):
+            self._run_on_system([self.before])
+            self._run_on_system([self.before])
+
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+        f.write("dispatching_task: PENDING:1001:0\n")
+    workflow = _TwoDispatches(workdir=str(tmpdir), path_state_file=state_file)
+    workflow.system = _FakeSystem(par_file="p.yaml", outcomes=[(True, "")])
+
+    with pytest.raises(AssertionError, match="more than once"):
+        workflow.run()
+
+
+def test_resuming_flag_guards_unsafe_preamble(tmpdir):
+    """
+    Work a task does before dispatching that destroys the dispatched job's
+    output (e.g. `Migration.postprocess_event_kernels` clearing kernel
+    directories) must be skipped when resuming
+    """
+    seen = []
+
+    class _Guarded(_DummySystemWorkflow):
+        def dispatching_task(self):
+            seen.append(self._resuming)
+            self._run_on_system([self.before])
+
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+
+    first = _Guarded(workdir=str(tmpdir), path_state_file=state_file)
+    first.system = _FakeSystem(par_file="p.yaml")
+    first.run()
+
+    resumed = _Guarded(workdir=str(tmpdir), path_state_file=state_file)
+    resumed.system = _FakeSystem(par_file="p.yaml", outcomes=[(True, "")])
+    resumed.run()
+
+    assert(seen == [False, True])
+
+
+def _fake_modules(system):
+    class _Module:
+        def check(self):
+            pass
+    return Dict(system=system, solver=_Module(), preprocess=_Module(),
+                optimize=_Module())
+
+
+def test_check_accepts_nonblocking_for_supported_workflow(tmpdir):
+    workflow = Forward(workdir=str(tmpdir), modules=_fake_modules(
+        _FakeSystem(par_file="p.yaml", blocking=False)))
+    workflow.check()
+
+
+def test_check_refuses_nonblocking_for_unsupported_workflow(tmpdir):
+    """
+    `Inversion`'s line search still blocks (and is recursive), so it must
+    refuse a non-blocking system instead of half-working under it
+    """
+    workflow = Inversion(workdir=str(tmpdir), modules=_fake_modules(
+        _FakeSystem(par_file="p.yaml", blocking=False)))
+    with pytest.raises(AssertionError, match="does not yet support"):
+        workflow.check()

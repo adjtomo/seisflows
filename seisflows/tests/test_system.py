@@ -3,6 +3,7 @@ Test the system modules ability to run jobs
 """
 import os
 import pytest
+import subprocess
 from glob import glob
 from unittest.mock import patch, MagicMock
 from seisflows.tools import unix
@@ -10,6 +11,7 @@ from seisflows.tools.config import get_task_id
 from seisflows.system.workstation import Workstation
 from seisflows.system.cluster import Cluster
 from seisflows.system.chinook import Chinook
+from seisflows.system.slurm import Slurm
 
 
 def _test_function_a(tmpdir, **kwargs):
@@ -219,3 +221,126 @@ def test_slurm_run_blocking_true_still_monitors(tmpdir):
     assert(job_id is None)  # blocking run has no meaningful return value
 
 
+
+
+def test_submit_resume_appends_log_and_skips_backup(tmpdir):
+    """
+    A dependent (resumed) submission should make the scheduler APPEND to the
+    output log rather than truncate it, and so should NOT back up the log
+    first (backing up on every resume would pile up numbered copies)
+    """
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
+                     submit_to="debug")
+    system.setup()
+    with open(system.path.output_log, "w") as f:
+        f.write("log from an earlier master job invocation\n")
+
+    with patch("seisflows.system.cluster.subprocess.run") as mock_run:
+        system.submit(workdir=str(tmpdir), parameter_file="parameters.yaml",
+                      depends_on="123456")
+
+    assert("--open-mode=append" in mock_run.call_args[0][0])
+    assert(glob(os.path.join(system.path.log_files, "*")) == [])
+
+
+def test_submit_first_submission_backs_up_log(tmpdir, monkeypatch):
+    """A normal (first) submission still backs up an existing log"""
+    # `copy_file()` resolves the file relative to the cwd, which is always
+    # the workdir when SeisFlows runs for real
+    monkeypatch.chdir(tmpdir)
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
+                     submit_to="debug")
+    system.setup()
+    with open(system.path.output_log, "w") as f:
+        f.write("log from a previous workflow\n")
+
+    with patch("seisflows.system.cluster.subprocess.run") as mock_run:
+        system.submit(workdir=str(tmpdir), parameter_file="parameters.yaml")
+
+    assert("--open-mode" not in mock_run.call_args[0][0])
+    assert(len(glob(os.path.join(system.path.log_files, "*"))) == 1)
+
+
+def test_submit_resume_failure_is_not_silent(tmpdir):
+    """
+    If the dependent job fails to submit, the workflow would exit after
+    dispatching and never be resumed -- that must be a hard error, not
+    ignored like a failed first submission is
+    """
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
+                     submit_to="debug")
+    system.setup()
+
+    error = subprocess.CalledProcessError(1, "sbatch")
+    with patch("seisflows.system.cluster.subprocess.run", side_effect=error):
+        with pytest.raises(SystemExit):
+            system.submit(workdir=str(tmpdir), depends_on="123456")
+
+
+def test_slurm_job_outcome_success(tmpdir):
+    """All tasks completed: success, nothing to re-run"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2)
+    with patch.object(system, "monitor_job_status", return_value=1):
+        assert(system.job_outcome("99") == (True, ""))
+
+
+def test_slurm_job_outcome_reports_failed_task_ids(tmpdir):
+    """
+    Failed task ids come from each array element's own id ('99_3' -> '3')
+    """
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=4)
+    jobs = ("99_0", "99_1", "99_2", "99_3")
+    states = ("COMPLETED", "FAILED", "COMPLETED", "TIMEOUT")
+    with patch.object(system, "monitor_job_status", return_value=-1), \
+         patch.object(system, "query_job_states",
+                      return_value=(jobs, states)):
+        assert(system.job_outcome("99") == (False, "1,3"))
+
+
+def test_slurm_job_outcome_after_partial_rerun(tmpdir):
+    """
+    A re-run of only tasks 1 and 3 produces an array with just those two
+    elements. If task 3 fails again, it must be reported as '3' -- reading
+    the position in the list instead would wrongly give '1'
+    """
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=4)
+    jobs = ("100_1", "100_3")
+    states = ("COMPLETED", "FAILED")
+    with patch.object(system, "monitor_job_status", return_value=-1), \
+         patch.object(system, "query_job_states",
+                      return_value=(jobs, states)):
+        assert(system.job_outcome("100") == (False, "3"))
+
+
+def test_cluster_job_outcome_not_implemented(tmpdir):
+    """Generalized `Cluster` has no real scheduler to inspect"""
+    system = Cluster(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1)
+    with pytest.raises(NotImplementedError):
+        system.job_outcome("99")
+
+
+def test_nonblocking_support_flags():
+    """
+    Support must be declared per class rather than inferred: only systems
+    that implement `run(blocking=False)` and `job_outcome()` claim it
+    """
+    assert(Cluster._supports_nonblocking is False)
+    assert(Slurm._supports_nonblocking is True)
+    assert(Chinook._supports_nonblocking is True)
+
+
+def test_check_refuses_nonblocking_on_unsupported_system(tmpdir):
+    """`blocking=False` on a system that can't honor it fails at check()"""
+    system = Cluster(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
+                     blocking=False)
+    with patch("seisflows.system.workstation.Workstation.check"):
+        with pytest.raises(AssertionError, match="non-blocking"):
+            system.check()
+
+
+def test_check_allows_nonblocking_on_supported_system(tmpdir):
+    """...and passes for one that can"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
+                     blocking=False)
+    with patch("seisflows.system.workstation.Workstation.check"):
+        system.check()

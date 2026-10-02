@@ -62,7 +62,11 @@ class Frontera(Slurm):
 
     ***
     """
-    def __init__(self, user=None, conda_env=None, partition="development", 
+    # `Frontera.run()` overrides `Slurm.run()` with its own ssh-based
+    # submission and does not implement `blocking=False`/`job_outcome()`
+    _supports_nonblocking = False
+
+    def __init__(self, user=None, conda_env=None, partition="development",
                  submit_to=None, allocation=None, mpiexec="ibrun", **kwargs):
         """Frontera init"""
         super().__init__(**kwargs)

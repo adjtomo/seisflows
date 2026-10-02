@@ -55,6 +55,11 @@ class Slurm(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
+    # `run(blocking=False)`, `submit(depends_on=...)` and `job_outcome()` are
+    # implemented below. Children that override `run()` themselves (e.g.
+    # `Frontera`) must set this back to False
+    _supports_nonblocking = True
+
     def __init__(self, ntask_max=100, slurm_args="", **kwargs):
         """
         Slurm-specific setup parameters
@@ -236,6 +241,51 @@ class Slurm(Cluster):
         :return: the sbatch dependency flag
         """
         return f"--dependency=afterany:{job_id}"
+
+    @property
+    def _append_log_flag(self):
+        """
+        Overwrites `system.cluster.Cluster._append_log_flag`. By default
+        sbatch truncates the output file when a job starts, which would
+        erase the log of earlier master-job invocations each time a
+        non-blocking workflow resumes.
+
+        :rtype: str
+        :return: the sbatch flag that appends rather than truncates
+        """
+        return "--open-mode=append"
+
+    def job_outcome(self, job_id):
+        """
+        Overwrites `system.cluster.Cluster.job_outcome`. Waits (briefly --
+        the job has already finished by the time a dependent job resumes
+        the workflow, but the scheduler's accounting database can lag
+        behind) for the final state of every task in the array, then
+        reports which failed.
+
+        .. note::
+            Failed task ids are read from each array element's own id
+            (e.g. '441630_3' -> '3'), not inferred from list position, so
+            this stays correct when `job_id` was itself a re-run of only a
+            subset of the original tasks.
+
+        :type job_id: str
+        :param job_id: ID returned by `run(blocking=False)`
+        :rtype: (bool, str)
+        :return: (True if every task completed, comma-separated SLURM array
+            string of failed task ids, empty string if none failed)
+        """
+        if self.monitor_job_status(job_id, wait_time_s=5) == 1:
+            return True, ""
+
+        jobs, states = self.query_job_states(job_id, sort=True)
+        failed = []
+        for i, (jid, state) in enumerate(zip(jobs, states)):
+            if state in self._failed_states:
+                idx = str(jid).split("_")[-1]
+                failed.append(idx if idx.isdigit() else str(i))
+
+        return False, ",".join(failed)
 
     def run(self, funcs, single=False, tasktime=None, array=None, _attempts=0,
             blocking=True, **kwargs):

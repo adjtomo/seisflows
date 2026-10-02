@@ -111,7 +111,7 @@ class Migration(Forward):
             general by allowing other workflows to include pre- and post-
             processing tasks, or to overwrite the adjoint simulation task
         """
-        self.system.run([self._run_adjoint_simulation_single], **kwargs)
+        self._run_on_system([self._run_adjoint_simulation_single], **kwargs)
 
     def _run_adjoint_simulation_single(self, save_kernels=None, 
                                        export_kernels=None, **kwargs):
@@ -266,19 +266,22 @@ class Migration(Forward):
                                              "misfit_kernel")
                 )
 
-        # Make sure were in a clean scratch eval_grad directory
-        tags = ["misfit_kernel", "mk_nosmooth"]
-        for tag in tags:
-            scratch_path = os.path.join(self.path.eval_grad, tag)
-            if os.path.exists(scratch_path):
-                shutil.rmtree(scratch_path)
+        # Make sure were in a clean scratch eval_grad directory. Not when
+        # resuming a non-blocking dispatch: these directories are the OUTPUT
+        # of the job that already ran, deleting them would discard its work
+        if not self._resuming:
+            tags = ["misfit_kernel", "mk_nosmooth"]
+            for tag in tags:
+                scratch_path = os.path.join(self.path.eval_grad, tag)
+                if os.path.exists(scratch_path):
+                    shutil.rmtree(scratch_path)
 
         # NOTE: May need to increase the tasktime by a factor of n because the
         # smoothing operation is computational expensive; add the following:
         # tasktime=self.system.tasktime * 2  # increase 2 if you need more time
-        self.system.run([mask_source_event_kernels, combine_event_kernels, 
-                         smooth_misfit_kernel], single=True,
-                         tasktime=self.system.tasktime * 1)
+        self._run_on_system([mask_source_event_kernels, combine_event_kernels,
+                             smooth_misfit_kernel], single=True,
+                            tasktime=self.system.tasktime * 1)
 
     def evaluate_gradient_from_kernels(self):
         """

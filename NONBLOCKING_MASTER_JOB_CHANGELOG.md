@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total: `pytest seisflows/tests` → 65 passed, 4 deselected (`slow`)**
+**Current total: `pytest seisflows/tests` → 92 passed, 4 deselected (`slow`)**
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -140,56 +140,148 @@ viable once the master job stops blocking.
     realistic risk is a user manually re-running `seisflows submit` while a
     dependent job is still pending. Revisit only if real-cluster testing on
     Chinook actually surfaces this.
+- **Phase 1 pilot: non-blocking dispatch wired into real tasks.**
+  - `Forward._run_on_system(funcs, **kwargs)` — the one call that task-list
+    functions use instead of `system.run()`. Blocking systems: identical to
+    `system.run()`. Non-blocking (`system.blocking == False`): the calling
+    task is simply *entered twice*. First entry dispatches
+    (`run(blocking=False)`), records `PENDING:<job_id>:<attempt>` as the
+    task's state, checkpoints, schedules the dependent resume job, and
+    raises `WorkflowSuspended`. Re-entry (in the resumed process) calls
+    `system.job_outcome(job_id)`: success → return, so the code *after*
+    the call (the "finish half") runs; failure → re-dispatch only the failed
+    task ids and suspend again, up to `system.rerun` times, then mark the
+    task `-1` and exit (so fixing the cause and re-running `seisflows
+    submit` dispatches fresh, as after a blocking failure).
+    **This closes the failure-handling gap** listed under the previous
+    "Not done" — retries are honored across process restarts because the
+    attempt count lives in the state file.
+  - State value is now `PENDING:<job_id>:<attempt>` (attempt optional when
+    parsing, so the earlier `PENDING:<job_id>` form still reads as attempt
+    0). Parsed/validated by `_parse_pending_state`; a malformed value gets
+    the same clear state-file error as any other bad line.
+  - Converted call sites: `Forward.generate_synthetic_data`,
+    `Forward.evaluate_initial_misfit` (so `Inversion`/`NoiseInversion`
+    overrides that call `super()` compose: on resume the whole override
+    re-runs, and its post-processing after `super()` is the finish half),
+    `Migration.run_adjoint_simulations`, and
+    `Migration.postprocess_event_kernels`.
+  - `Forward._resuming`: True when the running task is re-entering to
+    collect a dispatch. Needed because re-entry re-runs everything before
+    the dispatch call: `postprocess_event_kernels` deletes the
+    `misfit_kernel`/`mk_nosmooth` dirs *before* dispatching, which on resume
+    would have destroyed the finished job's output, so that cleanup is now
+    skipped when resuming. **Any task converted in future must be audited
+    for this** (a pre-dispatch step that isn't safe to repeat).
+  - Safety rails: a task may make at most ONE `_run_on_system` call per
+    invocation (a single PENDING state can't tell two dispatches apart) —
+    a second raises `AssertionError` rather than silently skipping it on
+    resume. `Forward._supports_nonblocking` (True) /
+    `Inversion._supports_nonblocking` (False, until Phase 2) make
+    `Forward.check()` refuse `system.blocking=False` for workflows with
+    unconverted `system.run()` calls, instead of half-working.
+  - `system.blocking` (new `Cluster` param, default `True`) is the
+    user-facing switch. `Cluster._supports_nonblocking` (False; True on
+    `Slurm`) is declared per class, not inferred, and `Cluster.check()`
+    refuses `blocking=False` where unsupported. Flipping the default to
+    `False` is deliberately NOT done yet — wait for real-cluster validation.
+  - `Slurm.job_outcome(job_id)` (generic `Cluster` stub raises
+    `NotImplementedError`): reuses `monitor_job_status` (so it tolerates
+    sacct lag) then reads failed task ids from each array element's own id
+    (`'99_3'` → `3`) rather than list position — see Not done for why that
+    matters.
+  - **Resumed jobs append to the output log.** Found that `sbatch --output`
+    truncates by default, and the Python logger writes to the same file
+    (`sflog.txt`), so every resume would have erased the workflow's log
+    history. Dependent submissions now add `--open-mode=append`
+    (`Cluster._append_log_flag`, `Slurm` returns it) and skip the
+    log/parameter-file backup `submit()` does for fresh submissions (it
+    would otherwise pile up a numbered copy per resume). Systems with no
+    append option fall back to backing up before each resume.
+  - **A failed dependent submission is now fatal.** `Cluster.submit` ran
+    `sbatch` without `check=True`, so a failed resume-job submission would
+    have been silent: the master exits after dispatching and nothing ever
+    resumes the workflow. It now exits with a message saying how to resume
+    manually. (Fresh submissions are unchanged.)
+  - Verified, not assumed: each resume re-runs `workflow.check()` and
+    `workflow.setup()` (the `submit` runscript does) — checked every
+    module's `setup()` and they are idempotent (mkdir / skip-if-exists;
+    `Specfem._initialize_working_directories` skips existing source dirs),
+    so a resume does not wipe a dispatched job's results.
+  - Tests: `test_workflow.py` drives `_run_on_system` against a
+    `_FakeSystem` (records dispatches/submits, replays scripted
+    `job_outcome`s) — dispatch+suspend, resume success runs only the finish
+    half, resume failure re-dispatches only failed ids, retry cap honored
+    across restarts, fresh dispatch after exhaustion, second-dispatch
+    assertion, `_resuming` guard, `check()` gating. `test_system.py`:
+    append/backup behavior, fatal failed resume submit, `job_outcome`
+    (incl. partial re-run), support flags, `check()` gating.
 
 ## Not done / come back to this
 
-- **Failure handling in `blocking=False` path — biggest gap.** Today,
-  `run(blocking=False)` only covers the happy path. Nothing yet inspects
-  whether the dispatched job actually succeeded. The resumed process (after
-  the dependent `afterany` job fires) needs to replicate what
-  `monitor_job_status()`'s blocking caller already does: query final job
-  states, decide retry (respecting `self.rerun`/`_attempts`, resubmitting
-  just the failed array indices) vs. give up with a clear error. Needs
-  design: where does this check happen — generically in `Slurm` on resume,
-  or per-task in each task-list function's "finish half"? Leaning toward
-  the latter (consistent with the dispatch/finish split below), but not
-  decided.
-- **The actual dispatch/finish split in `workflow/*.py` — not started.**
-  Everything above is plumbing; no real task-list function (e.g.
-  `Forward.evaluate_initial_misfit`) has been rewritten to use it yet.
-  Planned sequencing (from the original design discussion):
-  - **Phase 1** (easier): non-recursive task-list functions in `Forward`,
-    `Migration`, most of `NoiseInversion` — each calls `system.run()` once
-    (or in a simple sequential loop) and does a deterministic thing with
-    the result afterward. `NoiseInversion` already half-invented the
-    needed idiom (per-substep `_states[key]` + `checkpoint()` in
-    `_run_rt_adjoint_simulations_separate` and the `evaluate_line_search_
-    misfit` override) for blocking crash-recovery — generalizing to the
-    `PENDING` state is mechanical. Note: `NoiseInversion.
-    postprocess_event_kernels` needs *two* sequential dispatches, not one.
-  - **Phase 2** (hard): `Inversion.update_line_search()` is recursive — on
-    "TRY" it calls `evaluate_line_search_misfit()` then itself,
-    synchronously, deciding control flow from a result it just blocked to
-    get. Must become an explicit iterative state machine (loop driven by
-    state read at the top of each resume), not recursion.
-  - Suggested pilot: `Forward.evaluate_initial_misfit` first (simplest
-    real case), to validate the full contract end-to-end before touching
-    anything else.
+- **Real-cluster validation — the top priority, nothing above has run on a
+  scheduler.** Everything is tested against mocks/fakes. Suggested first
+  real test on Chinook: the `forward` workflow with `blocking: False`,
+  `submit_to: debug`, a tiny `ntask`, then `migration` (4 dispatches).
+  Things only a real run will answer: does `sbatch --dependency=afterany`
+  behave as assumed for array jobs (incl. when some elements fail); does
+  `job_outcome()` see final states promptly (sacct lag); does the resumed
+  job really append to `sflog.txt`; how much per-resume overhead
+  (`check()`+`setup()` + queue wait) actually is; does a deliberately failed
+  array element exercise the retry path end to end.
+- **Phase 1 remainder: multi-dispatch tasks (`NoiseInversion`).** Not
+  converted. Several of its tasks dispatch more than once per invocation
+  (`generate_synthetic_data` loops over forces; `evaluate_rt_misfit` calls
+  `super().evaluate_initial_misfit` twice; `postprocess_event_kernels` does
+  two `single=True` runs). Needs per-dispatch sub-keys in the state file
+  (the idiom `_run_rt_adjoint_simulations_separate` already uses for
+  blocking crash-recovery) and a `key=` argument on `_run_on_system`.
+  `NoiseInversion` currently inherits `Inversion._supports_nonblocking =
+  False`, so `check()` refuses it — flip only once converted.
+- **Phase 2 (hard): the line search.** `Inversion.update_line_search()` is
+  recursive — on "TRY" it calls `evaluate_line_search_misfit()` then
+  itself, synchronously, deciding control flow from a result it just
+  blocked to get. Must become an explicit iterative state machine (loop
+  driven by state read at the top of each resume), not recursion. Until
+  then `Inversion._supports_nonblocking = False`, so inversions can't use
+  non-blocking at all; the `forward` and `migration` workflows can. Flip
+  that flag when this lands.
+- **Audit in-memory state that must survive a process restart.** A
+  non-blocking workflow restarts the Python process at every dispatch, so
+  anything a task stores on `self` and a *later* task reads is lost.
+  Grepped `workflow/*.py`: `Inversion._was_thrifty` (set in
+  `finalize_iteration`, read in `evaluate_initial_misfit`; no dispatch sits
+  between them today, so it survives, but it breaks if one is ever
+  inserted) and `NoiseInversion._force`/`_cmpnt` (set immediately before
+  each use, so fine, but re-check when converting `NoiseInversion`).
+  `_srcrcv_stats` is rebuilt by `setup()` on resume. Optimizer state is
+  persisted via `optimize.checkpoint()`.
 - **PBS/Miyabi port — not started, intentionally deferred.** Once validated
   on Chinook: add `Pbs._dependency_flag()` (`-W depend=afterany:{job_id}`)
   and a `blocking` param to `Pbs.run()`, reusing `Pbs.submit()`'s existing
   `-v`-based variable-passing (already correct for PBS's `qsub` quirks, see
   `pbs.py` module docstring) — same shape as the SLURM work, not a
   redesign.
-- **`Frontera` gap.** `Frontera(Slurm)` overrides `run()` itself (own
-  override, not inherited from `Slurm.run()`), so it does NOT get
-  `blocking=False` support for free the way `Chinook`/`Maui` do. Needs its
-  own matching update if/when non-blocking is wanted there. Not blocking
-  for Chinook validation.
-- **Real-cluster validation — not done.** Everything so far is mocked
-  `subprocess.run()`; no real `sbatch --dependency=afterany` chain has been
-  submitted to an actual SLURM scheduler. This needs to happen on Chinook
-  before trusting the mechanism, even once Phase 1 lands.
+- **`Frontera` gap — and it's already broken.** `Frontera(Slurm)`
+  overrides `run()` itself, so it would not get `blocking=False` support for
+  free (it declares `_supports_nonblocking = False` so `check()` refuses
+  it). Separately, **`seisflows/system/frontera.py` can't be imported at
+  all on this branch**: it does `from seisflows.system.slurm import Slurm,
+  check_job_status`, and `check_job_status` doesn't exist in `slurm.py`
+  (it's been that way since the v3.5.5 rewrite, `21e2b99b`). Pre-existing,
+  unrelated to this project — left alone, but worth its own fix or removal.
+- **Latent bug in the *blocking* retry path (not touched, on purpose).**
+  `Slurm.run()` finds failed tasks by `enumerate()`-ing the sorted job list
+  and treating the position as the task id. That's only right on the first
+  attempt: after re-running just tasks `1,3`, the new array has two
+  elements, so a repeat failure of task 3 is read as index 1 and the wrong
+  task is re-run. The new `Slurm.job_outcome()` reads ids from the job ids
+  instead. The blocking path is left untouched because it's the
+  known-good baseline for validating the non-blocking one — once that's
+  done, switch it to `job_outcome()` and delete the duplicated logic.
+- **Master-job `walltime` guidance.** In non-blocking mode a master job
+  only does bookkeeping, so `walltime` can be short (the point is to fit
+  `debug`). Not yet documented for users; worth a docs note once validated.
 - **`Miyabi.submit_to`/`Chinook.submit_to`** (routing the master job to a
   cheap queue/partition) already exists and needs no changes — just a
   reminder that `submit_to="debug"` on Chinook is the real-world validation
@@ -201,5 +293,6 @@ viable once the master job stops blocking.
 2. `git log` on `feature/nonblocking-master-job` to confirm what's actually
    landed vs. what this file claims (this file could drift from reality).
 3. Check "Not done" above for the next concrete step — as of the last
-   update here, that's the failure-handling design question, then the
-   Phase 1 pilot.
+   update here, that's real-cluster validation on Chinook of the `forward`
+   and `migration` workflows with `blocking: False`; then `NoiseInversion`
+   multi-dispatch; then Phase 2 (the line search).

@@ -65,6 +65,12 @@ class Inversion(Migration):
     """
     __doc__ = Migration.__doc__ + __doc__
 
+    # The line search (`evaluate_line_search_misfit`/`update_line_search`)
+    # still calls `system.run()` directly, and `update_line_search` is
+    # recursive, so it can't yet be suspended and resumed. Until it's
+    # rewritten as a resumable state machine, refuse `system.blocking=False`
+    _supports_nonblocking = False
+
     def __init__(self, start=1, end=1, thrifty=False, optimize="LBFGS",
                  export_model=True, path_eval_func=None, **kwargs):
         """

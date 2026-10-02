@@ -35,8 +35,44 @@ class WorkflowSuspended(Exception):
        itself has not failed, it is simply still in progress elsewhere)
 
     A task-list function that does not call `system.run(blocking=False)`
-    never raises this and behaves exactly as it does today.
+    never raises this and behaves exactly as it does today. In practice,
+    task-list functions do not do the above by hand: they call
+    `Forward._run_on_system()`, which does all three.
     """
+
+
+def _pending_state(job_id, attempt=0):
+    """
+    Build the state-file value for a task that has dispatched work
+    non-blockingly and is waiting on it
+
+    :type job_id: str
+    :param job_id: ID of the dispatched job, from `system.run(blocking=False)`
+    :type attempt: int
+    :param attempt: how many times the failed tasks of this job have already
+        been re-dispatched (0 for the original dispatch), used to honor
+        `system.rerun` across process restarts
+    :rtype: str
+    :return: state value of the form 'PENDING:<job_id>:<attempt>'
+    """
+    return f"PENDING:{job_id}:{attempt}"
+
+
+def _parse_pending_state(val):
+    """
+    Inverse of `_pending_state`. Tolerates a missing attempt count (e.g.
+    'PENDING:12345') as attempt 0.
+
+    :type val: str
+    :param val: state-file value beginning with 'PENDING'
+    :rtype: (str, int)
+    :return: (job_id, attempt)
+    :raises ValueError: if `val` is not a well-formed PENDING value
+    """
+    tag, job_id, *rest = val.split(":")
+    if tag != "PENDING" or not job_id or len(rest) > 1:
+        raise ValueError(f"malformed PENDING state: '{val}'")
+    return job_id, int(rest[0]) if rest else 0
 
 
 class Forward:
@@ -100,8 +136,14 @@ class Forward:
         including models, kernels, gradient and residuals.
     ***
     """
+    # Whether every `system.run()` call in this workflow's task list goes
+    # through `_run_on_system()` (see its docstring) and so can be run with
+    # `system.blocking == False`. Subclasses that add task-list functions
+    # with direct `system.run()` calls must set this back to False
+    _supports_nonblocking = True
+
     def __init__(self, modules=None, generate_data=False, stop_after=None,
-                 export_traces=False, export_residuals=False, 
+                 export_traces=False, export_residuals=False,
                  workdir=os.getcwd(), path_output=None, 
                  path_data=None, path_state_file=None, path_model_init=None,
                  path_model_true=None, path_eval_grad=None, **kwargs):
@@ -138,6 +180,11 @@ class Forward:
         self._required_modules = ["system", "solver"]
         self._optional_modules = ["preprocess"]
 
+        # Set by `run()` so `_run_on_system()` knows which task-list function
+        # is executing and how many dispatches it has made so far
+        self._current_task = None
+        self._dispatch_count = 0
+
         # Read in any existing state file which keeps track of workflow tasks
         self._states = {task.__name__: 0 for task in self.task_list}
         if os.path.exists(self.path.state_file):
@@ -159,16 +206,19 @@ class Forward:
                     # a plain int (0/1/-1), as is the (unrelated)
                     # 'iteration' line written by
                     # `workflow.inversion.Inversion.checkpoint()`
-                    self._states[key] = (
-                        val if val.startswith("PENDING") else int(val)
-                    )
+                    if val.startswith("PENDING"):
+                        _parse_pending_state(val)  # validate format only
+                        self._states[key] = val
+                    else:
+                        self._states[key] = int(val)
                 except ValueError:
                     logger.critical(msg.cli(
                         f"State file contains a line SeisFlows cannot "
                         f"parse (line {i}): '{line}'. This file is only "
                         f"ever meant to be written by SeisFlows itself; "
                         f"if it was hand-edited, check for a value that "
-                        f"is not '0', '1', '-1', or 'PENDING:<job_id>'",
+                        f"is not '0', '1', '-1', or "
+                        f"'PENDING:<job_id>:<attempt>'",
                         items=[f"STATE FILE: {self.path.state_file}"],
                         header="state file error", border="=")
                     )
@@ -215,6 +265,16 @@ class Forward:
 
             # Run check function of these modules
             self._modules[req_mod].check()
+
+        # Non-blocking dispatch needs every `system.run()` in the task list
+        # to go through `_run_on_system()`; refuse rather than half-work
+        if not getattr(self._modules.system, "blocking", True):
+            assert(self._supports_nonblocking), (
+                f"`system.blocking` is False but workflow "
+                f"'{self.__class__.__name__}' does not yet support "
+                f"non-blocking dispatch for all of its tasks. Set "
+                f"`blocking: True`, or use a workflow that does"
+            )
 
         # Tell the user whether optional modules are instantiated
         for opt_mod in self._optional_modules:
@@ -283,8 +343,8 @@ class Forward:
                 f.write(f"# SeisFlows State File\n")
                 f.write(f"# {asctime()}\n")
                 f.write(f"#'1: complete', '0: pending', '-1: failed', "
-                       f"'PENDING:<job_id>: dispatched non-blockingly, "
-                       f"waiting on job'\n")
+                       f"'PENDING:<job_id>:<attempt>: dispatched "
+                       f"non-blockingly, waiting on job'\n")
                 f.write(f"# ========================================\n")
 
         # Distribute modules to the class namespace. We don't do this at init
@@ -347,6 +407,8 @@ class Forward:
                     # Print called func name, e.g., test_func -> TEST FUNC
                     _log_name = func.__name__.replace("_", " ").upper()
                     logger.info(msg.mnr(_log_name))
+                    self._current_task = func.__name__
+                    self._dispatch_count = 0
                     func()
                     n += 1
                     self._states[func.__name__] = 1  # completed
@@ -367,6 +429,8 @@ class Forward:
                     self._states[func.__name__] = -1  # failed
                     self.checkpoint()
                     raise
+                finally:
+                    self._current_task = None
             # Allow user to prematurely stop a workflow after a given task
             if self.stop_after and func.__name__ == self.stop_after:
                 logger.info(
@@ -379,11 +443,125 @@ class Forward:
         logger.info(f"completed {n} tasks from task list")
         return status
 
+    @property
+    def _resuming(self):
+        """
+        True if the currently running task-list function already dispatched
+        work non-blockingly in an earlier process and is being re-entered to
+        collect it. Anything a task does BEFORE dispatching that is not safe
+        to repeat (e.g. deleting directories the dispatched work writes
+        into) must be skipped when this is True.
+
+        :rtype: bool
+        :return: whether this task is resuming a non-blocking dispatch
+        """
+        state = self._states.get(self._current_task)
+        return isinstance(state, str) and state.startswith("PENDING")
+
+    def _run_on_system(self, funcs, **kwargs):
+        """
+        Run `funcs` on the system module (`system.run()`), non-blockingly if
+        `system.blocking` is False. Task-list functions should call this
+        instead of `system.run()` directly.
+
+        Blocking (default): identical to `system.run(funcs, **kwargs)`.
+
+        Non-blocking, the work happens in two process lifetimes, and the
+        calling task-list function is simply entered twice:
+
+        1. First entry: dispatch `funcs`, record the job ID as this task's
+           'PENDING' state, schedule a dependent job that resumes the
+           workflow once the dispatched job finishes, and suspend (raises
+           `WorkflowSuspended`, so nothing after this call runs).
+        2. Re-entry in the resumed process: the dispatched job has
+           finished. Check its outcome. On success, return so the calling
+           function can carry on with whatever follows the call (reading
+           results, etc.). On failure, re-dispatch only the failed tasks
+           (up to `system.rerun` times, like blocking `system.run()` does)
+           and suspend again, or exit if retries are exhausted.
+
+        .. warning::
+            Because the caller is re-entered, everything it does before
+            this call runs again on resume and must be safe to repeat (see
+            `_resuming` for the exceptions). A task-list function may make
+            at most ONE call to this per invocation; the PENDING state is
+            tracked per task, so a second dispatch could not be told apart
+            from the first.
+
+        :type funcs: list of methods
+        :param funcs: functions to run on the system, see `system.run()`
+        :param kwargs: passed through to `system.run()`
+        :raises WorkflowSuspended: after dispatching, see above
+        """
+        task = self._current_task
+        if task is None or getattr(self.system, "blocking", True):
+            return self.system.run(funcs, **kwargs)
+
+        self._dispatch_count += 1
+        assert(self._dispatch_count == 1), (
+            f"task '{task}' called `_run_on_system()` more than once while "
+            f"`system.blocking` is False, which is not supported: a task's "
+            f"PENDING state cannot distinguish between multiple dispatches"
+        )
+
+        if not self._resuming:
+            job_id = self.system.run(funcs, blocking=False, **kwargs)
+            self._suspend(task, job_id, attempt=0)
+
+        job_id, attempt = _parse_pending_state(self._states[task])
+        logger.info(f"resuming '{task}', checking outcome of job {job_id}")
+        success, failed = self.system.job_outcome(job_id)
+        if success:
+            logger.info(f"job {job_id} finished successfully")
+            return
+
+        if attempt < self.system.rerun:
+            logger.info(f"attempt {attempt + 1}/{self.system.rerun} rerun "
+                        f"failed tasks: {failed}")
+            job_id = self.system.run(funcs, blocking=False, array=failed,
+                                     **kwargs)
+            self._suspend(task, job_id, attempt=attempt + 1)
+
+        # Out of retries. Mark failed (not PENDING) so that fixing the
+        # problem and re-running `seisflows submit` dispatches fresh, as
+        # happens after a failure in blocking mode
+        self._states[task] = -1
+        self.checkpoint()
+        logger.critical(
+            msg.cli(f"Stopping workflow. Please check logs for details",
+                    items=[f"TASK:   {task}", f"JOB_ID: {job_id}",
+                           f"FAILED TASK IDS: {failed}"],
+                    header="system run error", border="=")
+        )
+        sys.exit(-1)
+
+    def _suspend(self, task, job_id, attempt):
+        """
+        Record that `task` is waiting on `job_id`, schedule the dependent
+        job that resumes the workflow when it finishes, and suspend.
+
+        :type task: str
+        :param task: name of the task-list function that dispatched `job_id`
+        :type job_id: str
+        :param job_id: ID of the job the workflow is waiting on
+        :type attempt: int
+        :param attempt: number of re-dispatches so far, see `_pending_state`
+        :raises WorkflowSuspended: always
+        """
+        # Checkpoint BEFORE scheduling the resume job so that it can never
+        # start and read a state file that doesn't yet know about `job_id`
+        self._states[task] = _pending_state(job_id, attempt)
+        self.checkpoint()
+        self.system.submit(workdir=self.path.workdir,
+                           parameter_file=self.system.path.par_file,
+                           depends_on=job_id)
+        raise WorkflowSuspended()
+
     def generate_synthetic_data(self, **kwargs):
         """
         For synthetic inversion cases, we can use the workflow machinery to
-        generate 'data' by running simulations through a target/true model for 
-        each of our `ntask` sources. This only needs to be run once during a 
+        generate 'data' by running simulations through a target/true model for
+        each of our `ntask` sources. This only needs to be run once during a
         workflow.
         """
         if not self.generate_data:
@@ -393,7 +571,7 @@ class Forward:
         logger.info("checking true/target model parameters:")
         self.solver.check_model_values(path=self.path.model_true)
 
-        self.system.run([self._generate_synthetic_data_single], **kwargs)
+        self._run_on_system([self._generate_synthetic_data_single], **kwargs)
 
     def _generate_synthetic_data_single(self, path_model=None, 
                                         _copy_function=unix.ln, **kwargs):
@@ -514,11 +692,11 @@ class Forward:
         else:
             run_list = [self.run_forward_simulations]
 
-        self.system.run(run_list, path_model=path_model, 
-                        save_residuals=save_residuals, 
-                        save_forward_arrays=save_forward_arrays,
-                        **kwargs
-                        )
+        self._run_on_system(run_list, path_model=path_model,
+                            save_residuals=save_residuals,
+                            save_forward_arrays=save_forward_arrays,
+                            **kwargs
+                            )
 
     def prepare_data_for_solver(self, _src=None, _copy_function=unix.ln,
                                 **kwargs):

@@ -50,6 +50,16 @@ class Cluster(Workstation):
     :param environs: Optional environment variables to be provided in the
         following format VAR1=var1,VAR2=var2... Will be set using
         os.environs
+    :type blocking: bool
+    :param blocking: if True (default), the master job stays alive and waits
+        (polls the scheduler) for every job it submits to finish before
+        moving on. If False, the master job instead submits work, schedules
+        a dependent job to resume the workflow once that work finishes, and
+        exits -- so it only ever needs enough walltime for bookkeeping
+        (e.g. a short 'debug' queue) rather than the whole workflow's
+        duration. Only supported by systems that implement scheduler-native
+        job dependencies (currently `Slurm`/`Chinook`/`Maui`), and only by
+        workflow tasks that have been converted to support it.
 
     Paths
     -----
@@ -63,8 +73,14 @@ class Cluster(Workstation):
     submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts", "submit")
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", "run")
 
+    # Whether `run(blocking=False)` + `submit(depends_on=...)` are implemented
+    # for this class. Must be set explicitly (not inferred) by each child
+    # class that supports it, because a child that overrides `run()` itself
+    # (e.g. `Frontera`) would otherwise inherit a True it can't honor
+    _supports_nonblocking = False
+
     def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
-                 environs="", **kwargs):
+                 environs="", blocking=True, **kwargs):
         """Instantiate the Cluster System class"""
         super().__init__(**kwargs)
 
@@ -76,6 +92,7 @@ class Cluster(Workstation):
         self.ntask_max = ntask_max or nproc() - 1  # -1 because master job
         self.walltime = walltime
         self.environs = environs or ""
+        self.blocking = blocking
     
         # These define cluster status codes for jobs queued/running, 
         # completed, or failed. Must be filled in by child classes.
@@ -151,10 +168,20 @@ class Cluster(Workstation):
             direct submission runs immediately in-process and has no
             scheduler to defer it.
         """
+        # A dependent (resumed) submission appends to the existing output log
+        # rather than truncating it, so a workflow that suspends and resumes
+        # many times keeps ONE continuous log. In that case there is no old
+        # log to back up (and backing up on every resume would just pile up
+        # ever-growing numbered copies). Systems with no append option fall
+        # back to backing up the log before each resume truncates it.
+        resuming = depends_on is not None and not direct
+        append_flag = self._append_log_flag if resuming else ""
+
         # Copy log files if present to avoid overwriting
-        for src in [self.path.output_log, self.path.par_file]:
-            if os.path.exists(src) and os.path.exists(self.path.log_files):
-                copy_file(src, copy_to=self.path.log_files)
+        if not append_flag:
+            for src in [self.path.output_log, self.path.par_file]:
+                if os.path.exists(src) and os.path.exists(self.path.log_files):
+                    copy_file(src, copy_to=self.path.log_files)
 
         # Determine where submit call will be sent (login or compute node)
         if direct:
@@ -164,6 +191,8 @@ class Cluster(Workstation):
             header = self.submit_call_header
             if depends_on is not None:
                 header = f"{header} {self._dependency_flag(depends_on)}"
+                if append_flag:
+                    header = f"{header} {append_flag}"
 
         # e.g., submit -w ./ -p parameters.yaml
         submit_call = " ".join([
@@ -175,9 +204,19 @@ class Cluster(Workstation):
 
         logger.debug(submit_call)
         try:
-            subprocess.run(submit_call, shell=True)
+            # A dependent submission must be checked: if it fails silently,
+            # the workflow exits after dispatching and nothing ever resumes it
+            subprocess.run(submit_call, shell=True, check=resuming)
         except subprocess.CalledProcessError as e:
-            print(f"SeisFlows master job has failed with: {e}")
+            if resuming:
+                logger.critical(
+                    f"Failed to submit the job that resumes the workflow "
+                    f"after job {depends_on} finishes: {e}. Job {depends_on} "
+                    f"was still dispatched; once it finishes, resume "
+                    f"manually with `seisflows submit`"
+                )
+            else:
+                print(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
 
     def _dependency_flag(self, job_id):
@@ -208,6 +247,60 @@ class Cluster(Workstation):
             f"system '{self.__class__.__name__}' does not support "
             f"scheduler-native job dependencies, required for "
             f"`run(blocking=False)` / `submit(depends_on=...)`"
+        )
+
+    @property
+    def _append_log_flag(self):
+        """
+        Scheduler-specific flag that makes a submitted job APPEND to its
+        output log instead of truncating it (the default for most
+        schedulers). Used when resuming a suspended workflow, so the log
+        from earlier master-job invocations is not erased. Child classes
+        whose scheduler supports this should overwrite it; the default
+        (empty string) means unsupported, in which case `submit()` backs up
+        the old log before each resume instead.
+
+        :rtype: str
+        :return: the system-dependent flag, or an empty string
+        """
+        return ""
+
+    def job_outcome(self, job_id):
+        """
+        Inspect a job that was dispatched with `run(blocking=False)` and has
+        since finished, returning whether it succeeded and, if not, which
+        tasks of the array failed so they can be re-attempted.
+
+        .. note::
+            Generalized `Cluster` has no real external scheduler, so this
+            must be implemented by child classes that support non-blocking
+            dispatch (see `system.Slurm`).
+
+        :type job_id: str
+        :param job_id: ID returned by `run(blocking=False)`
+        :rtype: (bool, str)
+        :return: (True if every task completed, task ids that failed in a
+            format the child class's `run(array=...)` accepts, empty string
+            if none failed)
+        :raises NotImplementedError: if the system class does not support
+            non-blocking dispatch
+        """
+        raise NotImplementedError(
+            f"system '{self.__class__.__name__}' does not support "
+            f"non-blocking dispatch (`job_outcome`)"
+        )
+
+    def check(self):
+        """
+        Checks parameters and paths
+        """
+        super().check()
+
+        assert(self.blocking or self._supports_nonblocking), (
+            f"`system.blocking` is False but system "
+            f"'{self.__class__.__name__}' does not support non-blocking "
+            f"dispatch. Set `blocking: True`, or use a system that does "
+            f"(currently the SLURM-based systems, e.g. 'chinook')"
         )
 
     def run(self, funcs, single=False, tasktime=None, _retry=0, **kwargs):
