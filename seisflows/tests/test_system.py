@@ -12,6 +12,8 @@ from seisflows.system.workstation import Workstation
 from seisflows.system.cluster import Cluster
 from seisflows.system.chinook import Chinook
 from seisflows.system.slurm import Slurm
+from seisflows.system.pbs import Pbs
+from seisflows.system.miyabi import Miyabi
 
 
 def _test_function_a(tmpdir, **kwargs):
@@ -342,5 +344,203 @@ def test_check_allows_nonblocking_on_supported_system(tmpdir):
     """...and passes for one that can"""
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
                      blocking=False)
+    with patch("seisflows.system.workstation.Workstation.check"):
+        system.check()
+
+
+# -----------------------------------------------------------------------------
+# Non-blocking master job on PBS (Miyabi). As above, `subprocess.run` is mocked
+# -----------------------------------------------------------------------------
+
+def _miyabi(tmpdir, ntask=4, **kwargs):
+    """Miyabi system, set up, with the minimum parameters to submit"""
+    system = Miyabi(workdir=str(tmpdir), path_system=str(tmpdir),
+                    ntask=ntask, group="gz00", **kwargs)
+    system.setup()
+    return system
+
+
+def _qsub_result(*job_ids):
+    """Mock `subprocess.run` results, one per qsub, each a job id"""
+    results = []
+    for job_id in job_ids:
+        result = MagicMock()
+        result.stdout = f"{job_id}\n"
+        results.append(result)
+    return results
+
+
+def test_pbs_dependency_flag(tmpdir):
+    """
+    PBS's 'afterany' dependency, with the ',' that `run(blocking=False)`
+    joins several job ids with turned into PBS's ':'
+    """
+    system = _miyabi(tmpdir)
+    assert(system._dependency_flag("123.opbs") ==
+           "-W depend=afterany:123.opbs")
+    assert(system._dependency_flag("123[].opbs,124[].opbs") ==
+           "-W depend=afterany:123[].opbs:124[].opbs")
+
+
+def test_pbs_submit_depends_on_appends_dependency_flag(tmpdir):
+    """A resumed master job is submitted with the dependency, a first one
+    without"""
+    system = _miyabi(tmpdir)
+
+    with patch("seisflows.system.pbs.subprocess.run") as mock_run:
+        system.submit(workdir=str(tmpdir), depends_on="123.opbs")
+    assert("-W depend=afterany:123.opbs" in mock_run.call_args[0][0])
+
+    with patch("seisflows.system.pbs.subprocess.run") as mock_run:
+        system.submit(workdir=str(tmpdir))
+    assert("-W depend=" not in mock_run.call_args[0][0])
+
+
+def test_pbs_submit_resume_failure_is_not_silent(tmpdir):
+    """A failed submission of the resume job must stop the workflow with an
+    error that says how to recover"""
+    system = _miyabi(tmpdir)
+    error = subprocess.CalledProcessError(1, "qsub")
+    with patch("seisflows.system.pbs.subprocess.run", side_effect=error), \
+         patch("seisflows.system.pbs.logger") as mock_logger:
+        with pytest.raises(SystemExit):
+            system.submit(workdir=str(tmpdir), depends_on="123.opbs")
+    assert("resume manually" in mock_logger.critical.call_args[0][0])
+
+
+def test_pbs_run_blocking_false_returns_job_id_without_monitoring(tmpdir):
+    """Submits an array job and returns at once, with the id of the array"""
+    system = _miyabi(tmpdir)
+    with patch("seisflows.system.pbs.subprocess.run",
+               side_effect=_qsub_result("55[].opbs")) as mock_run, \
+         patch.object(system, "monitor_job_status") as mock_monitor:
+        job_id = system.run(funcs=[_test_function_a], tmpdir=str(tmpdir),
+                            blocking=False)
+
+    assert(job_id == "55[].opbs")
+    mock_monitor.assert_not_called()
+    assert(mock_run.call_count == 1)
+    assert("-J 0-3%" in mock_run.call_args[0][0])
+
+
+def test_pbs_run_blocking_true_still_monitors(tmpdir):
+    """The default path is unchanged by the refactor into
+    `_submit_run_call`"""
+    system = _miyabi(tmpdir)
+    with patch("seisflows.system.pbs.subprocess.run",
+               side_effect=_qsub_result("55[].opbs")), \
+         patch("seisflows.system.pbs.time.sleep"), \
+         patch.object(system, "monitor_job_status",
+                      return_value=1) as mock_monitor:
+        assert(system.run(funcs=[_test_function_a], tmpdir=str(tmpdir))
+               is None)
+
+    mock_monitor.assert_called_once_with("55[].opbs")
+
+
+def test_pbs_run_rerun_submits_one_job_per_contiguous_range(tmpdir):
+    """
+    PBS's '-J' takes a single contiguous range, so re-running failed tasks
+    1,3,4 (as the workflow asks for them) takes two jobs, 1-1 and 3-4, whose
+    ids are returned together
+    """
+    system = _miyabi(tmpdir, ntask=6)
+    with patch("seisflows.system.pbs.subprocess.run",
+               side_effect=_qsub_result("56[].opbs", "57[].opbs")) as mock_run:
+        job_id = system.run(funcs=[_test_function_a], tmpdir=str(tmpdir),
+                            blocking=False, array="1,3,4")
+
+    assert(job_id == "56[].opbs,57[].opbs")
+    calls = [c[0][0] for c in mock_run.call_args_list]
+    assert(len(calls) == 2)
+    assert("-J 1-1 " in calls[0])
+    assert("-J 3-4 " in calls[1])
+
+
+def test_pbs_run_single_task_is_not_an_array(tmpdir):
+    """A single-task job has no '-J', so a re-run of task 0 submits as is"""
+    system = _miyabi(tmpdir, ntask=1)
+    with patch("seisflows.system.pbs.subprocess.run",
+               side_effect=_qsub_result("58.opbs")) as mock_run:
+        job_id = system.run(funcs=[_test_function_a], tmpdir=str(tmpdir),
+                            blocking=False, array="0")
+
+    assert(job_id == "58.opbs")
+    assert("-J" not in mock_run.call_args[0][0])
+
+
+def test_pbs_array_indices():
+    """Expands the index lists and ranges that failed tasks arrive as"""
+    assert(Pbs._array_indices("1,3,5-7") == [1, 3, 5, 6, 7])
+    assert(Pbs._array_indices("2") == [2])
+    assert(Pbs._array_indices("4,2,2-3") == [2, 3, 4])
+
+
+def test_pbs_job_outcome_success(tmpdir):
+    """All tasks completed: success, nothing to re-run"""
+    system = _miyabi(tmpdir)
+    with patch.object(system, "monitor_job_status", return_value=1):
+        assert(system.job_outcome("55[].opbs") == (True, ""))
+
+
+def test_pbs_job_outcome_reports_failed_task_ids(tmpdir):
+    """Failed task ids come from the subjob ids ('55[3].opbs' -> 3)"""
+    system = _miyabi(tmpdir)
+    jobs = ("55[0].opbs", "55[1].opbs", "55[2].opbs", "55[3].opbs")
+    states = ("COMPLETED", "FAILED", "COMPLETED", "FAILED")
+    with patch.object(system, "monitor_job_status", return_value=-1), \
+         patch.object(system, "query_job_states",
+                      return_value=(jobs, states)):
+        assert(system.job_outcome("55[].opbs") == (False, "1,3"))
+
+
+def test_pbs_job_outcome_across_several_jobs(tmpdir):
+    """
+    A re-run that took two jobs is judged as a whole: monitored together,
+    and the failures of both are reported
+    """
+    system = _miyabi(tmpdir)
+    answers = {"56[].opbs": (("56[1].opbs",), ("COMPLETED",)),
+               "57[].opbs": (("57[3].opbs", "57[4].opbs"),
+                             ("FAILED", "COMPLETED"))}
+    with patch.object(system, "monitor_job_status",
+                      return_value=-1) as mock_monitor, \
+         patch.object(system, "query_job_states",
+                      side_effect=lambda jid, sort=False: answers[jid]):
+        outcome = system.job_outcome("56[].opbs,57[].opbs")
+
+    assert(outcome == (False, "3"))
+    assert(mock_monitor.call_args[0][0] == ["56[].opbs", "57[].opbs"])
+
+
+def test_pbs_job_outcome_single_job_failure_is_task_zero(tmpdir):
+    """A job that isn't an array has no index and is task 0"""
+    system = _miyabi(tmpdir, ntask=1)
+    with patch.object(system, "monitor_job_status", return_value=-1), \
+         patch.object(system, "query_job_states",
+                      return_value=(("58.opbs",), ("FAILED",))):
+        assert(system.job_outcome("58.opbs") == (False, "0"))
+
+
+def test_monitor_job_status_waits_for_every_job_in_a_list(tmpdir):
+    """
+    If the scheduler can't report on one of several jobs yet, the others
+    finishing is not enough: that is not complete, and used to be a crash
+    """
+    system = _miyabi(tmpdir)
+    answers = iter([(("1.opbs",), ("COMPLETED",)), (None, None),
+                    (("1.opbs",), ("COMPLETED",)),
+                    (("2.opbs",), ("COMPLETED",))])
+    with patch("seisflows.system.cluster.time.sleep"), \
+         patch.object(system, "query_job_states",
+                      side_effect=lambda jid, sort=False: next(answers)):
+        assert(system.monitor_job_status(["1.opbs", "2.opbs"]) == 1)
+
+
+def test_pbs_nonblocking_support_flags(tmpdir):
+    """PBS and its children claim support and pass `check()`"""
+    assert(Pbs._supports_nonblocking is True)
+    assert(Miyabi._supports_nonblocking is True)
+    system = _miyabi(tmpdir, blocking=False)
     with patch("seisflows.system.workstation.Workstation.check"):
         system.check()

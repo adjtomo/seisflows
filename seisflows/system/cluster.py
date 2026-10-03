@@ -473,9 +473,14 @@ class Cluster(Workstation):
             if isinstance(job_id, list):
                 job_ids, states = [], []
                 for jid in job_id:
-                    _job_ids, _states = self.query_job_states(jid)                         
-                    job_ids += _job_ids            
-                    states += _states       
+                    _job_ids, _states = self.query_job_states(jid)
+                    # A job the scheduler can't report on yet means that the
+                    # list isn't complete, treat as no response (below)
+                    if not _job_ids or not _states:
+                        job_ids, states = [], []
+                        break
+                    job_ids += _job_ids
+                    states += _states
             else:                                             
                 job_ids, states = self.query_job_states(job_id)
 

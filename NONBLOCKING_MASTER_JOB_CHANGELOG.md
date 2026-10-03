@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 128 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 142 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -431,6 +431,56 @@ viable once the master job stops blocking.
     kernels` including that its cleanup is skipped on resume, `keyed()`, and
     `was_thrifty` surviving a restart and the end-of-iteration reset.
 
+### PBS / Miyabi port (`system/pbs.py`, written ahead of the Chinook run)
+
+Done in parallel with, not after, the user's Chinook validation, since the
+workflow side is scheduler-agnostic and this is the scheduler piece. It is
+therefore the least-verified code here: mocked `qsub` only, and every
+PBS-specific behaviour below is an assumption about the scheduler.
+
+- `Pbs._supports_nonblocking = True` (inherited by `Miyabi`).
+- `Pbs._dependency_flag` -> `-W depend=afterany:<id>`. `Pbs.submit(
+  depends_on=)` appends it to the header; a failed resume submission is
+  fatal and says how to resume by hand, as on SLURM.
+- `Pbs.run(blocking=False)` returns the job id without monitoring. The
+  qsub call moved into `_submit_run_call` (blocking path otherwise
+  unchanged, still the baseline).
+- **Retries need several jobs on PBS.** `-J` takes one contiguous range
+  (SLURM's `--array` takes a list), so re-running failed tasks `1,3,4`
+  submits `1-1` and `3-4`. `run(blocking=False, array="1,3,4")` therefore
+  submits one job per contiguous range and returns their ids joined by
+  `,`. That string is the dispatch's single job id as far as the
+  `Dispatcher` and the state file are concerned (no change there: `,` is
+  not the `:` the state file splits on), and `_dependency_flag` turns it
+  into PBS's `a:b` for the resume job. If the second of two qsubs fails,
+  the first is already running; it is fatal, resume by hand.
+- `Pbs.job_outcome` monitors all the ids together and reads failed task ids
+  from the subjob ids (`55[3].opbs` -> 3); a non-array job is task 0.
+- `Cluster.monitor_job_status` list branch crashed (`+=` of `None`) when
+  the scheduler had no answer yet for one job of a list. It now treats
+  that as "no response yet" and keeps waiting. Nothing used the list form
+  before this.
+- **Logs differ from SLURM.** qsub has no append option, so there is no
+  `_append_log_flag`; `Pbs.submit` already backed up the log before every
+  submission, so each earlier master job's log is kept as a numbered copy
+  in `path.log_files` and the live `sflog.txt` is replaced by the latest.
+- Tests (`test_system.py`, mocked `subprocess.run`, on `Miyabi`):
+  dependency flag incl. the `,` -> `:` conversion, `submit(depends_on)`
+  with and without, fatal resume failure, `run(blocking=False)` incl.
+  contiguous-range splitting and the single-task (no `-J`) case, blocking
+  path unchanged, `_array_indices`, `job_outcome` for one job / several
+  jobs / non-array, the monitor fix, and `check()` accepting
+  `blocking: False`.
+- **Things only Miyabi can answer** (check these first): is `-W depend=
+  afterany:<id>` accepted alongside the existing `-W group_list=` (two `-W`
+  options; if not they must be merged into one); does `afterany` on an
+  array parent id (`55[].opbs`) wait for every subjob; does `qstat -H`
+  still know a job when the resume job starts (history must be enabled, as
+  the blocking path already assumes); are single-index arrays (`-J 3-3`)
+  accepted (the blocking retry path already relies on it); is a dependent
+  job accepted by `debug-g`; how a failed dependency behaves when the
+  upstream job has already left the queue.
+
 ## Not done / come back to this
 
 - **Real-cluster validation — the top priority, nothing above has run on a
@@ -464,12 +514,12 @@ viable once the master job stops blocking.
   `_srcrcv_stats` is rebuilt by `setup()` on resume; optimizer state is
   persisted via `optimize.checkpoint()`. **Re-check this for any task or
   workflow added later.**
-- **PBS/Miyabi port — not started, intentionally deferred.** Once validated
-  on Chinook: add `Pbs._dependency_flag()` (`-W depend=afterany:{job_id}`)
-  and a `blocking` param to `Pbs.run()`, reusing `Pbs.submit()`'s existing
-  `-v`-based variable-passing (already correct for PBS's `qsub` quirks, see
-  `pbs.py` module docstring) — same shape as the SLURM work, not a
-  redesign.
+- **PBS/Miyabi port — written, not validated on Miyabi** (see its entry
+  above for the list of assumptions to check). Worth validating on Chinook
+  first, since a workflow-side bug would otherwise be indistinguishable
+  from a PBS-side one. The blocking retry path in `Pbs.run` has the same
+  position-as-task-id flaw as `Slurm.run` (see below), left alone for the
+  same reason.
 - **`Frontera` gap — and it's already broken.** `Frontera(Slurm)`
   overrides `run()` itself, so it would not get `blocking=False` support for
   free (it declares `_supports_nonblocking = False` so `check()` refuses
@@ -506,4 +556,5 @@ viable once the master job stops blocking.
    update here, that's real-cluster validation on Chinook of the `forward`,
    `migration` and `inversion` workflows with `blocking: False`
    (`NoiseInversion` is converted too, but has only been tested against
-   fakes, like everything else). After that, the PBS/Miyabi port.
+   fakes, like everything else). The PBS/Miyabi port is written too (mocked
+   `qsub` only); validate it on Miyabi `debug-g` afterwards.

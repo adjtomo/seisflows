@@ -108,6 +108,10 @@ class Pbs(Cluster):
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts",
                                  "pbs_entry_point")
 
+    # `run(blocking=False)`, `submit(depends_on=...)` and `job_outcome()` are
+    # implemented below
+    _supports_nonblocking = True
+
     def __init__(self, ntask_max=100, queue=None, group=None, pbs_args="",
                  **kwargs):
         """
@@ -326,6 +330,25 @@ class Pbs(Cluster):
         """
         return ""
 
+    def _dependency_flag(self, job_id):
+        """
+        Overwrites `system.cluster.Cluster._dependency_flag`. PBS's
+        'afterany' dependency type releases the dependent submission once
+        `job_id` finishes, successfully or not.
+
+        .. note::
+            `run(blocking=False)` joins the IDs of several jobs with ','
+            (see `run`), whereas PBS separates multiple IDs within one
+            dependency with ':'. Job IDs contain neither character.
+
+        :type job_id: str
+        :param job_id: ID of the job (or ','-separated IDs of several jobs)
+            that must finish before the dependent submission is released
+        :rtype: str
+        :return: the qsub dependency flag
+        """
+        return f"-W depend=afterany:{job_id.replace(',', ':')}"
+
     @property
     def _runscripts_dir(self):
         """
@@ -347,7 +370,7 @@ class Pbs(Cluster):
         return os.path.join(ROOT_DIR, "system", "runscripts")
 
     def submit(self, workdir=None, parameter_file="parameters.yaml",
-              direct=False):
+               direct=False, depends_on=None):
         """
         Submits the main workflow job as a separate job submitted directly
         to the system that is running the master job.
@@ -382,7 +405,22 @@ class Pbs(Cluster):
                 for Miyabi-G specifically -- confirm your Conda
                 environment/binaries are actually usable from your
                 pre-post session before relying on this for real runs.
+        :type depends_on: str
+        :param depends_on: (used by `run(blocking=False)`) if given, the
+            scheduler will not release this submission until the job(s)
+            with this ID (',' separated if several) have finished,
+            successfully or not. This is how a non-blocking master job
+            re-submits itself to resume a workflow. Ignored if `direct`.
+
+            .. note::
+                qsub has no option to append to the output log, so unlike
+                `Slurm` each resumed master job replaces it when it ends.
+                The log is backed up below before every submission, so
+                earlier invocations are kept as numbered copies in
+                `path.log_files`.
         """
+        resuming = depends_on is not None and not direct
+
         # Copy log files if present to avoid overwriting
         for src in [self.path.output_log, self.path.par_file]:
             if os.path.exists(src) and os.path.exists(self.path.log_files):
@@ -406,8 +444,12 @@ class Pbs(Cluster):
         if extra:
             variables += f",{extra}"
 
+        header = self.submit_call_header
+        if resuming:
+            header = f"{header} {self._dependency_flag(depends_on)}"
+
         submit_call = " ".join([
-            self.submit_call_header,
+            header,
             f"-v {variables}",
             f"{self.submit_workflow}",
         ])
@@ -415,11 +457,21 @@ class Pbs(Cluster):
         try:
             subprocess.run(submit_call, shell=True, check=True)
         except subprocess.CalledProcessError as e:
-            logger.critical(f"SeisFlows master job has failed with: {e}")
+            if resuming:
+                # If this fails silently the workflow exits after
+                # dispatching and nothing ever resumes it
+                logger.critical(
+                    f"Failed to submit the job that resumes the workflow "
+                    f"after job {depends_on} finishes: {e}. Job "
+                    f"{depends_on} was still dispatched; once it finishes, "
+                    f"resume manually with `seisflows submit`"
+                )
+            else:
+                logger.critical(f"SeisFlows master job has failed with: {e}")
             sys.exit(-1)
 
     def run(self, funcs, single=False, tasktime=None, array=None,
-            _attempts=0, **kwargs):
+            _attempts=0, blocking=True, **kwargs):
         """
         Runs task multiple times in embarrassingly parallel fashion on a PBS
         cluster. Executes the list of functions (`funcs`) NTASK times with
@@ -452,6 +504,22 @@ class Pbs(Cluster):
         :param _attempts: a recursive counter for failed job runs that allows
             the `run` function to re-attempt failed jobs up to `rerun` number
             of times
+        :type blocking: bool
+        :param blocking: if True (default), submit the job and poll/wait
+            (`monitor_job_status`) until it finishes before returning. If
+            False, submit the job and return its ID immediately without
+            waiting, for the caller to persist and resume from later (see
+            `submit(depends_on=...)`, `job_outcome`). Failure recovery
+            (`rerun`) does not apply in this mode since nothing here waits
+            to see the outcome. In this mode `array` may also be a
+            comma-separated list of indices and ranges ('1,3,4-6'), as
+            SLURM accepts and the workflow's re-dispatch of failed tasks
+            gives: each contiguous range is submitted as its own job (see
+            `_contiguous_ranges`).
+        :rtype: NoneType or str
+        :return: None if `blocking`; the submitted job's ID if not. If a
+            re-run of non-contiguous tasks required several jobs, their IDs
+            joined by ','
         """
         logger.info(f"running functions {[_.__name__ for _ in funcs]}")
 
@@ -484,27 +552,32 @@ class Pbs(Cluster):
         if extra:
             variables += f",{extra}"
 
+        if not blocking:
+            # A single job has no array to split. Otherwise PBS's '-J'
+            # takes one contiguous range, so a list of failed task ids
+            # needs one job per range
+            if not array or single or self.ntask == 1:
+                arrays = [array]
+            else:
+                arrays = [f"{start}-{end}" for start, end in
+                          self._contiguous_ranges(self._array_indices(array))]
+            job_ids = []
+            for array_str in arrays:
+                run_call = self.run_call(executable=f"{self.run_functions}",
+                                         tasktime=tasktime, array=array_str,
+                                         single=single, variables=variables)
+                job_ids.append(self._submit_run_call(run_call))
+            job_id = ",".join(job_ids)
+            logger.info(f"dispatched job {job_id} without waiting "
+                        f"(blocking=False)")
+            return job_id
+
         # Get the run call that will be submitted to the system via
         # subprocess
         run_call = self.run_call(executable=f"{self.run_functions}",
                                  tasktime=tasktime, array=array,
                                  single=single, variables=variables)
-        logger.debug(run_call)
-
-        # RUN the job by submitting the qsub directive to system
-        try:
-            stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
-                                    text=True, shell=True,
-                                    check=True).stdout
-        except subprocess.CalledProcessError as e:
-            logger.critical(msg.cli(
-                f"SeisFlows task submission has failed with: {e}",
-                items=[f"RUN CALL: {run_call}"],
-                header="pbs run error", border="=")
-                )
-            sys.exit(-1)
-
-        job_id = self._stdout_to_job_id(stdout)
+        job_id = self._submit_run_call(run_call)
 
         # Monitor the job queue until all jobs have finished
         status = self.monitor_job_status(job_id)
@@ -555,6 +628,83 @@ class Pbs(Cluster):
             # do). Moving on too quickly may result in required files not
             # being available
             time.sleep(5)
+
+    def _submit_run_call(self, run_call):
+        """
+        Submit one run call with qsub
+
+        :type run_call: str
+        :param run_call: the full qsub call, see `run_call()`
+        :rtype: str
+        :return: ID of the submitted job
+        :raises SystemExit: if the submission fails
+        """
+        logger.debug(run_call)
+        try:
+            stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
+                                    text=True, shell=True,
+                                    check=True).stdout
+        except subprocess.CalledProcessError as e:
+            logger.critical(msg.cli(
+                f"SeisFlows task submission has failed with: {e}",
+                items=[f"RUN CALL: {run_call}"],
+                header="pbs run error", border="=")
+                )
+            sys.exit(-1)
+
+        return self._stdout_to_job_id(stdout)
+
+    @staticmethod
+    def _array_indices(array):
+        """
+        Expand a comma-separated string of task indices and ranges, e.g.
+        '1,3,5-7', into a sorted list of unique integers [1, 3, 5, 6, 7].
+
+        :type array: str
+        :param array: task indices and '<start>-<end>' ranges
+        :rtype: list of int
+        :return: the task indices
+        """
+        indices = set()
+        for item in str(array).split(","):
+            start, _, end = item.strip().partition("-")
+            indices.update(range(int(start), int(end or start) + 1))
+
+        return sorted(indices)
+
+    def job_outcome(self, job_id):
+        """
+        Overwrites `system.cluster.Cluster.job_outcome`. Waits (briefly --
+        the job has already finished by the time a dependent job resumes
+        the workflow) for the final state of every task, then reports which
+        failed.
+
+        .. note::
+            Failed task ids are read from each array subjob's own id (e.g.
+            '441630[3].opbs' -> 3), so this stays correct when `job_id` was
+            a re-run of only a subset of the original tasks. A job that is
+            not an array has no index and is task 0.
+
+        :type job_id: str
+        :param job_id: ID returned by `run(blocking=False)`, which is
+            several IDs joined by ',' if a re-run needed more than one job
+        :rtype: (bool, str)
+        :return: (True if every task completed, comma-separated string of
+            failed task ids, empty string if none failed)
+        """
+        job_ids = job_id.split(",")
+        if self.monitor_job_status(job_ids, wait_time_s=5) == 1:
+            return True, ""
+
+        failed = set()
+        for jid in job_ids:
+            subjobs, states = self.query_job_states(jid, sort=True)
+            for subjob, state in zip(subjobs, states):
+                if state in self._failed_states:
+                    match = re.search(r"\[(\d+)]", subjob)
+                    failed.add(int(match.group(1)) if match else 0)
+
+        return False, ",".join(str(idx) for idx in sorted(failed))
 
     @staticmethod
     def _contiguous_ranges(indices):
