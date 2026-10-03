@@ -84,6 +84,7 @@ class Dispatcher:
     def __init__(self, workflow):
         self.workflow = workflow
         self._task = None  # name of the task-list function now running
+        self._key = None  # key set by `keyed()`, for dispatches inside it
         self._counts = {}  # dispatches made so far by that task, per key
 
     @contextmanager
@@ -101,6 +102,24 @@ class Dispatcher:
             yield
         finally:
             self._task = None
+
+    @contextmanager
+    def keyed(self, name):
+        """
+        Context in which dispatches are recorded under the key `name`
+        instead of the running task's name. For tasks that reach their
+        dispatch through other methods (e.g. a loop calling
+        `super().evaluate_initial_misfit()` once per force), where passing a
+        `key` argument down would mean changing every signature in between.
+
+        :type name: str
+        :param name: state-file key for dispatches made inside the context
+        """
+        self._key = name
+        try:
+            yield
+        finally:
+            self._key = None
 
     @property
     def nonblocking(self):
@@ -198,7 +217,8 @@ class Dispatcher:
         :type funcs: list of methods
         :param funcs: functions to run on the system, see `system.run()`
         :type key: str
-        :param key: state-file key to record this dispatch under, defaults to
+        :param key: state-file key to record this dispatch under. Defaults to
+            the key of the enclosing `keyed()` context if there is one, else
             the name of the running task-list function. Not passed on to
             `system.run()`
         :param kwargs: passed through to `system.run()`
@@ -208,7 +228,7 @@ class Dispatcher:
         if not self.nonblocking:
             return system.run(funcs, **kwargs)
 
-        key = key or self._task
+        key = key or self._key or self._task
         self._counts[key] = self._counts.get(key, 0) + 1
         assert(self._counts[key] == 1), (
             f"task '{self._task}' dispatched more than once under the key "

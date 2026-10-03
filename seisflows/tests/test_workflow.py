@@ -398,6 +398,7 @@ class _FakeSystem:
     def __init__(self, par_file, blocking=False, rerun=0, outcomes=None):
         self.blocking = blocking
         self.rerun = rerun
+        self.tasktime = 1
         self.path = Dict(par_file=par_file)
         self.outcomes = list(outcomes or [])  # [(success, failed_ids), ...]
         self.runs = []  # (blocking kwarg or None, array kwarg or None)
@@ -693,14 +694,26 @@ def test_check_accepts_nonblocking_for_inversion(tmpdir):
 
 def test_check_refuses_nonblocking_for_unsupported_workflow(tmpdir):
     """
-    `NoiseInversion` still has tasks that dispatch several times and call
-    `system.run()` directly, so it must refuse a non-blocking system
-    instead of half-working under it
+    A workflow with tasks that still call `system.run()` directly declares
+    itself unsupported, and must refuse a non-blocking system instead of
+    half-working under it
     """
-    workflow = NoiseInversion(workdir=str(tmpdir), modules=_fake_modules(
+    class _Unsupported(Forward):
+        _supports_nonblocking = False
+
+    workflow = _Unsupported(workdir=str(tmpdir), modules=_fake_modules(
         _FakeSystem(par_file="p.yaml", blocking=False)))
     with pytest.raises(AssertionError, match="does not yet support"):
         workflow.check()
+
+
+def test_every_shipped_workflow_supports_nonblocking():
+    """
+    Each workflow's dispatches all go through the dispatcher now. If a new
+    one is added with a direct `system.run()`, it must opt out explicitly
+    """
+    for workflow in (Forward, Inversion, NoiseInversion):
+        assert(workflow._supports_nonblocking is True)
 
 
 # -----------------------------------------------------------------------------
@@ -892,6 +905,9 @@ class _FakeOptimizer:
 
     def save_vector(self, name, m):
         self.events.append(f"save {name}")
+
+    def load_vector(self, name):
+        return _FakeModel()
 
     def checkpoint(self):
         self.events.append("checkpoint")
@@ -1085,3 +1101,228 @@ def test_line_search_fail_without_restart_options_exits(tmpdir):
     workflow = _line_search_workflow(tmpdir, ["FAIL"], can_restart=False)
     with pytest.raises(SystemExit):
         _run_line_search(workflow)
+
+
+def test_dispatcher_keyed_context_sets_the_default_key(tmpdir):
+    """
+    For tasks that reach their dispatch through other methods, `keyed()`
+    sets the key without changing any signature in between
+    """
+    class _Keyed(_DummySystemWorkflow):
+        def dispatching_task(self):
+            with self.dispatcher.keyed("custom_key"):
+                self.dispatcher.run([self.before])
+
+    workflow = _make_workflow(tmpdir, _Keyed)
+    workflow.run()
+    assert(workflow._states["custom_key"] == "PENDING:1001:0")
+    assert(workflow._states["dispatching_task"] == 0)
+
+
+# -----------------------------------------------------------------------------
+# `NoiseInversion`: tasks that dispatch once per force
+# -----------------------------------------------------------------------------
+
+class _NoiseWorkflow(NoiseInversion):
+    """
+    Real `NoiseInversion` task methods, with the parts that need real
+    preprocessing or optimization replaced by recorders
+    """
+    def __init__(self, **kwargs):
+        self.log = []
+        super().__init__(**kwargs)
+
+    def sum_residuals(self, residuals_files, save_to):
+        self.log.append(f"sum {self.evaluation}")
+
+    def _rename_preprocess_files(self, tag):
+        self.log.append(f"rename {tag}")
+
+
+def _noise_workflow(tmpdir, kernels, iteration=2, step_count=0, **system_kw):
+    """A `NoiseInversion` wired to fakes. Non-blocking unless told otherwise"""
+    os.makedirs(os.path.join(str(tmpdir), "scratch"), exist_ok=True)
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    if not os.path.exists(state_file):
+        with open(state_file, "w") as f:
+            f.write("# SeisFlows State File\n")
+    workflow = _NoiseWorkflow(
+        workdir=str(tmpdir), path_state_file=state_file, kernels=kernels,
+        path_model_true=os.path.join(str(tmpdir), "m_true"))
+    workflow.iteration = iteration
+    workflow.optimize = _FakeOptimizer([], step_count=step_count)
+    workflow.solver = _FakeSolver()
+    workflow.system = _FakeSystem(par_file="p.yaml", blocking=False,
+                                  **system_kw)
+    workflow.preprocess = object()  # truthy, only its presence is checked
+    return workflow
+
+
+def _run_task(workflow, func):
+    """Run a task function the way `Forward.run()` would"""
+    try:
+        with workflow.dispatcher.task(func.__name__):
+            func()
+    except WorkflowSuspended:
+        return "SUSPENDED"
+    return "COMPLETE"
+
+
+def test_noise_synthetic_data_is_one_suspend_per_force(tmpdir):
+    """
+    Z, E and N are separate dispatches, in that order, each its own process
+    lifetime. The model values are only checked before the first of them.
+    """
+    statuses, dispatched = [], []
+    for outcomes in ([], [(True, "")], [(True, "")], [(True, "")]):
+        workflow = _noise_workflow(tmpdir, "ZZ,RR", iteration=1,
+                                   outcomes=outcomes)
+        statuses.append(_run_task(workflow, workflow.generate_synthetic_data))
+        dispatched += workflow.system.funcs
+
+    assert(statuses == ["SUSPENDED"] * 3 + ["COMPLETE"])
+    assert(dispatched == [
+        ["_check_model_single", "_generate_synthetic_data_single"],
+        ["_generate_synthetic_data_single"],
+        ["_generate_synthetic_data_single"],
+    ])
+    for force in "ZEN":
+        assert(workflow._states[f"generate_synthetic_data_{force}"] == 1)
+
+
+def test_noise_synthetic_data_checks_files_on_master_only(tmpdir):
+    workflow = _noise_workflow(tmpdir, "ZZ", iteration=1)
+    _run_task(workflow, workflow.generate_synthetic_data)
+    assert(workflow.solver.files_checked == [workflow.path.model_true])
+    assert(workflow.solver.values_checked == [])
+
+
+def test_noise_rt_misfit_is_one_suspend_per_force(tmpdir):
+    first = _noise_workflow(tmpdir, "RR,TT")
+    assert(_run_task(first, first.evaluate_rt_misfit) == "SUSPENDED")
+    assert(first._states["evaluate_rt_misfit_E"] == "PENDING:1001:0")
+    assert(first.system.funcs[0][0] == "_check_model_single")
+    assert(first.log == [])  # the finish half has not been reached
+
+    # E is collected, then N dispatched
+    second = _noise_workflow(tmpdir, "RR,TT", outcomes=[(True, "")])
+    assert(_run_task(second, second.evaluate_rt_misfit) == "SUSPENDED")
+    assert(second._states["evaluate_rt_misfit_E"] == 1)
+    assert(second._states["evaluate_rt_misfit_N"] == "PENDING:1001:0")
+    assert(second.system.runs == [(False, None)])  # N only, E not redone
+    assert(second.log == [])
+
+    # E is skipped, N collected, and only then are the outputs renamed
+    third = _noise_workflow(tmpdir, "RR,TT", outcomes=[(True, "")])
+    assert(_run_task(third, third.evaluate_rt_misfit) == "COMPLETE")
+    assert(third.system.runs == [])
+    assert(third.log == ["rename RT"])
+
+
+def test_noise_rt_adjoint_collects_a_pending_dispatch(tmpdir):
+    """
+    These loops used to test their flags for truthiness, and a PENDING
+    dispatch is a non-empty string: it would have been skipped instead of
+    collected, silently moving on to the next one
+    """
+    first = _noise_workflow(tmpdir, "RR,TT")
+    assert(_run_task(first, first.run_rt_adjoint_simulations) == "SUSPENDED")
+    assert(first._states["run_rt_adjoint_simulations_ER"] == "PENDING:1001:0")
+
+    second = _noise_workflow(tmpdir, "RR,TT", outcomes=[(True, "")])
+    assert(_run_task(second, second.run_rt_adjoint_simulations) ==
+           "SUSPENDED")
+    assert(second.system.outcomes == [])  # ER's outcome WAS consulted
+    assert(second._states["run_rt_adjoint_simulations_ER"] == 1)
+    assert(second._states["run_rt_adjoint_simulations_ET"] ==
+           "PENDING:1001:0")
+
+
+def test_noise_line_search_evaluation_is_one_suspend_per_force(tmpdir):
+    statuses, dispatched, logs = [], [], []
+    for outcomes in ([], [(True, "")], [(True, "")], [(True, "")]):
+        workflow = _noise_workflow(tmpdir, "ZZ,RR", iteration=1, step_count=1,
+                                   outcomes=outcomes)
+        statuses.append(
+            _run_task(workflow, workflow.evaluate_line_search_misfit))
+        dispatched += workflow.system.funcs
+        logs += workflow.log
+
+    assert(statuses == ["SUSPENDED"] * 3 + ["COMPLETE"])
+    # The trial model is only checked before the first force of the step
+    assert([f[0] for f in dispatched] == ["_check_model_single",
+                                          "prepare_data_for_solver",
+                                          "prepare_data_for_solver"])
+    assert(logs == ["rename ZZ", "rename RT", "rename RT", "sum i01s01"])
+    # Flags are reset so the next line search step starts clean
+    for force in "ZEN":
+        assert(workflow._states[f"evaluate_line_search_misfit_{force}"] == 0)
+
+
+def test_noise_postprocess_kernels_makes_two_keyed_dispatches(tmpdir):
+    """
+    Combining the horizontal kernels and then smoothing are two dispatches in
+    one task. The cleanup the second one does first must be skipped once
+    it is resuming, or it would delete the output of the job being collected
+    """
+    first = _noise_workflow(tmpdir, "ZZ,RR")
+    assert(_run_task(first, first.postprocess_event_kernels) == "SUSPENDED")
+    assert(first.system.funcs == [["generate_event_kernels"]])
+    assert(first._states["postprocess_event_kernels_combine"] ==
+           "PENDING:1001:0")
+
+    # The combine is collected, then the smoothing is dispatched
+    second = _noise_workflow(tmpdir, "ZZ,RR", outcomes=[(True, "")])
+    assert(_run_task(second, second.postprocess_event_kernels) == "SUSPENDED")
+    assert(second.system.funcs == [["mask_source_event_kernels",
+                                    "combine_event_kernels",
+                                    "smooth_misfit_kernel"]])
+    assert(second._states["postprocess_event_kernels"] == "PENDING:1001:0")
+
+    # Both collected. A misfit kernel directory now is the smoothing job's
+    # output, and must survive the resume
+    output = os.path.join(second.path.eval_grad, "misfit_kernel")
+    os.makedirs(output)
+    third = _noise_workflow(tmpdir, "ZZ,RR",
+                            outcomes=[(True, ""), (True, "")])
+    assert(_run_task(third, third.postprocess_event_kernels) == "COMPLETE")
+    assert(os.path.exists(output))
+    assert(third.system.runs == [])
+
+
+def test_was_thrifty_survives_a_process_restart(tmpdir):
+    """
+    Non-blocking dispatch restarts the process between the iteration that
+    sets this and tasks that read it (e.g. `NoiseInversion.
+    sum_all_residuals`), so it can't live in memory alone
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+
+    workflow = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file)
+    assert(workflow._was_thrifty is False)
+    workflow.iteration = 1
+    workflow._was_thrifty = True
+    workflow.checkpoint()
+
+    resumed = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file)
+    assert(resumed._was_thrifty is True)
+
+
+def test_was_thrifty_is_not_reset_with_the_task_states(tmpdir):
+    """`run()` zeroes every task state at the end of an iteration"""
+    class _SetsFlag(_DummyInversion):
+        def only_task(self):
+            self._was_thrifty = True
+
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+    workflow = _SetsFlag(workdir=str(tmpdir), path_state_file=state_file,
+                         start=1, end=1)
+    workflow.iteration = 1
+    workflow.run()
+
+    resumed = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file)
+    assert(resumed._was_thrifty is True)

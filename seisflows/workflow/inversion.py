@@ -92,7 +92,12 @@ class Inversion(Migration):
         # Internal attribute for keeping track of inversion
         self._optimize_name = optimize
         self._required_modules = ["system", "solver", "preprocess", "optimize"]
-        self._was_thrifty = False  # keeps track of previous thrifty status
+
+        # Keeps track of previous thrifty status. Persisted in the state file
+        # (see `checkpoint`) because non-blocking dispatch restarts the
+        # process between the iteration that sets it and the tasks that read
+        # it, so it cannot live in memory alone
+        self._was_thrifty = bool(int(self._states.get("was_thrifty", 0)))
 
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
@@ -252,20 +257,27 @@ class Inversion(Migration):
 
     def checkpoint(self):
         """
-        Add an additional line in the state file to keep track of iteration
+        Add additional lines in the state file to keep track of the iteration
+        and of whether the previous iteration was thrifty
+
+        .. note::
+            These are written from the attributes rather than `_states`,
+            because `run()` zeroes every entry of `_states` at the end of an
+            iteration, which must not reset either of them.
         """
         super().checkpoint()
 
         with open(self.path.state_file, "r") as f:
             lines = f.readlines()
-        # Clear out the previous 'iteration' line by reverse scanning through
-        # the list and deleting any mention of 'iteration'
+        # Clear out the previous 'iteration' and 'was_thrifty' lines by
+        # reverse scanning through the list and deleting any mention of them
         for i in range(len(lines)-1, -1, -1):
-            if lines[i].startswith("iteration"):
+            if lines[i].startswith(("iteration", "was_thrifty")):
                 lines.pop(i)
         lines.append(f"iteration: {self.iteration}\n")
+        lines.append(f"was_thrifty: {int(self._was_thrifty)}\n")
 
-        # Rewrite checkpoint file with new iteration line (atomically, see
+        # Rewrite checkpoint file with new lines (atomically, see
         # `Forward.checkpoint`)
         atomic_write_lines(self.path.state_file, lines)
 

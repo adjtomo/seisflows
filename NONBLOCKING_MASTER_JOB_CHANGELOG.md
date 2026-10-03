@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 118 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 128 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -182,10 +182,10 @@ viable once the master job stops blocking.
     invocation (a single PENDING state can't tell two dispatches apart) —
     a second raises `AssertionError` rather than silently skipping it on
     resume (tasks that dispatch several times give each its own `key`, see
-    the Phase 2 entry). `Forward._supports_nonblocking` (True) /
-    `NoiseInversion._supports_nonblocking` (False, until it is converted)
-    make `Forward.check()` refuse `system.blocking=False` for workflows with
-    unconverted `system.run()` calls, instead of half-working.
+    the Phase 2 entry). `_supports_nonblocking` (True on `Forward`, so on
+    every shipped workflow) lets a workflow opt out, and `Forward.check()`
+    then refuses `system.blocking=False` for it, instead of half-working.
+    Any new workflow with a direct `system.run()` must set it False.
   - `system.blocking` (new `Cluster` param, default `True`) is the
     user-facing switch. `Cluster._supports_nonblocking` (False; True on
     `Slurm`) is declared per class, not inferred, and `Cluster.check()`
@@ -365,9 +365,9 @@ viable once the master job stops blocking.
     recovery got simpler: a failed `perform_line_search` re-runs and
     re-enters at the persisted `step_count`, replacing the old trick of
     resetting `evaluate_line_search_misfit`'s task state to 0.
-  - `Inversion._supports_nonblocking` is no longer False, so `Inversion`
-    passes `check()` with `blocking: False`. `NoiseInversion` now says
-    False for itself.
+  - `Inversion` no longer opts out, so it passes `check()` with
+    `blocking: False`. (`NoiseInversion` opted out at this point and was
+    converted afterwards, see the next entry.)
   - **User-visible:** `stop_after` values `evaluate_line_search_misfit` and
     `update_line_search` are no longer valid, use `perform_line_search`. An
     inversion that is mid-iteration across this change re-runs its line
@@ -381,7 +381,55 @@ viable once the master job stops blocking.
     the dispatcher's rerun, FAIL-restart (keys reset, step 1 re-evaluated),
     FAIL with no restart exits, dispatcher keys (several dispatches in one
     task; `key` not passed on to the system), `check()` accepts
-    `Inversion` and refuses `NoiseInversion`.
+    `Inversion` and refuses a workflow that opts out.
+
+- **`NoiseInversion` converted; every shipped workflow now supports
+  non-blocking.** Its tasks dispatch once per force (and
+  `postprocess_event_kernels` twice), so each dispatch gets its own state
+  key and is skipped on resume once finished:
+  - `generate_synthetic_data` (Z, E, N): key `generate_synthetic_data_<f>`.
+  - `evaluate_rt_misfit` (E, N): key `evaluate_rt_misfit_<f>`. It reaches
+    its dispatch through `super().evaluate_initial_misfit()`, so it uses the
+    new `Dispatcher.keyed(name)` context manager instead of threading a
+    `key` argument through `Inversion`/`Forward`'s signatures.
+  - `_run_rt_adjoint_simulations_separate` (E/N x R/T): key
+    `run_rt_adjoint_simulations_<f><c>`, again via `keyed()`.
+  - `postprocess_event_kernels`: the horizontal-kernel combine uses key
+    `postprocess_event_kernels_combine`; the smoothing in `Migration` keeps
+    the task's own key, so its `resuming` guard (skip the cleanup that would
+    delete the job's output) still works.
+  - `evaluate_line_search_misfit` override: per-force keys
+    `evaluate_line_search_misfit_<f>` (reset to 0 at the end of each step as
+    before). Model check follows the inline `dispatcher.nonblocking`
+    pattern; values are only checked before the first force of a step (and,
+    for `generate_synthetic_data`, before the first force), since the rest
+    only run once that has passed.
+  - **A trap that was hiding here:** the per-force flags were tested with
+    `bool(self._states[key])` / `in self._states and bool(...)`. A pending
+    dispatch is a non-empty string, which is truthy, so the loop would have
+    SKIPPED it (never collecting it) and moved on to the next force. Now
+    `== 1`. A test confirms it fails if the old check is put back.
+  - The per-force flags also make blocking crash-recovery finer: a resumed
+    `evaluate_rt_misfit` / `generate_synthetic_data` skips forces already
+    finished instead of redoing all of them.
+  - **`Inversion._was_thrifty` is now persisted** in the state file as a
+    `was_thrifty: 0|1` line next to `iteration`, written from the attribute
+    in `Inversion.checkpoint()` (not from `_states`, which `run()` zeroes at
+    the end of every iteration). Needed because `NoiseInversion.
+    sum_all_residuals` reads it after dispatches that restart the process.
+    See Not done for an apparent pre-existing problem with when it is reset.
+  - `NoiseInversion` no longer opts out: `_supports_nonblocking` is True
+    everywhere, with a test that guards it.
+  - Not touched: `workflow/test_flow.py` (`TestFlow`) calls `system.run()`
+    directly. It is the manual smoke test of the system module itself, not
+    a `Forward` workflow, so it doesn't use the dispatcher.
+  - Tests (`test_workflow.py`, real `NoiseInversion` methods against fakes,
+    driving each task across several simulated processes): one suspend per
+    force for synthetic data / RT misfit / line-search evaluation, the
+    check placement (master: file names only, compute: first force only),
+    the truthiness trap, the two keyed dispatches in `postprocess_event_
+    kernels` including that its cleanup is skipped on resume, `keyed()`, and
+    `was_thrifty` surviving a restart and the end-of-iteration reset.
 
 ## Not done / come back to this
 
@@ -398,32 +446,24 @@ viable once the master job stops blocking.
   job really append to `sflog.txt`; how much per-resume overhead
   (`check()`+`setup()` + queue wait) actually is; does a deliberately failed
   array element exercise the retry path end to end.
-- **Phase 1 remainder: multi-dispatch tasks (`NoiseInversion`).** Not
-  converted. Several of its tasks dispatch more than once per invocation
-  (`generate_synthetic_data` loops over forces; `evaluate_rt_misfit` calls
-  `super().evaluate_initial_misfit` twice; `postprocess_event_kernels` does
-  two `single=True` runs). The mechanism now exists (`key=` on
-  `Dispatcher.run`, added for the line search), so this is converting each
-  of those call sites to `self.dispatcher.run(..., key=...)`: the per-force
-  `_state_check` keys `NoiseInversion` already uses for blocking
-  crash-recovery are the natural dispatch keys. Two wrinkles:
-  `evaluate_initial_misfit` is called twice by `evaluate_rt_misfit` via
-  `super()` and takes `**kwargs` that flow into `system.run()`, so it needs
-  an explicit way to receive a key; and `NoiseInversion` overrides
-  `evaluate_line_search_misfit` with its own multi-force loop, whose
-  `_check_model` placement needs the same inline `nonblocking` pattern.
-  `NoiseInversion._supports_nonblocking = False` so `check()` refuses it —
-  flip only once converted.
-- **Audit in-memory state that must survive a process restart.** A
-  non-blocking workflow restarts the Python process at every dispatch, so
-  anything a task stores on `self` and a *later* task reads is lost.
-  Grepped `workflow/*.py`: `Inversion._was_thrifty` (set in
-  `finalize_iteration`, read in `evaluate_initial_misfit`; no dispatch sits
-  between them today, so it survives, but it breaks if one is ever
-  inserted) and `NoiseInversion._force`/`_cmpnt` (set immediately before
-  each use, so fine, but re-check when converting `NoiseInversion`).
-  `_srcrcv_stats` is rebuilt by `setup()` on resume. Optimizer state is
-  persisted via `optimize.checkpoint()`.
+- **`Inversion._was_thrifty` looks like it is never reset (observed, NOT
+  verified, not touched).** `finalize_iteration` sets it True when the
+  iteration is thrifty but nothing sets it back to False, so after one
+  thrifty iteration it appears to stay True through later iterations that
+  are not thrifty (the final one, or after an optimizer restart), where
+  `evaluate_initial_misfit` would then skip an initial misfit evaluation it
+  needs. This predates the non-blocking work, which now persists the value
+  as it behaves today (see the `NoiseInversion` entry). Worth a look with
+  someone who knows the thrifty design before changing it.
+- **Audit in-memory state that must survive a process restart: done for
+  the shipped workflows.** A non-blocking workflow restarts the Python
+  process at every dispatch, so anything a task stores on `self` and a
+  later task reads is lost. Result: `Inversion._was_thrifty` was the one
+  real case (now persisted, see the `NoiseInversion` entry);
+  `NoiseInversion._force`/`_cmpnt` are set immediately before each use;
+  `_srcrcv_stats` is rebuilt by `setup()` on resume; optimizer state is
+  persisted via `optimize.checkpoint()`. **Re-check this for any task or
+  workflow added later.**
 - **PBS/Miyabi port — not started, intentionally deferred.** Once validated
   on Chinook: add `Pbs._dependency_flag()` (`-W depend=afterany:{job_id}`)
   and a `blocking` param to `Pbs.run()`, reusing `Pbs.submit()`'s existing
@@ -452,10 +492,6 @@ viable once the master job stops blocking.
   `debug`). Not yet documented for users; worth a docs note once validated.
   Measure first: the master still does gradient evaluation and optimizer
   vector operations, which scale with model size (see the decision above).
-- **`NoiseInversion` line-search model check.** Its
-  `evaluate_line_search_misfit` override still calls `check_model_values`
-  on the master (`Inversion`'s now uses the inline `dispatcher.nonblocking`
-  pattern). Convert with the rest of `NoiseInversion`.
 - **`Miyabi.submit_to`/`Chinook.submit_to`** (routing the master job to a
   cheap queue/partition) already exists and needs no changes — just a
   reminder that `submit_to="debug"` on Chinook is the real-world validation
@@ -468,5 +504,6 @@ viable once the master job stops blocking.
    landed vs. what this file claims (this file could drift from reality).
 3. Check "Not done" above for the next concrete step — as of the last
    update here, that's real-cluster validation on Chinook of the `forward`,
-   `migration` and `inversion` workflows with `blocking: False`; then
-   `NoiseInversion` multi-dispatch.
+   `migration` and `inversion` workflows with `blocking: False`
+   (`NoiseInversion` is converted too, but has only been tested against
+   fakes, like everything else). After that, the PBS/Miyabi port.

@@ -129,11 +129,6 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
-    # Several tasks here dispatch more than once (one simulation per force)
-    # and call `system.run()` directly rather than `self.dispatcher.run()`.
-    # Until they are converted, refuse `system.blocking=False`
-    _supports_nonblocking = False
-
     def __init__(self, kernels="ZZ", separate_rt_kernels=True,
                  **kwargs):
         """
@@ -295,14 +290,35 @@ class NoiseInversion(Inversion):
             forces.append("E")  # E must come first
             forces.append("N")
 
-        # Check the target model that will be used to generate data
+        # The model that will be used to generate data, passed explicitly
+        # because the compute-side model check needs to know it
+        kwargs.setdefault("path_model", self.path.model_true)
+
+        # Check the target model. The master job only looks at file names if
+        # dispatch is non-blocking; the values are checked on compute nodes
         logger.info("checking true/target model parameters:")
-        self.solver.check_model_values(path=self.path.model_true)
+        if self.dispatcher.nonblocking:
+            self.solver.check_model_files(path=kwargs["path_model"])
+        else:
+            self.solver.check_model_values(path=kwargs["path_model"])
 
         for force in forces:
+            # Each force is its own dispatch, so skip those already finished
+            _state_check = f"generate_synthetic_data_{force}"
+            if self._states.get(_state_check) == 1:
+                continue
+
             self._force = force
             logger.info(msg.sub(f"FORWARD SIMULATION FORCE '{self._force}'"))
-            self.system.run([self._generate_synthetic_data_single], **kwargs)
+            run_list = [self._generate_synthetic_data_single]
+            # The model only needs checking before the first dispatch, later
+            # ones only happen once that one has passed
+            if self.dispatcher.nonblocking and force == forces[0]:
+                run_list.insert(0, self._check_model_single)
+            self.dispatcher.run(run_list, key=_state_check, **kwargs)
+
+            self._states[_state_check] = 1
+            self.checkpoint()
 
     def _generate_synthetic_data_single(self, path_model=None, **kwargs):
         """
@@ -442,6 +458,11 @@ class NoiseInversion(Inversion):
             return 
 
         for force in ["E", "N"]:  # <- E before N required!
+            # Each force is its own dispatch, so skip those already finished
+            _state_check = f"evaluate_rt_misfit_{force}"
+            if self._states.get(_state_check) == 1:
+                continue
+
             self._force = force
             logger.info(msg.sub(f"MISFIT EVALUATION FORCE '{self._force}'"))
 
@@ -451,10 +472,13 @@ class NoiseInversion(Inversion):
                 f"residuals_{{src}}_{self.evaluation}_RT.txt"
                 )
             # saves to `scratch/solver/{source_name}/E_FWD_ARR` or `N_FWD_ARR`
-            super().evaluate_initial_misfit(
-                save_residuals=save_residuals, sum_residuals=False, 
-                save_forward_arrays=self.fwd_arr_path, **kwargs
-                )
+            with self.dispatcher.keyed(_state_check):
+                super().evaluate_initial_misfit(
+                    save_residuals=save_residuals, sum_residuals=False,
+                    save_forward_arrays=self.fwd_arr_path, **kwargs
+                    )
+            self._states[_state_check] = 1
+            self.checkpoint()
         self._rename_preprocess_files(tag="RT")
 
     def run_rt_adjoint_simulations(self):
@@ -494,10 +518,11 @@ class NoiseInversion(Inversion):
                 if cmpnt not in self.kernels:
                     continue
 
-                # Intermediate state check to avoid rerunning all after failure
+                # Intermediate state check to avoid rerunning all after
+                # failure. Compared to 1, not just truthy: a dispatch that is
+                # still PENDING is a non-empty string but is not finished
                 _state_check = f"run_rt_adjoint_simulations_{force}{cmpnt}"
-                if _state_check in self._states and \
-                                        bool(self._states[_state_check]):
+                if self._states.get(_state_check) == 1:
                     continue
 
                 logger.info(
@@ -510,10 +535,11 @@ class NoiseInversion(Inversion):
 
                 # Fwd arrays will not be deleted until all simulations for a 
                 # given FORCE are finished, that is, when we run the T adj sims
-                super().run_adjoint_simulations(
-                    load_forward_arrays=self.fwd_arr_path,
-                    del_loaded_forward_arrays=bool(cmpnt == "T")  # last index
-                )
+                with self.dispatcher.keyed(_state_check):
+                    super().run_adjoint_simulations(
+                        load_forward_arrays=self.fwd_arr_path,
+                        del_loaded_forward_arrays=bool(cmpnt == "T")  # last
+                    )
                 self._states[_state_check] = 1
                 self.checkpoint()
 
@@ -1204,8 +1230,11 @@ class NoiseInversion(Inversion):
         # there are many more kernel manipulations that need to happen and this 
         # task usually fails due to timeout when `tasktime` is set for an 
         # adjoint simulation (tasktime=self.system.tasktime * 2)
-        self.system.run([generate_event_kernels], single=True, 
-                        tasktime=self.system.tasktime * 1)
+        # This task dispatches twice (here, then in the original function
+        # below) so each needs its own key, this one is not the task's name
+        self.dispatcher.run([generate_event_kernels],
+                            key="postprocess_event_kernels_combine",
+                            single=True, tasktime=self.system.tasktime * 1)
 
         # Now the original function takes over and combines event kernels into
         # a misfit kernel, and applies smoothing, masking, etc.
@@ -1228,9 +1257,14 @@ class NoiseInversion(Inversion):
         logger.info(msg.sub(f"LINE SEARCH STEP COUNT "
                             f"{self.optimize.step_count:0>2}"))
 
+        # The master job only looks at file names if dispatch is non-blocking;
+        # the values are checked on compute nodes, see below
+        path_model = os.path.join(self.path.eval_func, "model")
         logger.info(f"`m_try` model parameters for line search evaluation:")
-        self.solver.check_model_values(path=os.path.join(self.path.eval_func,
-                                                         "model"))
+        if self.dispatcher.nonblocking:
+            self.solver.check_model_files(path=path_model)
+        else:
+            self.solver.check_model_values(path=path_model)
 
         # Determine which forward simulations we will need to run
         cfg = {}
@@ -1258,9 +1292,10 @@ class NoiseInversion(Inversion):
             components = attrs["components"]
             _state_check = f"evaluate_line_search_misfit_{force}"
 
-            # Intermediate state check to see if we already ran this force
-            if _state_check in self._states and \
-                bool(self._states[_state_check]):
+            # Intermediate state check to see if we already ran this force.
+            # Compared to 1, not just truthy: a dispatch that is still
+            # PENDING is a non-empty string but is not finished
+            if self._states.get(_state_check) == 1:
                 continue
 
             # Set up for the current forward simulation
@@ -1271,13 +1306,20 @@ class NoiseInversion(Inversion):
             # If we are running a thrifty inversion we need to save the fwd
             # arrays so that the next iterations adjoint simulations can use 'em
             logger.info(msg.sub(f"MISFIT EVALUATION FOR FORCE '{self._force}'"))
-            self.system.run(
-                run_list, path_model=os.path.join(self.path.eval_func, "model"),
+
+            # The model values only need checking before the first force of
+            # a step, the rest only run once that one has passed
+            force_list = run_list
+            if self.dispatcher.nonblocking and force == next(iter(cfg)):
+                force_list = [self._check_model_single] + run_list
+
+            self.dispatcher.run(
+                force_list, key=_state_check, path_model=path_model,
                 save_residuals=os.path.join(
-                    self.path.eval_func, "residuals", 
+                    self.path.eval_func, "residuals",
                     f"residuals_{{src}}_{self.evaluation}_{tag}.txt"),
                 save_forward_arrays=self.fwd_arr_path,
-                components=components, 
+                components=components,
             )
             self._rename_preprocess_files(tag)
             self._states[_state_check] = 1
