@@ -19,6 +19,7 @@ from seisflows.workflow.dispatch import (WorkflowSuspended, pending_state,
                                          parse_pending_state)
 from seisflows.workflow.forward import Forward
 from seisflows.workflow.inversion import Inversion
+from seisflows.workflow.noise_inversion import NoiseInversion
 
 
 class _DummyForward(Forward):
@@ -449,14 +450,14 @@ class _DummySystemWorkflow(Forward):
         self.calls.append("after")
 
 
-def _make_workflow(tmpdir, **system_kwargs):
-    """Build a `_DummySystemWorkflow` wired to a `_FakeSystem`"""
+def _make_workflow(tmpdir, workflow_class=_DummySystemWorkflow,
+                   **system_kwargs):
+    """Build a `_DummySystemWorkflow` (or subclass) wired to a `_FakeSystem`"""
     state_file = os.path.join(str(tmpdir), "sfstate.txt")
     if not os.path.exists(state_file):
         with open(state_file, "w") as f:
             f.write("# SeisFlows State File\n")
-    workflow = _DummySystemWorkflow(workdir=str(tmpdir),
-                                    path_state_file=state_file)
+    workflow = workflow_class(workdir=str(tmpdir), path_state_file=state_file)
     workflow.system = _FakeSystem(par_file=os.path.join(str(tmpdir), "p.yaml"),
                                   **system_kwargs)
     return workflow
@@ -578,6 +579,47 @@ def test_dispatcher_retries_are_capped_across_restarts(tmpdir):
     assert(fresh.system.runs == [(False, None)])  # a fresh dispatch
 
 
+class _TwoKeyWorkflow(_DummySystemWorkflow):
+    """A task that dispatches twice, each under its own key"""
+    def dispatching_task(self):
+        self.calls.append("start")
+        self.dispatcher.run([self.before], key="first")
+        self.calls.append("first done")
+        self.dispatcher.run([self.before], key="second")
+        self.calls.append("second done")
+
+
+def test_dispatcher_keys_allow_several_dispatches_in_one_task(tmpdir):
+    """
+    Each dispatch under its own key is tracked separately, so a task can be
+    suspended and resumed once per dispatch (as a line search is, per step)
+    """
+    first = _make_workflow(tmpdir, _TwoKeyWorkflow)
+    assert(first.run() == "SUSPENDED")
+    assert(first.calls == ["before", "start"])
+    assert(first._states["first"] == "PENDING:1001:0")
+
+    # The first dispatch is collected, then the second is made and suspends
+    second = _make_workflow(tmpdir, _TwoKeyWorkflow, outcomes=[(True, "")])
+    assert(second.run() == "SUSPENDED")
+    assert(second.calls == ["start", "first done"])
+    assert(second._states["second"] == "PENDING:1001:0")
+
+    # Both are collected, and the task finishes
+    third = _make_workflow(tmpdir, _TwoKeyWorkflow,
+                           outcomes=[(True, ""), (True, "")])
+    assert(third.run() == "COMPLETE")
+    assert(third.calls == ["start", "first done", "second done", "after"])
+    assert(third.system.runs == [])
+
+
+def test_dispatcher_key_is_not_passed_to_the_system(tmpdir):
+    """`key` is the dispatcher's own, it must not reach the task functions"""
+    workflow = _make_workflow(tmpdir, _TwoKeyWorkflow)
+    workflow.run()
+    assert("key" not in workflow.system.kwargs[0])
+
+
 def test_dispatcher_rejects_second_dispatch_in_one_task(tmpdir):
     """
     One PENDING state can't tell two dispatches apart, so a task making a
@@ -642,12 +684,20 @@ def test_check_accepts_nonblocking_for_supported_workflow(tmpdir):
     workflow.check()
 
 
+def test_check_accepts_nonblocking_for_inversion(tmpdir):
+    """The line search is a resumable loop now, so `Inversion` qualifies"""
+    workflow = Inversion(workdir=str(tmpdir), modules=_fake_modules(
+        _FakeSystem(par_file="p.yaml", blocking=False)))
+    workflow.check()
+
+
 def test_check_refuses_nonblocking_for_unsupported_workflow(tmpdir):
     """
-    `Inversion`'s line search still blocks (and is recursive), so it must
-    refuse a non-blocking system instead of half-working under it
+    `NoiseInversion` still has tasks that dispatch several times and call
+    `system.run()` directly, so it must refuse a non-blocking system
+    instead of half-working under it
     """
-    workflow = Inversion(workdir=str(tmpdir), modules=_fake_modules(
+    workflow = NoiseInversion(workdir=str(tmpdir), modules=_fake_modules(
         _FakeSystem(par_file="p.yaml", blocking=False)))
     with pytest.raises(AssertionError, match="does not yet support"):
         workflow.check()
@@ -800,3 +850,238 @@ def test_stale_preflight_marker_cleared_before_fresh_dispatch(tmpdir):
 
     _make_workflow(tmpdir).run()
     assert(not os.path.exists(marker))
+
+
+# -----------------------------------------------------------------------------
+# The line search: a resumable loop rather than a recursion
+# -----------------------------------------------------------------------------
+
+class _FakeModel:
+    """A trial model that records where it was written"""
+    def __init__(self):
+        self.written = []
+
+    def write(self, path):
+        self.written.append(path)
+
+
+class _FakeOptimizer:
+    """
+    Stands in for the optimization module, replaying a script of line search
+    statuses. Like the real one, the only thing a resumed process gets back
+    is `step_count` (from its checkpoint): tests give a new instance the
+    step count the previous process had checkpointed.
+    """
+    def __init__(self, statuses, step_count=1, can_restart=True):
+        self.statuses = list(statuses)
+        self.step_count = step_count
+        self.can_restart = can_restart
+        self.events = []
+        self.models = []
+
+    def update_search(self):
+        self.step_count += 1
+        self.events.append("update")
+
+    def calculate_step_length(self):
+        return 1e-3, self.statuses.pop(0)
+
+    def compute_trial_model(self, alpha):
+        self.models.append(_FakeModel())
+        return self.models[-1]
+
+    def save_vector(self, name, m):
+        self.events.append(f"save {name}")
+
+    def checkpoint(self):
+        self.events.append("checkpoint")
+
+    def finalize_search(self):
+        self.events.append("finalize")
+
+    def attempt_line_search_restart(self):
+        return self.can_restart
+
+    def restart(self):
+        self.step_count = 0
+        self.events.append("restart")
+
+
+class _LineSearchWorkflow(Inversion):
+    """
+    Real `Inversion` line search methods, with the parts that need real
+    simulations or optimization replaced by recorders
+    """
+    def __init__(self, **kwargs):
+        self.log = []
+        super().__init__(**kwargs)
+
+    def initialize_line_search(self):
+        self.log.append("initialize")
+        self.optimize.step_count = 1
+
+    def sum_residuals(self, residuals_files, save_to):
+        self.log.append(f"sum {self.evaluation}")
+
+
+def _line_search_workflow(tmpdir, statuses, step_count=1, blocking=True,
+                          can_restart=True, **system_kwargs):
+    """A line search workflow, in iteration 1, wired to fakes"""
+    # The residuals that simulations on the compute nodes would have written
+    residuals = os.path.join(str(tmpdir), "scratch", "eval_func", "residuals")
+    os.makedirs(residuals, exist_ok=True)
+    for step in range(1, 8):
+        with open(os.path.join(residuals, f"residuals_001_i01s{step:02d}.txt"),
+                  "w") as f:
+            f.write("1.0\n")
+
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    if not os.path.exists(state_file):
+        with open(state_file, "w") as f:
+            f.write("# SeisFlows State File\n")
+    workflow = _LineSearchWorkflow(workdir=str(tmpdir),
+                                   path_state_file=state_file)
+    workflow.iteration = 1
+    workflow.optimize = _FakeOptimizer(statuses, step_count, can_restart)
+    workflow.solver = _FakeSolver()
+    workflow.system = _FakeSystem(par_file="p.yaml", blocking=blocking,
+                                  **system_kwargs)
+    return workflow
+
+
+def _run_line_search(workflow):
+    """Run `perform_line_search` the way `Forward.run()` would"""
+    try:
+        with workflow.dispatcher.task("perform_line_search"):
+            workflow.perform_line_search()
+    except WorkflowSuspended:
+        return "SUSPENDED"
+    return "COMPLETE"
+
+
+def test_line_search_tasks_replaced_by_one_resumable_task(tmpdir):
+    names = [f.__name__ for f in Inversion(workdir=str(tmpdir)).task_list]
+    assert("perform_line_search" in names)
+    assert("update_line_search" not in names)
+    assert("evaluate_line_search_misfit" not in names)
+
+    names = [f.__name__ for f in NoiseInversion(workdir=str(tmpdir)).task_list]
+    assert("perform_line_search" in names)
+    assert("update_line_search" not in names)
+    assert("evaluate_line_search_misfit" not in names)
+
+
+def test_line_search_loops_until_pass(tmpdir):
+    """Blocking: evaluate and update, repeating on TRY until the PASS"""
+    workflow = _line_search_workflow(tmpdir, ["TRY", "TRY", "PASS"])
+    assert(_run_line_search(workflow) == "COMPLETE")
+
+    assert(workflow.log == ["sum i01s01", "sum i01s02", "sum i01s03"])
+    assert(workflow.optimize.events.count("update") == 3)
+    assert(workflow.optimize.events.count("finalize") == 1)
+    # Only the two TRY steps expose a new trial model to the solver
+    assert(sum(len(m.written) for m in workflow.optimize.models) == 2)
+    # One dispatch per step, through the blocking path, model checked in full
+    assert(workflow.system.runs == [(None, None)] * 3)
+    assert(workflow.system.funcs[0] == ["run_forward_simulations",
+                                        "evaluate_objective_function"])
+    assert(len(workflow.solver.values_checked) == 3)
+    assert(workflow.solver.files_checked == [])
+
+
+def test_line_search_passes_on_first_step(tmpdir):
+    workflow = _line_search_workflow(tmpdir, ["PASS"])
+    assert(_run_line_search(workflow) == "COMPLETE")
+    assert(workflow.log == ["sum i01s01"])
+    assert(workflow.optimize.events.count("finalize") == 1)
+
+
+def test_line_search_is_suspended_and_resumed_across_processes(tmpdir):
+    """
+    Non-blocking, every step is a process lifetime: dispatch and suspend,
+    then (resumed) collect, do the bookkeeping, and dispatch the next step
+    """
+    # Process 1: dispatches the first step and suspends before any
+    # bookkeeping, so the optimizer is untouched
+    first = _line_search_workflow(tmpdir, ["TRY", "PASS"], blocking=False)
+    assert(_run_line_search(first) == "SUSPENDED")
+    assert(first.system.runs == [(False, None)])
+    assert(first.system.funcs[0] == ["_check_model_single",
+                                     "run_forward_simulations",
+                                     "evaluate_objective_function"])
+    assert(first.system.kwargs[0]["path_model"] ==
+           os.path.join(first.path.eval_func, "model"))
+    assert(first._states["evaluate_line_search_misfit_i01s01"] ==
+           "PENDING:1001:0")
+    assert(first.log == [] and first.optimize.events == [])
+    # The master only looked at file names, the values are checked remotely
+    assert(first.solver.files_checked == [os.path.join(first.path.eval_func,
+                                                       "model")])
+    assert(first.solver.values_checked == [])
+
+    # Process 2: collects step 1, finds it needs another step, dispatches it
+    second = _line_search_workflow(tmpdir, ["TRY", "PASS"], step_count=1,
+                                   blocking=False, outcomes=[(True, "")])
+    assert(_run_line_search(second) == "SUSPENDED")
+    assert(second.log == ["sum i01s01"])
+    assert(second.optimize.events.count("update") == 1)
+    assert(second.optimize.step_count == 2)
+    assert(second.system.runs == [(False, None)])  # step 2's dispatch only
+    assert(second._states["evaluate_line_search_misfit_i01s02"] ==
+           "PENDING:1001:0")
+
+    # Process 3: the optimizer checkpoint says step 2. Collects only that
+    # step (not step 1 again), and the line search passes
+    third = _line_search_workflow(tmpdir, ["PASS"], step_count=2,
+                                  blocking=False, outcomes=[(True, "")])
+    assert(_run_line_search(third) == "COMPLETE")
+    assert(third.log == ["sum i01s02"])
+    assert(third.optimize.events.count("finalize") == 1)
+    assert(third.system.runs == [])
+
+
+def test_line_search_resume_does_not_repeat_bookkeeping(tmpdir):
+    """
+    The reason the loop is shaped as it is: a resumed process must not apply
+    `update_search()` for a step again. Suspending while a step is pending
+    leaves the optimizer untouched, and collecting it applies the update once
+    """
+    _run_line_search(_line_search_workflow(tmpdir, ["PASS"], blocking=False))
+
+    resumed = _line_search_workflow(tmpdir, ["PASS"], blocking=False,
+                                    outcomes=[(True, "")])
+    _run_line_search(resumed)
+    assert(resumed.optimize.events.count("update") == 1)
+
+
+def test_line_search_failed_step_is_retried_like_any_dispatch(tmpdir):
+    """A failed simulation job in a step uses the dispatcher's rerun logic"""
+    _run_line_search(_line_search_workflow(tmpdir, ["PASS"], blocking=False,
+                                           rerun=1))
+    resumed = _line_search_workflow(tmpdir, ["PASS"], blocking=False, rerun=1,
+                                    outcomes=[(False, "0")])
+    assert(_run_line_search(resumed) == "SUSPENDED")
+    assert(resumed.system.runs == [(False, "0")])
+    assert(resumed.optimize.events == [])  # no bookkeeping until it succeeds
+    assert(resumed._states["evaluate_line_search_misfit_i01s01"] ==
+           "PENDING:1001:1")
+
+
+def test_line_search_restart_after_fail(tmpdir):
+    """
+    A FAIL restarts the line search from step 1. Evaluations of the steps it
+    is about to revisit are forgotten, and step 1 is evaluated again
+    """
+    workflow = _line_search_workflow(tmpdir, ["FAIL", "PASS"])
+    workflow._states["evaluate_line_search_misfit_i01s01"] = "PENDING:55:0"
+
+    assert(_run_line_search(workflow) == "COMPLETE")
+    assert(workflow.log == ["sum i01s01", "initialize", "sum i01s01"])
+    assert(workflow.optimize.events.count("restart") == 1)
+    assert(workflow._states["evaluate_line_search_misfit_i01s01"] == 0)
+
+
+def test_line_search_fail_without_restart_options_exits(tmpdir):
+    workflow = _line_search_workflow(tmpdir, ["FAIL"], can_restart=False)
+    with pytest.raises(SystemExit):
+        _run_line_search(workflow)

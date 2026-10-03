@@ -129,6 +129,11 @@ class NoiseInversion(Inversion):
     """
     __doc__ = Inversion.__doc__ + __doc__
 
+    # Several tasks here dispatch more than once (one simulation per force)
+    # and call `system.run()` directly rather than `self.dispatcher.run()`.
+    # Until they are converted, refuse `system.blocking=False`
+    _supports_nonblocking = False
+
     def __init__(self, kernels="ZZ", separate_rt_kernels=True,
                  **kwargs):
         """
@@ -227,8 +232,7 @@ class NoiseInversion(Inversion):
                 self.postprocess_event_kernels,
                 self.evaluate_gradient_from_kernels,
                 self.initialize_line_search,
-                self.evaluate_line_search_misfit,
-                self.update_line_search,
+                self.perform_line_search,
                 self.finalize_iteration
                 ]
 

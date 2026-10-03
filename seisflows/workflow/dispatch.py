@@ -84,7 +84,7 @@ class Dispatcher:
     def __init__(self, workflow):
         self.workflow = workflow
         self._task = None  # name of the task-list function now running
-        self._count = 0  # dispatches that task has made so far
+        self._counts = {}  # dispatches made so far by that task, per key
 
     @contextmanager
     def task(self, name):
@@ -96,7 +96,7 @@ class Dispatcher:
         :type name: str
         :param name: name of the task-list function
         """
-        self._task, self._count = name, 0
+        self._task, self._counts = name, {}
         try:
             yield
         finally:
@@ -127,7 +127,18 @@ class Dispatcher:
         :rtype: bool
         :return: whether this task is resuming a non-blocking dispatch
         """
-        state = self.workflow._states.get(self._task)
+        return self._pending(self._task)
+
+    def _pending(self, key):
+        """
+        Whether the state recorded under `key` is a PENDING dispatch
+
+        :type key: str
+        :param key: state-file key of a dispatch, see `run`
+        :rtype: bool
+        :return: True if a dispatch under `key` is waiting to be collected
+        """
+        state = self.workflow._states.get(key)
         return isinstance(state, str) and state.startswith("PENDING")
 
     @property
@@ -144,7 +155,7 @@ class Dispatcher:
         """
         return os.path.join(self.workflow.path.scratch, "preflight_failed.txt")
 
-    def run(self, funcs, **kwargs):
+    def run(self, funcs, key=None, **kwargs):
         """
         Run `funcs` on the system module, non-blockingly if
         `system.blocking` is False. Task-list functions call this instead of
@@ -155,10 +166,11 @@ class Dispatcher:
         Non-blocking, the work happens in two process lifetimes, and the
         calling task-list function is simply entered twice:
 
-        1. First entry: dispatch `funcs`, record the job ID as this task's
-           'PENDING' state, schedule a dependent job that resumes the
-           workflow once the dispatched job finishes, and suspend (raises
-           `WorkflowSuspended`, so nothing after this call runs).
+        1. First entry: dispatch `funcs`, record the job ID as the 'PENDING'
+           state of this task (or of `key`), schedule a dependent job that
+           resumes the workflow once the dispatched job finishes, and
+           suspend (raises `WorkflowSuspended`, so nothing after this call
+           runs).
         2. Re-entry in the resumed process: the dispatched job has
            finished. Check its outcome. On success, return so the calling
            function can carry on with whatever follows the call (reading
@@ -171,13 +183,24 @@ class Dispatcher:
         .. warning::
             Because the caller is re-entered, everything it does before
             this call runs again on resume and must be safe to repeat (see
-            `resuming` for the exceptions). A task-list function may make
-            at most ONE call to this per invocation; the PENDING state is
-            tracked per task, so a second dispatch could not be told apart
-            from the first.
+            `resuming` for the exceptions).
+
+        .. note::
+            Each dispatch's PENDING state is kept under a key in the state
+            file, by default the task's own name. A task that dispatches
+            several times (e.g. once per line search step) must give each
+            dispatch its own `key`; two dispatches under one key in a
+            single invocation are refused, since they could not be told
+            apart on resume. Keys must not contain ':' (the state file
+            splits each line at its first one). The task is responsible for
+            resetting a key it wants to reuse, e.g. after a restart.
 
         :type funcs: list of methods
         :param funcs: functions to run on the system, see `system.run()`
+        :type key: str
+        :param key: state-file key to record this dispatch under, defaults to
+            the name of the running task-list function. Not passed on to
+            `system.run()`
         :param kwargs: passed through to `system.run()`
         :raises WorkflowSuspended: after dispatching, see above
         """
@@ -185,23 +208,24 @@ class Dispatcher:
         if not self.nonblocking:
             return system.run(funcs, **kwargs)
 
-        task = self._task
-        self._count += 1
-        assert(self._count == 1), (
-            f"task '{task}' dispatched more than once while "
-            f"`system.blocking` is False, which is not supported: a task's "
-            f"PENDING state cannot distinguish between multiple dispatches"
+        key = key or self._task
+        self._counts[key] = self._counts.get(key, 0) + 1
+        assert(self._counts[key] == 1), (
+            f"task '{self._task}' dispatched more than once under the key "
+            f"'{key}' while `system.blocking` is False, which is not "
+            f"supported: its PENDING state cannot distinguish between "
+            f"multiple dispatches. Give each dispatch its own `key`"
         )
 
-        if not self.resuming:
+        if not self._pending(key):
             # A marker left by an earlier, since-fixed failure must not be
             # mistaken for a failure of this dispatch
             self.clear_preflight_failure()
             job_id = system.run(funcs, blocking=False, **kwargs)
-            self._suspend(task, job_id, attempt=0)
+            self._suspend(key, job_id, attempt=0)
 
-        job_id, attempt = parse_pending_state(self.workflow._states[task])
-        logger.info(f"resuming '{task}', checking outcome of job {job_id}")
+        job_id, attempt = parse_pending_state(self.workflow._states[key])
+        logger.info(f"resuming '{key}', checking outcome of job {job_id}")
         success, failed = system.job_outcome(job_id)
         if success:
             logger.info(f"job {job_id} finished successfully")
@@ -210,22 +234,22 @@ class Dispatcher:
         # A failed preflight check is deterministic, retrying would only
         # fail the same way, so it ends the workflow instead of using up
         # `system.rerun` attempts
-        self._exit_on_preflight_failure(task, job_id)
+        self._exit_on_preflight_failure(key, job_id)
 
         if attempt < system.rerun:
             logger.info(f"attempt {attempt + 1}/{system.rerun} rerun "
                         f"failed tasks: {failed}")
             job_id = system.run(funcs, blocking=False, array=failed, **kwargs)
-            self._suspend(task, job_id, attempt=attempt + 1)
+            self._suspend(key, job_id, attempt=attempt + 1)
 
         # Out of retries. Mark failed (not PENDING) so that fixing the
         # problem and re-running `seisflows submit` dispatches fresh, as
         # happens after a failure in blocking mode
-        self.workflow._states[task] = -1
+        self.workflow._states[key] = -1
         self.workflow.checkpoint()
         logger.critical(
             msg.cli(f"Stopping workflow. Please check logs for details",
-                    items=[f"TASK:   {task}", f"JOB_ID: {job_id}",
+                    items=[f"TASK:   {key}", f"JOB_ID: {job_id}",
                            f"FAILED TASK IDS: {failed}"],
                     header="system run error", border="=")
         )
@@ -248,16 +272,16 @@ class Dispatcher:
         if os.path.exists(self.marker):
             os.remove(self.marker)
 
-    def _exit_on_preflight_failure(self, task, job_id):
+    def _exit_on_preflight_failure(self, key, job_id):
         """
         If a compute-side preflight check failed (see
-        `flag_preflight_failure`), mark `task` failed and exit with the
+        `flag_preflight_failure`), mark `key` failed and exit with the
         check's own error message. Does nothing if there is no failure
         marker, i.e. the job failed for some other (possibly transient)
         reason.
 
-        :type task: str
-        :param task: name of the task-list function whose job failed
+        :type key: str
+        :param key: state-file key of the dispatch whose job failed
         :type job_id: str
         :param job_id: ID of the job that failed
         """
@@ -270,24 +294,25 @@ class Dispatcher:
 
         # Failed, not PENDING: once the cause is fixed, `seisflows submit`
         # then dispatches fresh
-        self.workflow._states[task] = -1
+        self.workflow._states[key] = -1
         self.workflow.checkpoint()
         logger.critical(
             msg.cli(f"A check run on the compute nodes failed. The job is "
                     f"not retried because it would fail the same way.",
-                    items=[f"TASK:   {task}", f"JOB_ID: {job_id}",
+                    items=[f"TASK:   {key}", f"JOB_ID: {job_id}",
                            f"ERROR:  {error}"],
                     header="preflight check error", border="=")
         )
         sys.exit(-1)
 
-    def _suspend(self, task, job_id, attempt):
+    def _suspend(self, key, job_id, attempt):
         """
-        Record that `task` is waiting on `job_id`, schedule the dependent
-        job that resumes the workflow when it finishes, and suspend.
+        Record that the dispatch under `key` is waiting on `job_id`, schedule
+        the dependent job that resumes the workflow when it finishes, and
+        suspend.
 
-        :type task: str
-        :param task: name of the task-list function that dispatched `job_id`
+        :type key: str
+        :param key: state-file key of the dispatch that created `job_id`
         :type job_id: str
         :param job_id: ID of the job the workflow is waiting on
         :type attempt: int
@@ -296,7 +321,7 @@ class Dispatcher:
         """
         # Checkpoint BEFORE scheduling the resume job so that it can never
         # start and read a state file that doesn't yet know about `job_id`
-        self.workflow._states[task] = pending_state(job_id, attempt)
+        self.workflow._states[key] = pending_state(job_id, attempt)
         self.workflow.checkpoint()
         self.workflow.system.submit(
             workdir=self.workflow.path.workdir,
