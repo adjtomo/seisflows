@@ -13,6 +13,7 @@ beyond the state file itself.
 import os
 import dill
 import pytest
+from types import SimpleNamespace
 
 from seisflows.tools.config import Dict
 from seisflows.workflow.dispatch import (WorkflowSuspended, pending_state,
@@ -1288,6 +1289,58 @@ def test_noise_postprocess_kernels_makes_two_keyed_dispatches(tmpdir):
     assert(_run_task(third, third.postprocess_event_kernels) == "COMPLETE")
     assert(os.path.exists(output))
     assert(third.system.runs == [])
+
+
+class _FinalizingInversion(_DummyInversion):
+    """`_DummyInversion` whose thrifty status is set by the test"""
+    thrifty_now = False
+
+    @property
+    def is_thrifty(self):
+        return self.thrifty_now
+
+
+def _finalize_iteration(workflow, thrifty):
+    """Run the real `Inversion.finalize_iteration()` for one iteration"""
+    workflow.thrifty_now = thrifty
+    workflow.export_model = False
+    workflow._modules = {}
+    workflow.system = SimpleNamespace(
+        path=SimpleNamespace(log_files=os.path.join(workflow.path.workdir,
+                                                    "logs"))
+    )
+    workflow.optimize = SimpleNamespace(checkpoint=lambda: None)
+    os.makedirs(workflow.system.path.log_files, exist_ok=True)
+    for path in [workflow.path.eval_grad, workflow.path.eval_func]:
+        os.makedirs(path, exist_ok=True)
+    workflow.finalize_iteration()
+
+
+def test_was_thrifty_follows_the_previous_iteration(tmpdir):
+    """
+    The flag tells the NEXT iteration whether it can reuse this one's line
+    search, so a standard finalize must clear it. Otherwise after a thrifty
+    iteration followed by a restart, the iteration after that would skip its
+    initial misfit although its gradient evaluation directory was just wiped
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+    workflow = _FinalizingInversion(workdir=str(tmpdir),
+                                    path_state_file=state_file, thrifty=True)
+    assert(workflow._was_thrifty is False)
+
+    workflow.iteration = 2
+    _finalize_iteration(workflow, thrifty=True)
+    assert(workflow._was_thrifty is True)
+
+    workflow.iteration = 3  # e.g., the optimizer restarted in this one
+    _finalize_iteration(workflow, thrifty=False)
+    assert(workflow._was_thrifty is False)
+
+    workflow.checkpoint()
+    resumed = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file)
+    assert(resumed._was_thrifty is False)
 
 
 def test_was_thrifty_survives_a_process_restart(tmpdir):

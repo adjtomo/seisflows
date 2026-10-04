@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 142 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 143 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -496,15 +496,19 @@ PBS-specific behaviour below is an assumption about the scheduler.
   job really append to `sflog.txt`; how much per-resume overhead
   (`check()`+`setup()` + queue wait) actually is; does a deliberately failed
   array element exercise the retry path end to end.
-- **`Inversion._was_thrifty` looks like it is never reset (observed, NOT
-  verified, not touched).** `finalize_iteration` sets it True when the
-  iteration is thrifty but nothing sets it back to False, so after one
-  thrifty iteration it appears to stay True through later iterations that
-  are not thrifty (the final one, or after an optimizer restart), where
-  `evaluate_initial_misfit` would then skip an initial misfit evaluation it
-  needs. This predates the non-blocking work, which now persists the value
-  as it behaves today (see the `NoiseInversion` entry). Worth a look with
-  someone who knows the thrifty design before changing it.
+- **`Inversion._was_thrifty` was never reset — FIXED, see below.**
+  `finalize_iteration` sets it True in its
+  thrifty branch and nothing sets it back to False; its other branch wipes
+  both `eval_grad` and `eval_func`. Sequence: iteration N is thrifty
+  (flag True), N+1 is not (optimizer restarted in its line search, or it is
+  the final iteration) so it is finalized the standard way and the flag
+  stays True. If the inversion goes on to N+2 (a restart, not the final
+  iteration), `evaluate_initial_misfit` sees the stale flag and skips the
+  initial misfit, though `eval_grad` was just emptied. Fixed by setting
+  `self._was_thrifty = False` in the standard `else` branch. This changes
+  inversion behaviour independent of the non-blocking work, hence its own
+  commit. `test_was_thrifty_follows_the_previous_iteration` runs the real
+  `finalize_iteration` thrifty then standard, and failed before the fix.
 - **Audit in-memory state that must survive a process restart: done for
   the shipped workflows.** A non-blocking workflow restarts the Python
   process at every dispatch, so anything a task stores on `self` and a

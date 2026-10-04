@@ -764,6 +764,10 @@ class Inversion(Migration):
 
         # Std. Inversion bombs out both eval dirs., next iter will start fresh
         else:
+            # The flag describes only the iteration just finished, otherwise
+            # a later iteration would skip an initial misfit it now needs
+            self._was_thrifty = False
+
             logger.info("cleaning out scratch directory for next iteration")
             unix.rm(self.path.eval_grad)
             unix.rm(self.path.eval_func)
