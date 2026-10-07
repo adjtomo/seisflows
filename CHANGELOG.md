@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## v3.6.0 (unreleased)
+- Non-blocking master job: with `system.blocking: False` the master job no
+  longer waits for the work it submits. It dispatches the work, submits a
+  dependent job (`afterany`) that resumes the workflow with `seisflows submit`,
+  and exits, so it can run in short queues (e.g., Chinook `debug`, Miyabi
+  `debug-g`). Failed tasks are still re-run up to `system.rerun` times.
+  Supported by the `Slurm`, `Chinook`, `Maui`, `Pbs` and `Miyabi` systems and
+  by the `Forward`, `Migration`, `Inversion` and `NoiseInversion` workflows.
+  `blocking` defaults to True (unchanged behavior).
+- Model values are checked on the compute nodes rather than the master job
+  when non-blocking. A failed check stops the workflow without retries.
+- **Breaking:** the `stop_after` task names `evaluate_line_search_misfit` and
+  `update_line_search` are replaced by `perform_line_search`, the line search
+  is now a single resumable task. An inversion that is part way through an
+  iteration re-runs its line search from the start when resumed.
+- The workflow state file is written atomically, and a stray blank line no
+  longer prevents it from loading.
+- Bugfix: `NLCG` checkpointing failed (read-only array, undefined variable)
+- Bugfix: a thrifty inversion no longer skips the initial misfit evaluation
+  of an iteration that follows a restarted one
+
 ## v3.5.6
 - Bugfix SPECFEM3D unexpected removal of executables during forward runs
 

@@ -372,7 +372,7 @@ viable once the master job stops blocking.
     `update_line_search` are no longer valid, use `perform_line_search`. An
     inversion that is mid-iteration across this change re-runs its line
     search from the start (old task keys in the state file are ignored).
-    The project's release `CHANGELOG.md` has NOT been updated for this.
+    Recorded in the release `CHANGELOG.md` under v3.6.0 (unreleased).
   - Tests (`test_workflow.py`, with a `_FakeOptimizer` that replays a script
     of statuses and, like the real one, only gives a resumed process its
     `step_count`): loop-until-PASS, PASS on step 1, suspend/resume across
