@@ -531,7 +531,7 @@ class Pbs(Cluster):
             re-run of non-contiguous tasks required several jobs, their IDs
             joined by ','
         """
-        logger.info(f"running functions {[_.__name__ for _ in funcs]}")
+        logger.debug(f"running functions {[_.__name__ for _ in funcs]}")
 
         # Condense the functions that we want to run on system to a pickle
         # file
@@ -623,10 +623,11 @@ class Pbs(Cluster):
                              **kwargs)
             else:
                 logger.critical(
-                    msg.cli(f"Stopping workflow. Please check logs for "
-                            f"details",
+                    msg.cli(f"Stopping workflow. Please check the logs of the "
+                            f"failed tasks for details",
                             items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
                                    f"JOB_ID: {job_id}",
+                                   f"TASK LOGS: {self.path.log_files}",
                                    f"QSUB:  {run_call}"],
                             header="pbs run error", border="=")
                 )

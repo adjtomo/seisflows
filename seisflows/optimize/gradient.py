@@ -372,7 +372,7 @@ class Gradient:
         g = self.load_vector("g_new")  # current gradient from scaled kernels
         p = self.load_vector("p_new")  # current search direction
         
-        logger.info("calculating gradient dot products GTG and GTP")
+        logger.debug("calculating gradient dot products GTG and GTP")
         gtg = dot(g.vector, g.vector)
         gtp = dot(g.vector, p.vector)
 
@@ -395,8 +395,8 @@ class Gradient:
         f_try = self.load_vector("f_try")  # misfit for the trial model
         self._line_search.update_search_history(step_len=alpha_try, 
                                                 func_val=f_try)
-        logger.info(f"saving misfit and step length for step count == "
-                    f"{self.step_count}")
+        logger.debug(f"saving misfit and step length for step count == "
+                     f"{self.step_count}")
 
         # Log out the current line search stats for reference
         x, f, idx = self._line_search.get_search_history()
@@ -409,7 +409,7 @@ class Gradient:
 
         # Increment step count for next line search evaluation
         self._line_search.step_count += 1
-        logger.info(f"increment step count -> {self._line_search.step_count}")
+        logger.debug(f"increment step count -> {self._line_search.step_count}")
 
     def calculate_step_length(self):
         """
@@ -556,7 +556,7 @@ class Gradient:
                                           "output_optim.txt"),
                          path_out=self.path._optim_output)
 
-        logger.info("setting current model as previous model (?_new -> ?_old)")
+        logger.debug("setting current model as previous model (?_new -> ?_old)")
         # e.g., f_new.txt -> f_old.txt
         for src in glob(os.path.join(self.path.scratch, "?_new*")):
             # Change 'new' to 'old' in ONLY the filename (#259)
@@ -565,7 +565,7 @@ class Gradient:
             dst = src.replace(fid, fid_new)
             unix.mv(src, dst)
 
-        logger.info("setting trial model as starting model (m_try -> m_new)")
+        logger.debug("setting trial model as starting model (m_try -> m_new)")
         unix.mv(src=os.path.join(self.path.scratch, "m_try"),
                 dst=os.path.join(self.path.scratch, "m_new"))
 
@@ -576,7 +576,7 @@ class Gradient:
         self.save_vector("f_new", f.min())
         logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
-        logger.info("resetting line search step count to 0")
+        logger.debug("resetting line search step count to 0")
         self._line_search.step_count = 0
 
     def attempt_line_search_restart(self, threshold=1E-3):

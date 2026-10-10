@@ -335,7 +335,7 @@ class Slurm(Cluster):
         :return: None if `blocking` (as today); the submitted job's ID if
             not `blocking`
         """
-        logger.info(f"running functions {[_.__name__ for _ in funcs]}")
+        logger.debug(f"running functions {[_.__name__ for _ in funcs]}")
 
         # Condense the functions that we want to run on system to a pickle file
         funcs_fid, kwargs_fid = pickle_function_list(
@@ -387,9 +387,11 @@ class Slurm(Cluster):
                          array=array_str, _attempts=_attempts+1, **kwargs)
             else:
                 logger.critical(
-                    msg.cli(f"Stopping workflow. Please check logs for details",
+                    msg.cli(f"Stopping workflow. Please check the logs of the "
+                            f"failed tasks for details",
                             items=[f"TASKS:   {[_.__name__ for _ in funcs]}",
                                    f"JOB_ID: {job_id}",
+                                   f"TASK LOGS: {self.path.log_files}",
                                    f"SBATCH:  {run_call}"],
                             header="slurm run error", border="=")
                 )

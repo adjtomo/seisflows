@@ -427,7 +427,7 @@ class Forward:
 
         # Check the target model. The master job only looks at file names if
         # dispatch is non-blocking; the values are checked on compute nodes
-        logger.info("checking true/target model parameters:")
+        logger.debug("checking true/target model")
         if self.dispatcher.nonblocking:
             self.solver.check_model_files(path=kwargs["path_model"])
             run_list.insert(0, self._check_model_single)
@@ -554,7 +554,7 @@ class Forward:
 
         # The master job only looks at file names if dispatch is non-blocking;
         # the values are checked on compute nodes
-        logger.info("checking model parameters:")
+        logger.debug("checking model")
         if self.dispatcher.nonblocking:
             self.solver.check_model_files(path=path_model)
             run_list.insert(0, self._check_model_single)
@@ -778,7 +778,7 @@ class Forward:
         # Run finalization/tear down procedures for all modules that have it
         for name, module in self._modules.items():
             if hasattr(module, "finalize"):
-                logger.info(f"running finalization for module "
-                            f"'{name}.{self._modules[name].__class__.__name__}'"
-                            )
+                module_name = f"{name}.{module.__class__.__name__}"
+                logger.debug(f"running finalization for module "
+                             f"'{module_name}'")
                 module.finalize()

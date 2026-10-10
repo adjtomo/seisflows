@@ -250,7 +250,7 @@ class Inversion(Migration):
                 break
             logger.info(msg.mjr(f"COMPLETE ITERATION {self.iteration:0>2}"))
             self.iteration += 1
-            logger.info(f"setting current iteration to: {self.iteration}")
+            logger.debug(f"setting current iteration to: {self.iteration}")
             # Set the state file to pending for new iteration
             self._states = {key: 0 for key in self._states}
             self.checkpoint()
@@ -518,7 +518,7 @@ class Inversion(Migration):
                 unix.mv(src, dst)
 
         # Expose the gradient to the optimization library
-        logger.info("exposing gradient `g_new` to optimization library")
+        logger.debug("exposing gradient `g_new` to optimization library")
         gradient = Model(path=os.path.join(self.path.eval_grad, "gradient"),
                          regions=self.solver._regions
                          )
@@ -548,10 +548,10 @@ class Inversion(Migration):
 
         # Determine the model we will use for first line search step count
         # m_try = m_new + alpha * p_new (i.e., m_i+1 = m_i + dm)
-        logger.info("calculating step length `alpha`")
+        logger.debug("calculating step length `alpha`")
         alpha, _ = self.optimize.calculate_step_length()
 
-        logger.info("computing line search trial model `m_try`")
+        logger.debug("computing line search trial model `m_try`")
         m_try = self.optimize.compute_trial_model(alpha=alpha)
         
         # Save the current state of the optimization module to disk
@@ -606,7 +606,7 @@ class Inversion(Migration):
 
         # The master job only looks at file names if dispatch is non-blocking;
         # the values are checked on compute nodes
-        logger.info(f"`m_try` model parameters for line search evaluation:")
+        logger.debug("checking `m_try` for line search evaluation")
         if self.dispatcher.nonblocking:
             self.solver.check_model_files(path=path_model)
             run_list.insert(0, self._check_model_single)
@@ -768,7 +768,7 @@ class Inversion(Migration):
             # a later iteration would skip an initial misfit it now needs
             self._was_thrifty = False
 
-            logger.info("cleaning out scratch directory for next iteration")
+            logger.debug("cleaning out scratch directory for next iteration")
             unix.rm(self.path.eval_grad)
             unix.rm(self.path.eval_func)
 

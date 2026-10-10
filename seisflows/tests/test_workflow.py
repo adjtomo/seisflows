@@ -663,6 +663,16 @@ def test_dispatcher_retries_are_capped_across_restarts(tmpdir):
     assert(fresh.system.runs == [(False, None)])  # a fresh dispatch
 
 
+def test_dispatcher_failure_points_to_the_task_logs(tmpdir, caplog):
+    """A failure that stops the workflow says where to find out why"""
+    _make_workflow(tmpdir).run()
+    resumed = _make_workflow(tmpdir, outcomes=[(False, "0")])
+    with pytest.raises(SystemExit):
+        resumed.run()
+
+    assert(f"TASK LOGS: {resumed.system.path.log_files}" in caplog.text)
+
+
 class _TwoKeyWorkflow(_DummySystemWorkflow):
     """A task that dispatches twice, each under its own key"""
     def dispatching_task(self):

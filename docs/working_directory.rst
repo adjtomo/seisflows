@@ -403,6 +403,36 @@ information collected during the workflow
     2022-08-16 14:33:36 (I) | evaluating objective function for source 003
 
 
+Which log to read
+~~~~~~~~~~~~~~~~~
+
+``sflog.txt`` is the story of the workflow, the files in ``logs/`` are the
+detail. Each message is written at one of four levels, set with the
+``log_level`` parameter of the system module:
+
+- **INFO**: what a user watching the inversion wants to know. Which stage the
+  workflow is in, what was dispatched and where, results (misfits, step
+  lengths, the accepted step), and decisions (a line search outcome, a
+  restart). Reading ``sflog.txt`` top to bottom at this level should not
+  require knowing the code.
+- **DEBUG**: how it happened. Commands sent to the scheduler, paths,
+  parameters, the inputs behind a decision, state file and scheduler
+  responses.
+- **WARNING**: something unexpected that the workflow carries on from, such as
+  failed tasks that are being re-run.
+- **CRITICAL**: the workflow is stopping.
+
+When the master job is non-blocking (``blocking: False``) it is started again
+by the scheduler for every task the workflow dispatches. Only the first start
+logs the setup; a resumed one logs a single ``RESUMING`` line and carries on
+from there, so ``sflog.txt`` still reads as one story.
+
+Messages from the individual tasks (the solver, preprocessing, and so on) are
+written to ``logs/``, one file per task. The master job points to them when
+it dispatches work, when an iteration finishes (they are then moved to
+``logs/LOGS_iNN``), and when a task fails.
+
+
 --------------
 
 sfstate.txt

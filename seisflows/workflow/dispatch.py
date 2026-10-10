@@ -321,9 +321,12 @@ class Dispatcher:
         self.workflow._states[key] = -1
         self.workflow.checkpoint()
         logger.critical(
-            msg.cli(f"Stopping workflow. Please check logs for details",
+            msg.cli(f"Stopping workflow. Please check the logs of the failed "
+                    f"tasks for details",
                     items=[f"TASK:   {key}", f"JOB_ID: {job_id}",
-                           f"FAILED TASK IDS: {failed}"],
+                           f"FAILED TASK IDS: {failed}",
+                           f"TASK LOGS: {self.workflow.system.path.log_files}"
+                           ],
                     header="system run error", border="=")
         )
         sys.exit(-1)
@@ -373,7 +376,9 @@ class Dispatcher:
             msg.cli(f"A check run on the compute nodes failed. The job is "
                     f"not retried because it would fail the same way.",
                     items=[f"TASK:   {key}", f"JOB_ID: {job_id}",
-                           f"ERROR:  {error}"],
+                           f"ERROR:  {error}",
+                           f"TASK LOGS: {self.workflow.system.path.log_files}"
+                           ],
                     header="preflight check error", border="=")
         )
         sys.exit(-1)

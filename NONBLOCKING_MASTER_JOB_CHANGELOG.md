@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 149 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 150 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -523,6 +523,39 @@ Decisions: resume startup hidden entirely, "skipping" lines dropped.
   test so a test that stops early can't hide another's log.
 - Not yet: the `logs/` hint in failure messages, "running functions
   [...]" (INFO, unhelpful, wants phase 2), queue/run times.
+
+### Logging cleanup, phase 2: the level contract, applied to the master job
+
+The contract (INFO = the story, DEBUG = how, WARNING = carried on from,
+CRITICAL = stopping) is written up in `docs/working_directory.rst`, under
+"Which log to read". Applied here to what the master job writes to
+`sflog.txt`, judged against the log of the first Chinook run. Message
+levels only, plus the failure hints; no result values were added yet.
+
+- INFO -> DEBUG, because they narrate a step whose result is logged next, or
+  precede a check that logs nothing when it passes: `checking (true/target)
+  model` (it logged a dangling colon), `m_try` check, `exposing gradient`,
+  `calculating step length` / `computing line search trial model` /
+  `calculating gradient dot products` (each followed by its result),
+  `increment step count`, `saving misfit and step length` (the table after
+  it stays INFO), the `?_new -> ?_old` / `m_try -> m_new` / `resetting step
+  count` bookkeeping, `running finalization for module`, `cleaning out
+  scratch directory`, `setting current iteration`, and `running functions
+  [...]` in `Slurm`/`Pbs` (internal function names).
+- Failure messages (`Dispatcher` retries spent, preflight failure, and the
+  blocking `Slurm.run`/`Pbs.run`) now say `TASK LOGS: <dir>`.
+- Left alone on purpose: compute-side messages (per source: `evaluating
+  objective function for source`, ...), which are the story of `logs/`;
+  the other systems' `running functions` (Cluster, Fujitsu, ...), which are
+  blocking-only and the only record of what was run; everything in
+  `optimize/` and `plugins/line_search/` apart from the above, which is
+  already results and decisions.
+- Test: a failure that stops the workflow names the task log directory.
+- Next (phase 3, and what phase 2 leaves): add values where INFO announces a
+  stage without a result (gradient min/max, a one-line iteration summary:
+  misfit before/after, steps taken, wall time), job queue and run times,
+  and an audit of `solver/`, `preprocess/` and `optimize/` DEBUG content,
+  which at 51 `logger.debug` calls for the package is thin.
 
 ## Not done / come back to this
 
