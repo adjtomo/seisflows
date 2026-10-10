@@ -15,6 +15,7 @@ done, and exits, so it never has to outlive a single scheduler job. See
 """
 import os
 import sys
+import logging
 from contextlib import contextmanager
 
 from seisflows import logger
@@ -64,6 +65,22 @@ def parse_pending_state(val):
     if tag != "PENDING" or not job_id or len(rest) > 1:
         raise ValueError(f"malformed PENDING state: '{val}'")
     return job_id, int(rest[0]) if rest else 0
+
+
+class ResumeFilter(logging.Filter):
+    """
+    Logging filter that lets only warnings and worse through. Installed while
+    a resumed workflow replays its startup, so the log of the whole workflow
+    reads as one continuous story rather than repeating it at every resume.
+    """
+    def filter(self, record):
+        """
+        :type record: logging.LogRecord
+        :param record: the record being logged
+        :rtype: bool
+        :return: True if the record should be logged
+        """
+        return record.levelno >= logging.WARNING
 
 
 class Dispatcher:
@@ -147,6 +164,41 @@ class Dispatcher:
         :return: whether this task is resuming a non-blocking dispatch
         """
         return self._pending(self._task)
+
+    def begin_resume(self):
+        """
+        Called once the workflow has read its state file. If a dispatch is
+        waiting to be collected, this process is a resumption of an earlier
+        one, and everything it logs until it gets back to that dispatch
+        (startup, banners of finished tasks, whatever the task does before
+        dispatching) repeats what the log already says. Hide it, other than
+        warnings and errors. `end_resume` shows the log again.
+        """
+        self.end_resume()
+        if any(self._pending(key) for key in self.workflow._states):
+            logger.addFilter(ResumeFilter())
+
+    def end_resume(self, key=None, job_id=None):
+        """
+        Show the log again after `begin_resume`. Does nothing if that did
+        not hide it. Always safe to call.
+
+        :type key: str
+        :param key: state-file key of the dispatch being collected, if the
+            log is being shown again because the workflow got back to one
+        :type job_id: str
+        :param job_id: ID of the job that was dispatched under `key`
+        """
+        hidden = [f for f in logger.filters if isinstance(f, ResumeFilter)]
+        for resume_filter in hidden:
+            logger.removeFilter(resume_filter)
+
+        if hidden and key is not None:
+            iteration = getattr(self.workflow, "iteration", None)
+            where = f" ITERATION {iteration:0>2}" if iteration else ""
+            logger.info(f"---- RESUMING{where}: '{self._task}' after job "
+                        f"{job_id} ----")
+            logger.debug(f"collecting dispatch '{key}'")
 
     def _pending(self, key):
         """
@@ -238,6 +290,7 @@ class Dispatcher:
         )
 
         if not self._pending(key):
+            self.end_resume()
             # A marker left by an earlier, since-fixed failure must not be
             # mistaken for a failure of this dispatch
             self.clear_preflight_failure()
@@ -245,7 +298,7 @@ class Dispatcher:
             self._suspend(key, job_id, attempt=0)
 
         job_id, attempt = parse_pending_state(self.workflow._states[key])
-        logger.info(f"resuming '{key}', checking outcome of job {job_id}")
+        self.end_resume(key, job_id)
         success, failed = system.job_outcome(job_id)
         if success:
             logger.info(f"job {job_id} finished successfully")
@@ -257,8 +310,8 @@ class Dispatcher:
         self._exit_on_preflight_failure(key, job_id)
 
         if attempt < system.rerun:
-            logger.info(f"attempt {attempt + 1}/{system.rerun} rerun "
-                        f"failed tasks: {failed}")
+            logger.warning(f"job {job_id} had failed tasks: {failed}. "
+                           f"Attempt {attempt + 1}/{system.rerun} to rerun")
             job_id = system.run(funcs, blocking=False, array=failed, **kwargs)
             self._suspend(key, job_id, attempt=attempt + 1)
 
@@ -343,9 +396,18 @@ class Dispatcher:
         # start and read a state file that doesn't yet know about `job_id`
         self.workflow._states[key] = pending_state(job_id, attempt)
         self.workflow.checkpoint()
-        self.workflow.system.submit(
+        resume_id = self.workflow.system.submit(
             workdir=self.workflow.path.workdir,
             parameter_file=self.workflow.system.path.par_file,
             depends_on=job_id
         )
+
+        # The log of the master job is the high-level story, point to where
+        # the output of the dispatched tasks goes
+        log_files = self.workflow.system.path.log_files
+        if log_files.startswith(self.workflow.path.workdir):
+            log_files = os.path.relpath(log_files, self.workflow.path.workdir)
+        logger.info(f"dispatched job {job_id}, job {resume_id} will resume "
+                    f"the workflow when it finishes. Task logs are in "
+                    f"{log_files}")
         raise WorkflowSuspended()

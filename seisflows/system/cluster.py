@@ -167,6 +167,9 @@ class Cluster(Workstation):
             `_dependency_flag()`. Ignored if `direct` is True, since a
             direct submission runs immediately in-process and has no
             scheduler to defer it.
+        :rtype: str or NoneType
+        :return: the ID of the submitted job if `depends_on` was given,
+            otherwise None
         """
         # A dependent (resumed) submission appends to the existing output log
         # rather than truncating it, so a workflow that suspends and resumes
@@ -205,8 +208,17 @@ class Cluster(Workstation):
         logger.debug(submit_call)
         try:
             # A dependent submission must be checked: if it fails silently,
-            # the workflow exits after dispatching and nothing ever resumes it
-            subprocess.run(submit_call, shell=True, check=resuming)
+            # the workflow exits after dispatching and nothing ever resumes it.
+            # Its output is captured because the scheduler's own message
+            # (e.g., 'Submitted batch job 123') would end up in the log
+            stdout = subprocess.PIPE if resuming else None
+            result = subprocess.run(submit_call, shell=True, check=resuming,
+                                    stdout=stdout, text=True)
+            if resuming:
+                # The ID is the last word of e.g. 'Submitted batch job 123'
+                words = str(result.stdout).split()
+                logger.debug(f"scheduler response: {result.stdout}")
+                return words[-1].split(";")[0] if words else None
         except subprocess.CalledProcessError as e:
             if resuming:
                 logger.critical(
@@ -459,7 +471,7 @@ class Cluster(Workstation):
             -1 for fail (one or more jobs returned failing status)
         :raises TimeoutError: if 'sacct' does not return any output for ~1 min.
         """
-        logger.info(f"monitoring job status for job: {job_id}")
+        logger.debug(f"monitoring job status for job: {job_id}")
         bad_jobs = []  # used to keep track of failed jobs
         time_waited = 0
 

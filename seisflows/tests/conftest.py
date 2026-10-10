@@ -2,8 +2,9 @@
 Shared pytest configuration for the SeisFlows test suite.
 """
 import os
+import pytest
 
-from seisflows import ROOT_DIR
+from seisflows import ROOT_DIR, logger
 
 # Parent directory of the `seisflows` package as imported by *this* process
 # (i.e. this checkout, whichever git worktree/branch it happens to be)
@@ -37,3 +38,14 @@ def pytest_configure(config):
     if _PACKAGE_ROOT not in existing:
         os.environ["PYTHONPATH"] = os.pathsep.join(
             [_PACKAGE_ROOT] + existing)
+
+
+@pytest.fixture(autouse=True)
+def reset_logger_filters():
+    """
+    A workflow that starts out resuming hides its log until it gets back to
+    the dispatch it is collecting (see `Dispatcher.begin_resume`). Tests
+    don't always get that far, so don't let one test hide another's log
+    """
+    yield
+    logger.filters.clear()

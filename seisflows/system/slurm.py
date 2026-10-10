@@ -357,8 +357,8 @@ class Slurm(Cluster):
         job_id = self._stdout_to_job_id(stdout)
 
         if not blocking:
-            logger.info(f"dispatched job {job_id} without waiting "
-                        f"(blocking=False)")
+            logger.debug(f"dispatched job {job_id} without waiting "
+                         f"(blocking=False)")
             return job_id
 
         # Monitor the job queue until all jobs have finished

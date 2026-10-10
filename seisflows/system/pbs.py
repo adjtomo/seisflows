@@ -418,6 +418,9 @@ class Pbs(Cluster):
                 The log is backed up below before every submission, so
                 earlier invocations are kept as numbered copies in
                 `path.log_files`.
+        :rtype: str or NoneType
+        :return: the ID of the submitted job if `depends_on` was given,
+            otherwise None
         """
         resuming = depends_on is not None and not direct
 
@@ -455,7 +458,14 @@ class Pbs(Cluster):
         ])
         logger.debug(submit_call)
         try:
-            subprocess.run(submit_call, shell=True, check=True)
+            # Captured when resuming because the ID is returned for the log
+            stdout = subprocess.PIPE if resuming else None
+            result = subprocess.run(submit_call, shell=True, check=True,
+                                    stdout=stdout, text=True)
+            if resuming:
+                words = str(result.stdout).split()
+                logger.debug(f"scheduler response: {result.stdout}")
+                return words[-1] if words else None
         except subprocess.CalledProcessError as e:
             if resuming:
                 # If this fails silently the workflow exits after
@@ -568,8 +578,8 @@ class Pbs(Cluster):
                                          single=single, variables=variables)
                 job_ids.append(self._submit_run_call(run_call))
             job_id = ",".join(job_ids)
-            logger.info(f"dispatched job {job_id} without waiting "
-                        f"(blocking=False)")
+            logger.debug(f"dispatched job {job_id} without waiting "
+                         f"(blocking=False)")
             return job_id
 
         # Get the run call that will be submitted to the system via

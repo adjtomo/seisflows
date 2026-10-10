@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 143 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 149 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -480,6 +480,49 @@ PBS-specific behaviour below is an assumption about the scheduler.
   accepted (the blocking retry path already relies on it); is a dependent
   job accepted by `debug-g`; how a failed dependency behaves when the
   upstream job has already left the queue.
+
+### Logging cleanup, phase 1: a resumed workflow reads as one story
+
+Prompted by the first real run (2D example on Chinook, `sflog.txt` of nine
+processes): every resume repeated ~17 lines of startup, banners and a
+"skipping" line per finished task, about half the file. The user wants
+`sflog.txt` to be the high-level story, with `logs/` for the detail and a
+hint in the story about where to look. Agreed plan: phase 1 (this), phase 2
+the INFO/DEBUG contract and an audit module by module, phase 3 new DEBUG
+content and job queue/run times (`sacct`/`qstat`, user wants these).
+Decisions: resume startup hidden entirely, "skipping" lines dropped.
+
+- `Dispatcher.begin_resume()` (called at the end of `Forward.__init__`):
+  if the state file has a PENDING dispatch, install `ResumeFilter` on the
+  `seisflows` logger, which drops everything below WARNING. That hides the
+  submit banner, `check()`/`setup()`, the iteration banner, the banners of
+  finished tasks and whatever the pending task logs before its dispatch,
+  with no change to any of those call sites. Warnings and errors still show.
+- `Dispatcher.end_resume()` removes it, and is called when `run()` gets back
+  to a dispatch (logging `---- RESUMING ITERATION 01: 'perform_line_search'
+  after job 723824 ----`), at the first fresh dispatch, when `Forward.run`
+  finishes and when a task raises. So the log can't stay hidden.
+- "has already been run, skipping" is now DEBUG. `completed N tasks` is no
+  longer logged when suspending (it said "0 tasks").
+- On suspend, one INFO line replaces three: `dispatched job X, job Y will
+  resume the workflow when it finishes. Task logs are in logs`. Needs the
+  resume job's id, so `Cluster.submit`/`Pbs.submit` now capture the
+  scheduler's response when resuming (it was the raw "Submitted batch job"
+  line in the log) and return the id, logging the response at DEBUG.
+- A failed task being re-run is a WARNING, naming the job and task ids.
+- Demoted to DEBUG: "dispatched job X without waiting", "monitoring job
+  status", "resuming key, checking outcome".
+- Hints for where the detail is: `setup()` says where task output is
+  written, the end of an iteration says where it was moved (`LOGS_iNN`,
+  previously DEBUG), the suspend line names the log directory.
+- Tests: the log of a resumed workflow is hidden until the dispatch is
+  collected and then shown (fails with `begin_resume` disabled); a fresh one
+  hides nothing; the filter is removed if the dispatch is never reached;
+  the suspend line; `submit` returns the id and captures output only when
+  resuming (Slurm and PBS). `conftest.py` clears logger filters after each
+  test so a test that stops early can't hide another's log.
+- Not yet: the `logs/` hint in failure messages, "running functions
+  [...]" (INFO, unhelpful, wants phase 2), queue/run times.
 
 ## Not done / come back to this
 

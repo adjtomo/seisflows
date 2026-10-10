@@ -12,9 +12,11 @@ beyond the state file itself.
 """
 import os
 import dill
+import logging
 import pytest
 from types import SimpleNamespace
 
+from seisflows import logger
 from seisflows.tools.config import Dict
 from seisflows.workflow.dispatch import (WorkflowSuspended, pending_state,
                                          parse_pending_state)
@@ -400,7 +402,9 @@ class _FakeSystem:
         self.blocking = blocking
         self.rerun = rerun
         self.tasktime = 1
-        self.path = Dict(par_file=par_file)
+        self.path = Dict(par_file=par_file,
+                         log_files=os.path.join(os.path.dirname(par_file),
+                                                "logs"))
         self.outcomes = list(outcomes or [])  # [(success, failed_ids), ...]
         self.runs = []  # (blocking kwarg or None, array kwarg or None)
         self.funcs = []  # the function list of each run
@@ -421,6 +425,7 @@ class _FakeSystem:
 
     def submit(self, workdir=None, parameter_file=None, depends_on=None):
         self.submits.append(depends_on)
+        return f"resume{depends_on}"
 
     def job_outcome(self, job_id):
         return self.outcomes.pop(0)
@@ -525,6 +530,83 @@ def test_dispatcher_nonblocking_dispatches_and_suspends(tmpdir):
     # ...and the state file already says so, for the resumed process to read
     resumed = _make_workflow(tmpdir)
     assert(resumed._states["dispatching_task"] == "PENDING:1001:0")
+
+
+def test_resumed_workflow_hides_repeats_until_it_collects_the_dispatch(
+        tmpdir, caplog):
+    """
+    A resumed process repeats the startup and the banners of every task
+    already done, which the log has already said. Only warnings get through
+    until the workflow is back at the dispatch it is collecting, where a
+    one-line marker says so and the log carries on as normal.
+    """
+    caplog.set_level(logging.DEBUG, logger="seisflows")
+    _make_workflow(tmpdir).run()
+    caplog.clear()
+
+    resumed = _make_workflow(tmpdir, outcomes=[(True, "")])
+    logger.info("startup of the resumed process")
+    logger.warning("something worth knowing")
+    resumed.run()
+
+    log = caplog.text
+    assert("startup of the resumed process" not in log)
+    assert("something worth knowing" in log)
+    assert("has already been run" not in log)
+    # Banners of the finished task and of the one being collected
+    assert("BEFORE" not in log)
+    assert("DISPATCHING TASK" not in log)
+    assert("---- RESUMING: 'dispatching_task' after job 1001 ----" in log)
+    assert(log.index("RESUMING") < log.index("job 1001 finished"))
+    # ...and the rest of the workflow is logged as normal
+    assert("AFTER" in log)
+    assert("completed 2 tasks from task list" in log)
+
+
+def test_fresh_workflow_hides_nothing(tmpdir, caplog):
+    """Only a workflow that is collecting a dispatch hides its startup"""
+    caplog.set_level(logging.DEBUG, logger="seisflows")
+    workflow = _make_workflow(tmpdir)
+    logger.info("startup of a fresh process")
+    workflow.run()
+
+    assert("startup of a fresh process" in caplog.text)
+    assert("BEFORE" in caplog.text)
+
+
+def test_resumed_workflow_shows_the_log_again_if_it_never_dispatches(
+        tmpdir, caplog):
+    """
+    If the pending dispatch is never reached (here a state file that marks a
+    task which doesn't dispatch anything as pending), the log must not stay
+    hidden for the rest of the process
+    """
+    caplog.set_level(logging.DEBUG, logger="seisflows")
+    with open(os.path.join(str(tmpdir), "sfstate.txt"), "w") as f:
+        f.write("after: PENDING:5:0\n")
+
+    resumed = _make_workflow(tmpdir)
+    logger.info("startup of the resumed process")
+    assert("startup of the resumed process" not in caplog.text)
+    resumed.run()
+    logger.info("after the run")
+
+    assert("after the run" in caplog.text)
+
+
+def test_suspending_logs_where_to_find_what_happens_next(tmpdir, caplog):
+    """
+    One line says what was dispatched, what will resume the workflow, and
+    where the output of the dispatched tasks is, instead of the scheduler's
+    own message and a task count of nothing
+    """
+    caplog.set_level(logging.INFO, logger="seisflows")
+    workflow = _make_workflow(tmpdir)
+    workflow.run()
+
+    assert("dispatched job 1001, job resume1001 will resume the workflow "
+           "when it finishes. Task logs are in logs" in caplog.text)
+    assert("completed" not in caplog.text)
 
 
 def test_dispatcher_resume_success_runs_finish_half_only(tmpdir):

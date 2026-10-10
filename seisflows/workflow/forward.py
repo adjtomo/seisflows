@@ -164,6 +164,9 @@ class Forward:
                     )
                     sys.exit(-1)
 
+        # A workflow resumed to collect dispatched work doesn't repeat itself
+        self.dispatcher.begin_resume()
+
     @property
     def task_list(self):
         """
@@ -293,6 +296,11 @@ class Forward:
         self.system = self._modules.system  # NOQA
         self.preprocess = self._modules.preprocess  # NOQA
 
+        # This log is the high-level story, the details are in the logs of
+        # the tasks themselves
+        logger.info(f"output of individual tasks (solver, preprocessing, "
+                    f"etc.) is written to {self.system.path.log_files}")
+
     def checkpoint(self):
         """
         Saves active SeisFlows working state to disk as a text files such that
@@ -338,7 +346,8 @@ class Forward:
             # Skip over functions which have already been completed
             if (func.__name__ in self._states.keys()) and (
                     self._states[func.__name__] == 1):  # completed
-                logger.info(f"'{func.__name__}' has already been run, skipping")
+                logger.debug(f"'{func.__name__}' has already been run, "
+                             f"skipping")
                 continue
             # Otherwise attempt to run functions that have failed or are
             # encountered for the first time
@@ -358,13 +367,11 @@ class Forward:
                     # state, and submitted a dependent job to resume this
                     # workflow later. Exit cleanly now; do not mark `func`
                     # failed or raise
-                    logger.info(
-                        f"'{func.__name__}' suspended the workflow to wait "
-                        f"on dispatched work; a dependent job will resume it"
-                    )
+                    logger.debug(f"'{func.__name__}' suspended the workflow")
                     status = "SUSPENDED"
                     break
                 except Exception as e:
+                    self.dispatcher.end_resume()
                     self._states[func.__name__] = -1  # failed
                     self.checkpoint()
                     raise
@@ -376,8 +383,11 @@ class Forward:
                 status = "STOPPED"
                 break
 
+        self.dispatcher.end_resume()
         self.checkpoint()
-        logger.info(f"completed {n} tasks from task list")
+        # A suspended workflow has not completed anything yet to report
+        if status != "SUSPENDED":
+            logger.info(f"completed {n} tasks from task list")
         return status
 
     def _check_model_single(self, path_model=None, **kwargs):

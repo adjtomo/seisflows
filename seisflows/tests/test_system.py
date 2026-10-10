@@ -279,6 +279,36 @@ def test_submit_resume_failure_is_not_silent(tmpdir):
             system.submit(workdir=str(tmpdir), depends_on="123456")
 
 
+def test_submit_resume_returns_job_id_and_captures_scheduler_output(tmpdir):
+    """
+    The scheduler's own message ('Submitted batch job 123') must not land in
+    the log, the job id is returned for the workflow to log in its own words
+    """
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
+                     submit_to="debug")
+    system.setup()
+
+    with patch("seisflows.system.cluster.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = "Submitted batch job 723810\n"
+        job_id = system.submit(workdir=str(tmpdir), depends_on="723809")
+    assert(job_id == "723810")
+    assert(mock_run.call_args[1]["stdout"] == subprocess.PIPE)
+
+    # A first submission is left alone: the user sees the scheduler's message
+    with patch("seisflows.system.cluster.subprocess.run") as mock_run:
+        assert(system.submit(workdir=str(tmpdir)) is None)
+    assert(mock_run.call_args[1]["stdout"] is None)
+
+
+def test_pbs_submit_resume_returns_job_id(tmpdir):
+    """...and the same for qsub, which responds with just the job id"""
+    system = _miyabi(tmpdir)
+    with patch("seisflows.system.pbs.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = "124.opbs\n"
+        assert(system.submit(workdir=str(tmpdir), depends_on="123.opbs")
+               == "124.opbs")
+
+
 def test_slurm_job_outcome_success(tmpdir):
     """All tasks completed: success, nothing to re-run"""
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2)

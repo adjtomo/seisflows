@@ -734,14 +734,14 @@ class Inversion(Migration):
         super().finalize_iteration()
 
         # Organize log files to keep file count in the main log dir. low
-        logger.debug(f"organizing log files in {self.system.path.log_files}")
-        logdir = os.path.join(self.system.path.log_files, 
+        logdir = os.path.join(self.system.path.log_files,
                               f"LOGS_i{self.iteration:0>2}")
         unix.mkdir(logdir)
         fids = glob(os.path.join(self.system.path.log_files, "*"))
-        fids = [fid for fid in fids if not 
+        fids = [fid for fid in fids if not
                 os.path.basename(fid).startswith("LOGS_")]
         unix.mv(fids, logdir)
+        logger.info(f"output of this iteration's tasks moved to {logdir}")
 
         # Update optimization on disk 
         self.optimize.checkpoint()
