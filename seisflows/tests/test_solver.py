@@ -5,6 +5,7 @@ SPECFEM
 import os
 import shutil
 import pytest
+from unittest.mock import patch
 from glob import glob
 from seisflows import ROOT_DIR
 from seisflows.tools.config import set_task_id
@@ -83,6 +84,38 @@ def test_run_binary(tmpdir):
     with pytest.raises(SystemExit):
         solver._run_binary(executable="ls -//daflkjeaf",
                            stdout=os.path.join(tmpdir, "log.txt"))
+
+
+def test_run_binary_failure_shows_the_end_of_the_solver_log(tmpdir, caplog):
+    """
+    The master job's log has to say why a solver failed without anyone going
+    to look for the file: the log's path, and the last lines of it
+    """
+    log = os.path.join(tmpdir, "log.txt")
+    script = os.path.join(tmpdir, "fail.sh")
+    with open(script, "w") as f:
+        f.write("#!/bin/sh\necho start\necho 'mesh is bad'\nexit 3\n")
+    os.chmod(script, 0o755)
+
+    with pytest.raises(SystemExit):
+        Specfem()._run_binary(executable=script, stdout=log)
+
+    assert(log in caplog.text)
+    assert("mesh is bad" in caplog.text)
+
+
+def test_import_model_warns_if_there_is_nothing_to_import(tmpdir, caplog):
+    """Copying no files is not an error to SPECFEM until much later"""
+    solver = Specfem(path_specfem_data=os.path.join(TEST_DATA, "sources"),
+                     source_prefix="CMTSOLUTION")
+    solver.path.scratch = str(tmpdir)
+    os.makedirs(os.path.join(str(tmpdir), "empty"))
+    with patch.object(Specfem, "cwd", str(tmpdir)), \
+         patch.object(Specfem, "model_databases", "DATABASES_MPI"):
+        os.makedirs(os.path.join(str(tmpdir), "DATABASES_MPI"))
+        solver.import_model(os.path.join(str(tmpdir), "empty"))
+
+    assert("model files found" in caplog.text)
 
 
 def _write_model_files(path, parameters, nproc=2):

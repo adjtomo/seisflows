@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 165 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 167 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -585,6 +585,33 @@ levels only, plus the failure hints; no result values were added yet.
 - Not done: gradient min/max (the model update already logs `dm_min/dm_max`,
   so I held off), and the audit of DEBUG content in `solver/`,
   `preprocess/` and `optimize/`, which is the rest of the thin 51 calls.
+
+### Logging cleanup, phase 3b: DEBUG content for the solver and preprocessing
+
+These run in the tasks, so they end up in `logs/`, which is where users are
+sent for detail. Judged by what is missing when a task goes wrong.
+
+- `Specfem._run_binary`: DEBUG says the working directory and log file, and
+  how long each executable took. **On failure the message now includes the
+  log's real path (it named `scratch/solver/mainsolver/` whatever the
+  source) and the last five lines of the solver's own log.** Before, finding
+  out why SPECFEM failed meant going to look.
+- `forward_simulation` / `adjoint_simulation`: DEBUG at the start (source,
+  directory, `SAVE_FORWARD`), trace counts when exporting or moving, and the
+  `FINISH ... SIMULATION` INFO says how long it took.
+- `import_model`: DEBUG with the file count, and a **WARNING when it finds
+  no model files** (previously a silent no-op that fails much later).
+  `combine` says what it combines.
+- `Default.quantify_misfit`: DEBUG with the number of obs-syn pairs and the
+  components, a WARNING if there are none, `FINISH QUANTIFY MISFIT` now gives
+  trace count, summed misfit and duration, and the per-trace `PREPROCESSING`
+  line is DEBUG (one INFO line per trace was most of the file). A failing
+  trace is named in `PREPROC FAILED`, with the traceback at DEBUG.
+- Tests: the solver failure shows the log's path and last lines; importing
+  nothing warns.
+- Still to audit: `optimize/` DEBUG, `Pyaflowa`, the SPECFEM3D solvers'
+  overrides of `forward_simulation`/`adjoint_simulation` (these changes are
+  in the 2D/base class only), and the other systems.
 
 ## Not done / come back to this
 

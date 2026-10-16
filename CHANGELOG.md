@@ -15,6 +15,12 @@
   `update_line_search` are replaced by `perform_line_search`, the line search
   is now a single resumable task. An inversion that is part way through an
   iteration re-runs its line search from the start when resumed.
+- Logging: `sflog.txt` is the high-level story of the workflow and the files in
+  `logs/` the detail (see the working directory docs). A resumed non-blocking
+  workflow no longer repeats its startup; it logs a `RESUMING` line, how long
+  each job queued and ran for, and how long each iteration took. Failure
+  messages say where the task logs are, and a failed solver shows the end of its
+  own log.
 - The workflow state file is written atomically, and a stray blank line no
   longer prevents it from loading.
 - Bugfix: `NLCG` checkpointing failed (read-only array, undefined variable)

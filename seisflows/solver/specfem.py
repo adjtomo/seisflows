@@ -719,7 +719,10 @@ class Specfem:
             forward arrays which are used for adjoint simulations. Not required 
             if only running forward simulations.
         """
+        start = time.time()
         unix.cd(self.cwd)
+        logger.debug(f"forward simulation of source {self.source_name} in "
+                     f"{self.cwd} (SAVE_FORWARD={flag_save_forward})")
         setpar(key="SIMULATION_TYPE", val="1", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=f".{str(flag_save_forward).lower()}.",
                file="DATA/Par_file")
@@ -746,18 +749,17 @@ class Specfem:
         if export_traces:
             if not os.path.exists(export_traces):
                 unix.mkdir(export_traces)
-            unix.cp(
-                src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
-                dst=export_traces
-            )
+            traces = glob(os.path.join("OUTPUT_FILES", self.data_wildcard()))
+            logger.debug(f"exporting {len(traces)} trace files to "
+                         f"{export_traces}")
+            unix.cp(src=traces, dst=export_traces)
         # Save traces somewhere else in the scratch/ directory for easier access
         if save_traces:
             if not os.path.exists(save_traces):
                 unix.mkdir(save_traces)
-            unix.mv(
-                src=glob(os.path.join("OUTPUT_FILES", self.data_wildcard())),
-                dst=save_traces
-            )
+            traces = glob(os.path.join("OUTPUT_FILES", self.data_wildcard()))
+            logger.debug(f"moving {len(traces)} trace files to {save_traces}")
+            unix.mv(src=traces, dst=save_traces)
         # Save forward arrays to disk for later adjoint simulations. This is
         # primarily used for ambient noise adjoint tomography when other
         # forward simulations are required prior to the adjoint simulation,
@@ -784,7 +786,8 @@ class Specfem:
             unix.rm(glob(os.path.join(self.model_databases, 
                                       "proc??????_*.vt?")))
 
-        logger.info(f"FINISH FORWARD SIMULATION: {self.source_name}")
+        logger.info(f"FINISH FORWARD SIMULATION: {self.source_name} "
+                    f"({msg.duration(time.time() - start)})")
 
     def adjoint_simulation(self, save_kernels=False, export_kernels=False,
                            load_forward_arrays=False, 
@@ -823,7 +826,10 @@ class Specfem:
             forward arrays that were used to run the adjoint simulation to 
             save space. Usually
         """
+        start = time.time()
         unix.cd(self.cwd)
+        logger.debug(f"adjoint simulation of source {self.source_name} in "
+                     f"{self.cwd}")
 
         setpar(key="SIMULATION_TYPE", val="3", file="DATA/Par_file")
         setpar(key="SAVE_FORWARD", val=".false.", file="DATA/Par_file")
@@ -911,7 +917,8 @@ class Specfem:
                          f"{load_forward_arrays}")
             unix.rm(load_forward_arrays)
 
-        logger.info(f"FINISH ADJOINT SIMULATION: {self.source_name}")
+        logger.info(f"FINISH ADJOINT SIMULATION: {self.source_name} "
+                    f"({msg.duration(time.time() - start)})")
 
     def _rename_kernel_parameters(self):
         """
@@ -969,6 +976,9 @@ class Specfem:
 
         if not os.path.exists(output_path):
             unix.mkdir(output_path)
+
+        logger.debug(f"combining {parameters} kernels of {len(input_paths)} "
+                     f"sources into {output_path}")
 
         # Write the source names into the kernel paths file for SEM/ directory
         with open("kernel_paths", "w") as f:
@@ -1099,25 +1109,38 @@ class Specfem:
         # looks something like: `mpirun -n 4 ./bin/xspecfem2d`
         if self._mpiexec and with_mpi:
             executable = f"{self._mpiexec} -n {self.nproc} {executable}"
-        logger.debug(f"running executable with cmd: '{executable}'")
+        logger.debug(f"running executable with cmd: '{executable}' in "
+                     f"{os.getcwd()}, solver output to '{stdout}'")
 
+        start = time.time()
         try:
             with open(stdout, "w") as f:
                 subprocess.run(executable, shell=True, check=True, stdout=f,
                                stderr=f)
         except (subprocess.CalledProcessError, OSError) as e:
+            # The end of the solver's own log is usually what says why
+            solver_log = []
+            if os.path.exists(stdout):
+                with open(stdout, "r") as f:
+                    solver_log = f.read().strip().splitlines()[-5:]
             logger.critical(
                 msg.cli("The external numerical solver has returned a "
                         "nonzero exit code (failure). Consider stopping any "
                         "currently running jobs to avoid wasted "
-                        "computational resources. Check 'scratch/solver/"
-                        f"mainsolver/{stdout}' for the solvers stdout log "
-                        "message. The failing command and error message are:",
-                        items=[f"exc: {executable}", f"err: {e}"],
+                        "computational resources. Check the solver's stdout "
+                        "log for the full message. The failing command and "
+                        "error message are:",
+                        items=[f"exc: {executable}", f"err: {e}",
+                               f"log: {os.path.join(os.getcwd(), stdout)}",
+                               f"after {msg.duration(time.time() - start)}, "
+                               f"the last lines of the log are:"
+                               ] + solver_log,
                         header="external solver error",
                         border="=")
             )
             sys.exit(-1)
+        logger.debug(f"finished in {msg.duration(time.time() - start)}: "
+                     f"'{executable}'")
 
     @staticmethod
     def _exc2log(exc):
@@ -1158,6 +1181,11 @@ class Specfem:
         # Copy the model files (ex: proc000023_vp.bin ...) into database dir
         src = glob(os.path.join(path_model, f"*{self._ext}"))
         dst = os.path.join(self.cwd, self.model_databases, "")
+        if not src:
+            logger.warning(f"no '*{self._ext}' model files found in "
+                           f"{path_model} to import")
+        logger.debug(f"importing {len(src)} model files from {path_model} "
+                     f"to {dst}")
         unix.cp(src, dst)
 
     def _initialize_working_directories(self, max_workers=None):

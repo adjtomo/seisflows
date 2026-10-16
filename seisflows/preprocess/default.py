@@ -7,6 +7,7 @@ and write adjoint sources that are expected by the solver.
 """
 import os
 import sys
+import time
 import numpy as np
 import traceback
 from concurrent.futures import ProcessPoolExecutor, wait
@@ -17,7 +18,7 @@ from obspy import Stream, Trace, UTCDateTime
 from pysep.utils.io import read_events_plus
 
 from seisflows import logger
-from seisflows.tools import unix
+from seisflows.tools import msg, unix
 from seisflows.tools.config import Dict, get_task_id
 from seisflows.tools.graphics import plot_waveforms
 from seisflows.tools.signal import normalize, resample, filter, mute, trim
@@ -380,11 +381,18 @@ class Default:
         """
         self._iteration = iteration
         self._step_count = step_count
+        start = time.time()
 
         # Retrieve matching obs and syn trace filenames to run through misfit
         # and initialize empty adjoint sources
         obs, syn = self._setup_quantify_misfit(source_name, save_adjsrcs,
                                                components)
+        logger.debug(f"quantifying misfit of {len(obs)} matching "
+                     f"observed-synthetic pairs for source {source_name} "
+                     f"(components: {components or 'all'})")
+        if not obs:
+            logger.warning(f"no matching observed and synthetic waveforms "
+                           f"found for source {source_name}")
 
         # Process each pair in parallel. Max workers is the total num. of cores
         # !!! see note in docstring !!!
@@ -405,15 +413,14 @@ class Default:
                 ]
             wait(futures)
             # Results are returned in the order that they were submitted and
-            for future in futures:
+            for future, syn_fid in zip(futures, syn):
                 try:
                     residual = future.result()
                     residuals.append(residual)
                 except Exception as e:
-                    logger.critical(f"PREPROC FAILED: {e}")
-                    # Uncomment if you want more extensive debug info
-                    # exc_str = traceback.format_exc()
-                    # logger.critical(exc_str)
+                    logger.critical(f"PREPROC FAILED for "
+                                    f"'{os.path.basename(syn_fid)}': {e}")
+                    logger.debug(traceback.format_exc())
                     sys.exit(-1)
 
         # Write residuals to text file for other modules to find
@@ -426,7 +433,10 @@ class Default:
             if export_residuals:
                 unix.cp(src=save_residuals, dst=export_residuals)
 
-        logger.info(f"FINISH QUANTIFY MISFIT: {source_name}")
+        logger.info(f"FINISH QUANTIFY MISFIT: {source_name} "
+                    f"({len(residuals)} traces, misfit "
+                    f"{sum(residuals):.3E}, "
+                    f"{msg.duration(time.time() - start)})")
 
     def _setup_quantify_misfit(self, source_name, save_adjsrcs=None,
                                components=None):
@@ -502,7 +512,9 @@ class Default:
                    origintime=cat[0].preferred_origin().time)
 
 
-        logger.info(f"PREPROCESSING {syn[0].get_id()}")
+        logger.debug(f"preprocessing {syn[0].get_id()} "
+                     f"(obs: '{os.path.basename(obs_fid)}', "
+                     f"syn: '{os.path.basename(syn_fid)}')")
 
         # Wrap all the preprocessing functions into single function so that
         # it can be more easily overwritten by overwriting classes
