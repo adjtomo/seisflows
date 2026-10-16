@@ -115,6 +115,7 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
 
    specfem2d_example
    2D_example_walkthrough
+   specfem3d_example
    running_on_chinook
    running_on_miyabi
 

@@ -179,7 +179,7 @@ class Specfem3D(Specfem):
         if self.attenuation:
             setpar(key="ATTENUATION", val=".true.", file="DATA/Par_file")
         else:
-            setpar(key="ATTENUATION", val=".false`.", file="DATA/Par_file")
+            setpar(key="ATTENUATION", val=".false.", file="DATA/Par_file")
 
         super().forward_simulation(**kwargs)
 

@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 167 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 195 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -613,21 +613,86 @@ sent for detail. Judged by what is missing when a task goes wrong.
   overrides of `forward_simulation`/`adjoint_simulation` (these changes are
   in the 2D/base class only), and the other systems.
 
+### Detour: Example 4, a SPECFEM3D homogeneous halfspace (`seisflows examples run 4`)
+
+Not part of the non-blocking work, but it is the natural larger-than-2D test
+bed for it (`--par blocking=False`), so it lives here. Requested by the user
+(2026-10-16): same approach as the 2D examples, a compiled SPECFEM3D is
+pointed at (nothing is downloaded or built), initial model = the SPECFEM3D
+`homogeneous_halfspace` example, target = the same with velocities +-5%, one
+node (28 cores), `NSTEP` 2000, `XYZ` components, `--ntask` sources and
+`--nsta` stations on a surface grid (default 25).
+
+- `seisflows/examples/ex4_hh_specfem3d.py`, class `SFExample3D`, standalone
+  (the 2D base class insists on a SPECFEM2D repo). Registered as choice 4 in
+  `SeisFlows.examples()`; the listing finds it by file name.
+- **Sizing:** `--nproc` (default 28 = a Chinook node) is split into the most
+  square `NPROC_XI x NPROC_ETA` (28 -> 7x4) and `NEX` follows so elements stay
+  about 3.7 km (28 -> 35x36). The mesh is made by `xmeshfem3D`, which is
+  what the `Specfem3D` solver runs (the example's `run_this_example.sh` uses
+  `xdecompose_mesh` instead, which SeisFlows does not).
+- **Models:** `xmeshfem3D` + `xgenerate_databases` (MPI) write
+  `proc*_vp/vs/rho/x/y/z.bin` because the example's Par_file has
+  `SAVE_MESH_FILES`; they are copied to `OUTPUT_FILES_INIT`. The target is the
+  same with the `Mesh_Par_file` material's vp and vs scaled (`--perturb`,
+  default 5, density kept), then the original material is put back.
+- **Sources / stations:** `CMTSOLUTION_001..N` (first at the center, the rest
+  on a ring of 0.2 x the domain width), `STATIONS` a `ceil(sqrt(nsta))` grid
+  with a 15% margin from the absorbing edges, equally spaced.
+- **Cluster configuration:** `--system NAME`, `--par KEY=VALUE ...`,
+  `--par_yaml FILE`. Parameters are validated against the generated parameter
+  file first (`seisflows par` silently ignores an unknown key). Checked with
+  `--system chinook --par partition=t1small submit_to=debug walltime=30
+  tasktime=40 blocking=False`: all applied, `seisflows check` passes. Other
+  new flags: `--specfem3d_repo` (`-r` also works), `--perturb`.
+- Refuses to run in a directory with an earlier workflow (`sfstate.txt`,
+  `scratch`, `output`): a new parameter file would otherwise pick it up (the
+  2D examples do, a stale state silently resumes).
+- **Run for real, locally** (a throwaway SPECFEM3D build in the scratchpad,
+  gfortran + Open MPI, the user's checkout untouched): `setup` and a full
+  `run` with `--nproc 4 --nsta 9 --ntask 2`, one iteration, three line search
+  steps, misfit down 94%. A 4-core forward simulation of 2000 steps took 32 s,
+  the adjoint 1m30s. Also found by running it:
+  - `smooth_type: gaussian` (the default) took **12 min per parameter** at 4
+    cores; the example now uses `pde` (`xsmooth_sem_pde`, required binary).
+  - the default `tasktime` of 1 minute timed the adjoint simulation out, the
+    example now sets 30.
+  - `Specfem3D.forward_simulation` wrote `ATTENUATION = .false`.` (a stray
+    backtick); gfortran tolerated it. Fixed.
+  - model generation needs a `DATA/CMTSOLUTION` and a pre-made
+    `OUTPUT_FILES/DATABASES_MPI` (SeisFlows makes both for itself later).
+- **Not validated:** a cluster. Nothing here has run under `srun`/`sbatch`,
+  with 28 cores or with `blocking=False`; the next real run on Chinook is
+  that test (from an interactive node: model generation is MPI). The
+  default `walltime` of a cluster system (10 min) is for the non-blocking
+  master job only; blocking needs a walltime for the whole workflow.
+- Tests: `tests/test_examples.py` (28), with a stand-in SPECFEM3D repository,
+  no SPECFEM needed: slices and `NEX` for several `nproc`, defaults, missing
+  binaries / example, the working directory edits (Par_file, Mesh_Par_file,
+  comments not mistaken for tables), ring sources, station grids, the
+  target scaling, parameter validation and override order, the earlier
+  workflow guard, the listing, and the argparse flags.
+- Docs: `docs/specfem3d_example.rst`, in the examples toctree.
+
 ## Not done / come back to this
 
-- **Real-cluster validation — the top priority, nothing above has run on a
-  scheduler.** Everything is tested against mocks/fakes. Suggested first
-  real test on Chinook: the `forward` workflow with `blocking: False`,
-  `submit_to: debug`, a tiny `ntask`, then `migration` (4 dispatches), then
-  a short `inversion` (exercises the line search loop; a step that needs a
-  second trial is the interesting case, since that's a suspend/resume
-  inside the loop).
-  Things only a real run will answer: does `sbatch --dependency=afterany`
-  behave as assumed for array jobs (incl. when some elements fail); does
-  `job_outcome()` see final states promptly (sacct lag); does the resumed
-  job really append to `sflog.txt`; how much per-resume overhead
-  (`check()`+`setup()` + queue wait) actually is; does a deliberately failed
-  array element exercise the retry path end to end.
+- **Real-cluster validation — started, not finished.** First real run
+  (2026-10-09, user, 2D example on Chinook, `t1small`, 1 source, one
+  inversion iteration, `blocking: False`): **works.** Jobs queue behind the
+  compute job with `afterany`, the workflow resumes exactly where it was,
+  including inside the line search (three trial steps, each its own
+  suspend/resume), the log appends across resumes, and the iteration
+  completes. The user also reviewed the cleaned-up logging afterwards and
+  was happy with it.
+  Still to validate on a real scheduler: (1) a larger run (more `ntask`,
+  larger simulations, real walltimes); (2) the failure paths, i.e. a
+  deliberately failed array element to exercise `rerun` end to end, and a
+  failed preflight (bad model) to check it is not retried; (3) the
+  `forward`, `migration` and `NoiseInversion` workflows (only `Inversion`
+  was run); (4) how big the per-resume overhead is at scale (startup was
+  14-35 s per resume in the first run, about 8 s of it between the
+  `workflow` and `system` setup lines, never profiled); (5) Miyabi/PBS,
+  see below.
 - **`Inversion._was_thrifty` was never reset — FIXED, see below.**
   `finalize_iteration` sets it True in its
   thrifty branch and nothing sets it back to False; its other branch wipes
@@ -688,9 +753,41 @@ sent for detail. Judged by what is missing when a task goes wrong.
 1. Re-read this file in full before touching code.
 2. `git log` on `feature/nonblocking-master-job` to confirm what's actually
    landed vs. what this file claims (this file could drift from reality).
-3. Check "Not done" above for the next concrete step — as of the last
-   update here, that's real-cluster validation on Chinook of the `forward`,
-   `migration` and `inversion` workflows with `blocking: False`
-   (`NoiseInversion` is converted too, but has only been tested against
-   fakes, like everything else). The PBS/Miyabi port is written too (mocked
-   `qsub` only); validate it on Miyabi `debug-g` afterwards.
+   Last commit when this was written: `1c3b7a42` ("Add useful DEBUG
+   content ..."). Nothing is pushed.
+3. Where things stand: the non-blocking master job is built for every
+   shipped workflow (`Forward`, `Migration`, `Inversion`, `NoiseInversion`)
+   on SLURM/Chinook, and **validated on Chinook for a 2D `Inversion`**.
+   PBS/Miyabi is written but only mocked. The logging cleanup (phases
+   1-3b, see their entries) is done and the user has reviewed it.
+4. **Next steps, in the order I'd take them.** The user drives, and is
+   running more on Chinook, then will come back with instructions.
+   - Whatever those runs turn up. Highest value: the failure paths and a
+     larger run (see "Real-cluster validation").
+   - Finish the DEBUG audit, started with `solver/specfem.py` and
+     `preprocess/default.py`: `optimize/` DEBUG, `Pyaflowa`, the SPECFEM3D /
+     3D_GLOBE overrides of `forward_simulation` / `adjoint_simulation`, the
+     other systems. The user wants to say what they miss in DEBUG after
+     real runs, so ask them first rather than guessing.
+   - Logging odds and ends: gradient min/max in INFO was held back (the
+     model update already logs `dm_min/dm_max`); revisit the contract in
+     `docs/working_directory.rst` if INFO feels off.
+   - Profile the per-resume startup (14-35 s) before it matters at scale.
+     The `mkdir` loop over every path in `Forward.setup` is the first
+     suspect, unconfirmed.
+   - Miyabi/PBS validation (assumptions listed in the PBS entry, including
+     the guessed `qstat` fields behind `Pbs.job_times`).
+   - Once non-blocking is validated: switch the blocking `Slurm.run` /
+     `Pbs.run` retry path to `job_outcome()` and delete the duplicated
+     logic (latent position-as-task-id bug, see above), document master
+     `walltime` guidance, and decide when `blocking` can default to False.
+   - Parked, unrelated: `Frontera` doesn't import; optional `Checkpoint`
+     class extraction (~26 `_states` sites).
+5. User preferences (also in memory): pause before committing so they can
+   review in VSCode, commit only when told; no single-line modifier helpers
+   (inline, repetition is fine); keep blocking infrastructure out of
+   `Forward`; 80-column max, PEP-8, docstrings with reST types; commit
+   trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`;
+   never a bare `git stash`; remove stray `sflog.txt` before commits.
+6. Tests: `micromamba run -n seisflows python -m pytest seisflows/tests`
+   (195 passed, 4 slow deselected as of the last run).

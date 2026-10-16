@@ -336,14 +336,25 @@ working state before the workflow can be resumed
                                "the current working directory. If that dir "
                                "is not found, SPECFEM2D will be downloaded, "
                                "configured and compiled automatically in the "
-                               "current working directory.")
+                               "current working directory. For Example 4 this "
+                               "is the SPECFEM3D directory, see "
+                               "`--specfem3d_repo`")
+    examples.add_argument("--specfem3d_repo", type=str, nargs="?",
+                          default=None,
+                          help="Only for Example 4. Path to the SPECFEM3D "
+                               "directory, which must have been compiled "
+                               "already. If not given, assumes directory is "
+                               "called 'specfem3d/' in the current working "
+                               "directory. Nothing is downloaded or compiled")
     examples.add_argument("--nsta", type=int, nargs="?", default=None,
                           help="User-defined number of stations to use for "
-                               "the example problem (1 <= NSTA <= 131). If "
+                               "the example problem (1 <= NSTA <= 131 for "
+                               "Examples 1-3, at least 1 for Example 4). If "
                                "not given, each example has its own default.")
     examples.add_argument("--ntask", type=int, nargs="?", default=None,
                           help="User-defined number of events to use for "
-                               "the example problem (1 <= NTASK <= 25). If "
+                               "the example problem (1 <= NTASK <= 25 for "
+                               "Examples 1-3, at least 1 for Example 4). If "
                                "not given, each example has its own default.")
     examples.add_argument("--niter", type=int, nargs="?", default=None,
                           help="User-defined number of iterations to run for "
@@ -367,6 +378,28 @@ working state before the workflow can be resumed
                           help="Number of processors to use for MPI runs. "
                                "Default values chosen for each example problem."
                           )
+    examples.add_argument("--perturb", type=float, nargs="?", default=None,
+                          help="Only for Example 4. Percentage by which the "
+                               "velocities of the target model differ from "
+                               "the starting model, negative for slower. "
+                               "Defaults to 5")
+    examples.add_argument("--system", type=str, nargs="?", default=None,
+                          help="Only for Example 4. Name of the SeisFlows "
+                               "system module to run with, e.g., 'chinook' "
+                               "or 'miyabi'. Defaults to 'workstation'. Use "
+                               "`--par` to set the parameters it requires")
+    examples.add_argument("--par", type=str, nargs="+", default=None,
+                          metavar="KEY=VALUE",
+                          help="Only for Example 4. SeisFlows parameters to "
+                               "set once the parameter file has been made, "
+                               "which may override the example's own, e.g., "
+                               "`--par partition=t1small walltime=30 "
+                               "blocking=False`")
+    examples.add_argument("--par_yaml", type=str, nargs="?", default=None,
+                          help="Only for Example 4. Path to a YAML file of "
+                               "SeisFlows parameters to set, for settings "
+                               "that are re-used, such as one file per "
+                               "cluster. `--par` is applied after it")
     # =========================================================================
     # Defines all arguments/functions that expect a sub-argument
     subparser_dict = {"check": check, "par": par,
@@ -1103,6 +1136,9 @@ class SeisFlows:
                 import SFPyatoaEx2D as Example
         elif choice == 3:
             from seisflows.examples.ex3_fwd_solver import SFFwdEx2D as Example
+        elif choice == 4:
+            from seisflows.examples.ex4_hh_specfem3d import SFExample3D \
+                as Example
         else:
             print(f"no SeisFlows example matching given number: {choice}")
             sys.exit(0)
