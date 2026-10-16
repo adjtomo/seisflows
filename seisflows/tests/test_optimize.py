@@ -3,6 +3,7 @@ Test the optimization module by setting up a Rosenbrock optimization problem
 and running line search
 """
 import os
+import logging
 import pytest
 import numpy as np
 import matplotlib.pyplot as plt
@@ -172,7 +173,7 @@ def test_gradient_update_line_search(tmpdir, setup_optimization_vectors):
     assert(optimize._line_search.func_vals[1] == pytest.approx(f_try))
 
 
-def test_bracket_line_search(tmpdir, setup_optimization_vectors):
+def test_bracket_line_search(tmpdir, setup_optimization_vectors, caplog):
     """
     Run a small optimization problem to try to reduce the Rosenbrock
     objective function using the Bracket'ing line search method. Checks that the
@@ -224,7 +225,11 @@ def test_bracket_line_search(tmpdir, setup_optimization_vectors):
     assert(min(optimize._line_search.func_vals) < 24.2)
 
     # Change model names and reset line search
+    caplog.set_level(logging.INFO, logger="seisflows")
     optimize.finalize_search()
+
+    # The log says how much the line search achieved, against where it started
+    assert("lower than before the line search (f=2.4" in caplog.text)
 
     # Check that the final model
     m_new = optimize.load_vector("m_new")

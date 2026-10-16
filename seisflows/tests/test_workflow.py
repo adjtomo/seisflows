@@ -335,6 +335,37 @@ def test_inversion_run_does_not_advance_iteration_on_suspension(tmpdir):
     assert(resumed.iteration == 4)
 
 
+def test_iteration_start_is_kept_across_a_resume(tmpdir, caplog):
+    """
+    The log says how long an iteration took, which spans the processes that
+    a non-blocking workflow is restarted into, so when it started is kept
+    in the state file until the iteration is complete
+    """
+    caplog.set_level(logging.INFO, logger="seisflows")
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+
+    workflow = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file,
+                               start=1, end=1, suspend_on_iteration=1)
+    workflow.iteration = workflow.start
+    workflow.run()
+    started = workflow._iteration_start
+    assert(started > 0)
+    assert("took" not in caplog.text)  # not over yet
+
+    resumed = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file,
+                              start=1, end=1, suspend_on_iteration=1)
+    assert(resumed._iteration_start == started)
+    resumed.run()
+
+    assert("iteration 01 took" in caplog.text)
+    assert(resumed._iteration_start == 0)
+    # ...and the next iteration starts its own clock
+    again = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file)
+    assert(again._iteration_start == 0)
+
+
 @pytest.mark.parametrize(
     "thrifty,iteration,start,end,restarted,expected", [
         (False, 2, 1, 5, False, False),  # thrifty disabled entirely
@@ -410,6 +441,7 @@ class _FakeSystem:
         self.funcs = []  # the function list of each run
         self.kwargs = []  # the kwargs of each run, as passed to the functions
         self.submits = []  # depends_on of each resume job scheduled
+        self.times = None  # (queued, ran) of every job, if the test says
         self._next_job_id = 1000
 
     def check(self):
@@ -429,6 +461,9 @@ class _FakeSystem:
 
     def job_outcome(self, job_id):
         return self.outcomes.pop(0)
+
+    def job_times(self, job_id):
+        return self.times
 
 
 class _DummySystemWorkflow(Forward):
@@ -661,6 +696,27 @@ def test_dispatcher_retries_are_capped_across_restarts(tmpdir):
     assert(fresh._states["dispatching_task"] == -1)
     assert(fresh.run() == "SUSPENDED")
     assert(fresh.system.runs == [(False, None)])  # a fresh dispatch
+
+
+def test_resume_logs_how_long_the_job_queued_and_ran(tmpdir, caplog):
+    """The log says what a job's trip through the queue cost"""
+    caplog.set_level(logging.INFO, logger="seisflows")
+    _make_workflow(tmpdir).run()
+    resumed = _make_workflow(tmpdir, outcomes=[(True, "")])
+    resumed.system.times = (6.0, 125.0)
+    resumed.run()
+
+    assert("job 1001 finished successfully (queued 6s, ran 2m05s)"
+           in caplog.text)
+
+
+def test_resume_without_job_times_just_says_it_finished(tmpdir, caplog):
+    caplog.set_level(logging.INFO, logger="seisflows")
+    _make_workflow(tmpdir).run()
+    _make_workflow(tmpdir, outcomes=[(True, "")]).run()
+
+    assert("job 1001 finished successfully" in caplog.text)
+    assert("queued" not in caplog.text)
 
 
 def test_dispatcher_failure_points_to_the_task_logs(tmpdir, caplog):

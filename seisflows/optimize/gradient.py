@@ -574,7 +574,13 @@ class Gradient:
 
         # Figure out what step length and step count that corresponds to
         self.save_vector("f_new", f.min())
-        logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
+        # Index 0 is the model the line search started from
+        if f[0]:
+            logger.info(f"misfit of accepted trial model is f={f.min():.3E}, "
+                        f"{100 * (f[0] - f.min()) / f[0]:.1f}% lower than "
+                        f"before the line search (f={f[0]:.3E})")
+        else:
+            logger.info(f"misfit of accepted trial model is f={f.min():.3E}")
 
         logger.debug("resetting line search step count to 0")
         self._line_search.step_count = 0

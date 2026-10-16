@@ -302,6 +302,20 @@ class Cluster(Workstation):
             f"non-blocking dispatch (`job_outcome`)"
         )
 
+    def job_times(self, job_id):
+        """
+        How long a job that has finished waited in the queue and ran for,
+        for the log. Purely informational, so child classes should return
+        None rather than raise if the scheduler can't say.
+
+        :type job_id: str
+        :param job_id: ID returned by `run(blocking=False)`
+        :rtype: (float, float) or NoneType
+        :return: (seconds from submission until the first task started,
+            seconds from then until the last task ended), None if unknown
+        """
+        return None
+
     def check(self):
         """
         Checks parameters and paths

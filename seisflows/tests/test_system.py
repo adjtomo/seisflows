@@ -574,3 +574,56 @@ def test_pbs_nonblocking_support_flags(tmpdir):
     system = _miyabi(tmpdir, blocking=False)
     with patch("seisflows.system.workstation.Workstation.check"):
         system.check()
+
+
+# -----------------------------------------------------------------------------
+# How long jobs queued and ran for, for the log
+# -----------------------------------------------------------------------------
+
+def test_slurm_job_times(tmpdir):
+    """Queue time is submit -> first start, run time first start -> last end"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2)
+    sacct = ("2026-10-09T15:27:54|2026-10-09T15:28:00|2026-10-09T15:28:30\n"
+             "2026-10-09T15:27:54|2026-10-09T15:28:10|2026-10-09T15:29:00\n")
+    with patch("seisflows.system.slurm.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = sacct
+        assert(system.job_times("99") == (6.0, 60.0))
+
+
+@pytest.mark.parametrize("sacct", ["", "2026-10-09T15:27:54|Unknown|Unknown\n"])
+def test_slurm_job_times_unknown(tmpdir, sacct):
+    """Nothing to report is not an error, the times are only for the log"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2)
+    with patch("seisflows.system.slurm.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = sacct
+        assert(system.job_times("99") is None)
+
+
+def test_pbs_job_times(tmpdir):
+    """The same from `qstat -H -f`, over every job a re-run took"""
+    system = _miyabi(tmpdir)
+
+    def qstat(stime, obittime):
+        return (
+            "Job Id: 56[].opbs\n    Job_Name = x\n"  # the array: no times
+            "Job Id: 56[1].opbs\n"
+            "    qtime = Fri Oct  9 15:27:54 2026\n"
+            f"    stime = {stime}\n"
+            f"    obittime = {obittime}\n"
+        )
+
+    results = [MagicMock(stdout=qstat("Fri Oct  9 15:28:00 2026",
+                                      "Fri Oct  9 15:28:30 2026")),
+               MagicMock(stdout=qstat("Fri Oct  9 15:28:10 2026",
+                                      "Fri Oct  9 15:29:00 2026"))]
+    with patch("seisflows.system.pbs.subprocess.run", side_effect=results):
+        assert(system.job_times("56[].opbs,57[].opbs") == (6.0, 60.0))
+
+
+def test_pbs_job_times_unknown(tmpdir):
+    """A server that doesn't report them gives nothing, not an error"""
+    system = _miyabi(tmpdir)
+    with patch("seisflows.system.pbs.subprocess.run") as mock_run:
+        mock_run.return_value.stdout = "Job Id: 56.opbs\n    qtime = x\n"
+        assert(system.job_times("56.opbs") is None)
+    assert(Cluster.job_times(system, "56") is None)

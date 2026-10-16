@@ -300,8 +300,15 @@ class Dispatcher:
         job_id, attempt = parse_pending_state(self.workflow._states[key])
         self.end_resume(key, job_id)
         success, failed = system.job_outcome(job_id)
+
+        times = system.job_times(job_id)
+        timing = ""
+        if times is not None:
+            timing = (f" (queued {msg.duration(times[0])}, "
+                      f"ran {msg.duration(times[1])})")
+
         if success:
-            logger.info(f"job {job_id} finished successfully")
+            logger.info(f"job {job_id} finished successfully{timing}")
             return
 
         # A failed preflight check is deterministic, retrying would only
@@ -310,8 +317,9 @@ class Dispatcher:
         self._exit_on_preflight_failure(key, job_id)
 
         if attempt < system.rerun:
-            logger.warning(f"job {job_id} had failed tasks: {failed}. "
-                           f"Attempt {attempt + 1}/{system.rerun} to rerun")
+            logger.warning(f"job {job_id} had failed tasks: {failed}"
+                           f"{timing}. Attempt {attempt + 1}/{system.rerun} "
+                           f"to rerun")
             job_id = system.run(funcs, blocking=False, array=failed, **kwargs)
             self._suspend(key, job_id, attempt=attempt + 1)
 

@@ -79,6 +79,25 @@ def sub(val, char="-"):
     return f"\n{val}\n{char*80}"
 
 
+def duration(seconds):
+    """
+    Format a length of time for a log message, e.g., 3s, 2m05s, 1h02m
+
+    :type seconds: float
+    :param seconds: length of time in seconds
+    :rtype: str
+    :return: the length of time, to the precision that matters at its scale
+    """
+    seconds = int(round(seconds))
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m"
+    if minutes:
+        return f"{minutes}m{seconds:02d}s"
+    return f"{seconds}s"
+
+
 def cli(text="", items=None, wraplen=80, header=None, border=None, hchar="/"):
     """
     Provide a standardized look to the SeisFlows command line interface messages

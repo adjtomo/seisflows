@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 150 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 165 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -556,6 +556,35 @@ levels only, plus the failure hints; no result values were added yet.
   misfit before/after, steps taken, wall time), job queue and run times,
   and an audit of `solver/`, `preprocess/` and `optimize/` DEBUG content,
   which at 51 `logger.debug` calls for the package is thin.
+
+### Logging cleanup, phase 3: queue/run times and iteration summaries
+
+- `Cluster.job_times(job_id)` (default None) -> `(queued, ran)` seconds.
+  `Slurm`: `sacct -nLXP -o submit,start,end`, queue time is submit -> first
+  start, run time first start -> last end over the array. `Pbs`: `qstat -H -f
+  -t` per job (a re-run can take several), `qtime`/`stime`/`obittime` of each
+  task. **The PBS version is a guess about what a PBS server reports** (the
+  array itself has no times, `obittime` may be absent); it returns None
+  rather than raising, so the worst case is the old log line. Check it on
+  Miyabi. Both log the reason at DEBUG when they have nothing.
+- `Dispatcher` logs them when it collects a job: `job 723809 finished
+  successfully (queued 3s, ran 5s)`, and on a failure in the rerun warning.
+  This is the number that answers whether resubmission latency matters.
+- `msg.duration()` formats seconds (`3s`, `2m05s`, `1h02m`).
+- `Inversion` logs `iteration 01 took 12m31s` after `COMPLETE ITERATION`.
+  The start time is persisted as `iteration_start:` in the state file (like
+  `was_thrifty`, since the process is restarted by a non-blocking
+  dispatch), set when the iteration first runs and zeroed when it
+  completes. The time includes queue waits, which is the point.
+- `Gradient.finalize_search`: `misfit of accepted trial model is
+  f=2.4E+01, 3.2% lower than before the line search (f=2.5E+01)`. It is
+  the first element of the sorted search history, i.e. step length 0.
+- Tests: `msg.duration`; Slurm and PBS time parsing incl. nothing to
+  report; the dispatcher's line with and without times; the iteration start
+  surviving a resume and the log line; the optimizer message.
+- Not done: gradient min/max (the model update already logs `dm_min/dm_max`,
+  so I held off), and the audit of DEBUG content in `solver/`,
+  `preprocess/` and `optimize/`, which is the rest of the thin 51 calls.
 
 ## Not done / come back to this
 

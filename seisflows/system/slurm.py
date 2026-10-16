@@ -28,6 +28,7 @@ import sys
 import numpy as np
 import time
 import subprocess
+from datetime import datetime
 
 from seisflows import logger
 from seisflows.system.cluster import Cluster
@@ -286,6 +287,39 @@ class Slurm(Cluster):
                 failed.append(idx if idx.isdigit() else str(i))
 
         return False, ",".join(failed)
+
+    def job_times(self, job_id):
+        """
+        Overwrites `system.cluster.Cluster.job_times`. Reads the submit,
+        start and end time that `sacct` has for every task in the array.
+
+        :type job_id: str
+        :param job_id: ID returned by `run(blocking=False)`
+        :rtype: (float, float) or NoneType
+        :return: (seconds from submission until the first task started,
+            seconds from then until the last task ended), None if `sacct`
+            can't say
+        """
+        cmd = f"sacct -nLXP -o submit,start,end -j {job_id}"
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True,
+                                    shell=True)
+            submits, starts, ends = [], [], []
+            for line in result.stdout.strip().splitlines():
+                submit, start, end = [datetime.fromisoformat(time_str)
+                                      for time_str in line.split("|")]
+                submits.append(submit)
+                starts.append(start)
+                ends.append(end)
+            queued = (min(starts) - min(submits)).total_seconds()
+            ran = (max(ends) - min(starts)).total_seconds()
+        except (ValueError, OSError) as e:
+            # Tasks that never started have a time of 'Unknown', or sacct
+            # had nothing to say. This is only for the log
+            logger.debug(f"could not get the times of job {job_id}: {e}")
+            return None
+
+        return queued, ran
 
     def run(self, funcs, single=False, tasktime=None, array=None, _attempts=0,
             blocking=True, **kwargs):

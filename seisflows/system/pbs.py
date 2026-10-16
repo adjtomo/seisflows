@@ -59,6 +59,7 @@ import sys
 import time
 import subprocess
 import numpy as np
+from datetime import datetime
 
 from seisflows import logger, ROOT_DIR
 from seisflows.system.cluster import Cluster
@@ -716,6 +717,53 @@ class Pbs(Cluster):
                     failed.add(int(match.group(1)) if match else 0)
 
         return False, ",".join(str(idx) for idx in sorted(failed))
+
+    def job_times(self, job_id):
+        """
+        Overwrites `system.cluster.Cluster.job_times`. Reads the 'qtime'
+        (queued), 'stime' (started) and 'obittime' (ended) that
+        `qstat -H -f` has for every task of every job in `job_id`.
+
+        .. note::
+            Not yet checked against a real PBS server, which may not report
+            all of these (e.g., 'obittime'). If so this returns None.
+
+        :type job_id: str
+        :param job_id: ID returned by `run(blocking=False)`, which is
+            several IDs joined by ',' if a re-run needed more than one job
+        :rtype: (float, float) or NoneType
+        :return: (seconds from submission until the first task started,
+            seconds from then until the last task ended), None if unknown
+        """
+        submits, starts, ends = [], [], []
+        try:
+            for jid in job_id.split(","):
+                cmd = f"qstat -H -f -t {shlex.quote(jid)}"
+                result = subprocess.run(cmd, capture_output=True, text=True,
+                                        shell=True)
+                # One block of attributes per task, the array itself has no
+                # start or end of its own
+                for block in result.stdout.split("Job Id:")[1:]:
+                    times = {}
+                    for name in ["qtime", "stime", "obittime"]:
+                        match = re.search(rf"^\s*{name}\s*=\s*(.+)$", block,
+                                          flags=re.MULTILINE)
+                        if match:
+                            times[name] = datetime.strptime(
+                                match.group(1).strip(), "%a %b %d %H:%M:%S %Y"
+                            )
+                    if len(times) == 3:
+                        submits.append(times["qtime"])
+                        starts.append(times["stime"])
+                        ends.append(times["obittime"])
+            queued = (min(starts) - min(submits)).total_seconds()
+            ran = (max(ends) - min(starts)).total_seconds()
+        except (ValueError, OSError) as e:
+            # This is only for the log
+            logger.debug(f"could not get the times of job {job_id}: {e}")
+            return None
+
+        return queued, ran
 
     @staticmethod
     def _contiguous_ranges(indices):

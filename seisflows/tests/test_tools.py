@@ -218,3 +218,13 @@ def test_rotate_rt_adjsrc_to_ne_r_component():
     assert(tr_ee.data == pytest.approx(np.zeros(3)))
     assert(tr_ne.data == pytest.approx(np.zeros(3)))
     assert(tr_en.data == pytest.approx(np.zeros(3)))
+
+
+@pytest.mark.parametrize("seconds,expected", [
+    (0, "0s"), (3.4, "3s"), (59.6, "1m00s"), (125, "2m05s"),
+    (3600, "1h00m"), (3720, "1h02m"), (90000, "25h00m"),
+])
+def test_msg_duration(seconds, expected):
+    """Durations in the log are as short as their scale allows"""
+    from seisflows.tools import msg
+    assert(msg.duration(seconds) == expected)

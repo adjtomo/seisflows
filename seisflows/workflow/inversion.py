@@ -20,6 +20,7 @@ exporting updated models, kernels and/or gradients to disk.
 """
 import os
 import sys
+import time
 import numpy as np
 
 from glob import glob
@@ -98,6 +99,11 @@ class Inversion(Migration):
         # process between the iteration that sets it and the tasks that read
         # it, so it cannot live in memory alone
         self._was_thrifty = bool(int(self._states.get("was_thrifty", 0)))
+
+        # When the current iteration started (seconds since the epoch), for
+        # its log. Persisted for the same reason as `_was_thrifty`, and 0 in
+        # the state file means no iteration has started
+        self._iteration_start = int(self._states.get("iteration_start", 0))
 
         # Grab iteration from state file, or set None to have setup() set it
         if "iteration" in self._states:
@@ -241,6 +247,8 @@ class Inversion(Migration):
         """Call the forward.run() function iteratively, from `start` to `end`"""
         while self.iteration < self.end + 1:
             logger.info(msg.mjr(f"RUNNING ITERATION {self.iteration:0>2}"))
+            if not self._iteration_start:
+                self._iteration_start = int(time.time())
             status = super().run()  # Runs task list
             # A 'STOPPED' (`stop_after`) or 'SUSPENDED' (non-blocking
             # dispatch, to be resumed by a dependent job) pass is not a
@@ -249,6 +257,9 @@ class Inversion(Migration):
             if status != "COMPLETE":
                 break
             logger.info(msg.mjr(f"COMPLETE ITERATION {self.iteration:0>2}"))
+            logger.info(f"iteration {self.iteration:0>2} took "
+                        f"{msg.duration(time.time() - self._iteration_start)}")
+            self._iteration_start = 0
             self.iteration += 1
             logger.debug(f"setting current iteration to: {self.iteration}")
             # Set the state file to pending for new iteration
@@ -276,6 +287,7 @@ class Inversion(Migration):
                 lines.pop(i)
         lines.append(f"iteration: {self.iteration}\n")
         lines.append(f"was_thrifty: {int(self._was_thrifty)}\n")
+        lines.append(f"iteration_start: {self._iteration_start}\n")
 
         # Rewrite checkpoint file with new lines (atomically, see
         # `Forward.checkpoint`)
