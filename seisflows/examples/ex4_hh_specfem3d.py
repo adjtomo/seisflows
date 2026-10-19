@@ -44,18 +44,18 @@ from seisflows.tools.unix import nproc as system_nproc
 
 class SFExample3D:
     """
-    A class for running the SPECFEM3D SeisFlows example. Follows the structure
-    of the SPECFEM2D examples (see `ex1_homogeneous_halfspace`) so that the
-    two read alike.
+    A class for running the SPECFEM3D SeisFlows example. Sets up the SPECFEM3D
+    working directory and models, then the SeisFlows working directory, and
+    optionally runs the workflow.
     """
     # SPECFEM3D executables required by SeisFlows to run this example
     _binaries = ["xmeshfem3D", "xgenerate_databases", "xspecfem3D",
                  "xcombine_sem", "xsmooth_sem_pde", "xcombine_vol_data_vtk"]
 
     def __init__(self, ntask=None, nsta=None, niter=None, nproc=None,
-                 method="run", specfem3d_repo=None, specfem2d_repo=None,
-                 mpiexec="mpirun", perturb=None, system=None, par=None,
-                 par_yaml=None, **kwargs):
+                 method="run", specfem3d_repo=None, mpiexec="mpirun",
+                 perturb=None, system=None, par=None, par_yaml=None,
+                 **kwargs):
         """
         Set path structure which is used to navigate around the SPECFEM3D
         repository and the example working directory
@@ -81,9 +81,6 @@ class SFExample3D:
         :param specfem3d_repo: path to the SPECFEM3D repository, which must
             contain binary executables in bin/. If not given, assumes it is
             called 'specfem3d/' in the current working directory
-        :type specfem2d_repo: str
-        :param specfem2d_repo: allows the repository to be given with the
-            `-r` flag of `seisflows examples`, which names it for SPECFEM2D
         :type mpiexec: str
         :param mpiexec: MPI executable used to run the SPECFEM3D mesher and
             database generator that make the models. Defaults to 'mpirun'
@@ -104,7 +101,7 @@ class SFExample3D:
         """
         self.cwd = os.getcwd()
         self.sem3d_paths, self.workdir_paths = self.define_dir_structures(
-            cwd=self.cwd, specfem3d_repo=specfem3d_repo or specfem2d_repo
+            cwd=self.cwd, specfem3d_repo=specfem3d_repo
         )
 
         # We set defaults here because `seisflows examples` may input these

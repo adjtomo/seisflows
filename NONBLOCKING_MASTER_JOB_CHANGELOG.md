@@ -644,7 +644,7 @@ node (28 cores), `NSTEP` 2000, `XYZ` components, `--ntask` sources and
   file first (`seisflows par` silently ignores an unknown key). Checked with
   `--system chinook --par partition=t1small submit_to=debug walltime=30
   tasktime=40 blocking=False`: all applied, `seisflows check` passes. Other
-  new flags: `--specfem3d_repo` (`-r` also works), `--perturb`.
+  new flags: `--specfem3d_repo`, `--perturb`.
 - Refuses to run in a directory with an earlier workflow (`sfstate.txt`,
   `scratch`, `output`): a new parameter file would otherwise pick it up (the
   2D examples do, a stale state silently resumes).

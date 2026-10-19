@@ -1,11 +1,10 @@
 SPECFEM3D Example
 =================
 
-Example 4 is the 3D counterpart of the `SPECFEM2D examples
-<specfem2d_example.html>`__. It runs an inversion between a homogeneous
-halfspace and the same halfspace with its velocities changed by a few percent,
-using SPECFEM3D_Cartesian. By default it is small enough to run on a single
-compute node (28 cores).
+Example 4 runs an inversion between a homogeneous halfspace and the same
+halfspace with its velocities changed by a few percent, using
+SPECFEM3D_Cartesian. By default it is small enough to run on a single compute
+node (28 cores).
 
 .. code:: bash
 
@@ -52,7 +51,7 @@ Arguments
      - Meaning
    * - ``--specfem3d_repo``
      - Compiled SPECFEM3D repository. Defaults to ``specfem3d/`` in the
-       current directory. ``-r`` also works.
+       current directory.
    * - ``--nproc``
      - Cores per simulation, default 28. Sets how the mesh is divided (see
        below).

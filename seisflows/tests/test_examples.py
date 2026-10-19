@@ -120,11 +120,16 @@ def test_more_processors_than_the_machine_has_is_refused(repo, workdir,
         SFExample3D(nproc=28, specfem3d_repo=repo)
 
 
-def test_repo_can_be_given_with_the_flag_for_specfem2d(repo, workdir):
-    """`-r` is the only short flag, so it works for this example too"""
-    assert(SFExample3D(specfem2d_repo=repo).sem3d_paths.repo == repo)
+def test_repo_is_given_by_its_own_flag_or_found_in_the_directory(
+        repo, workdir):
+    """
+    `seisflows examples` passes all of its arguments to every example, so the
+    ones that belong to other examples must not change anything
+    """
     assert(SFExample3D(specfem3d_repo=repo, specfem2d_repo="other"
                        ).sem3d_paths.repo == repo)
+    # Otherwise it is `specfem3d/` in the working directory
+    assert(SFExample3D(specfem2d_repo="other").sem3d_paths.repo == repo)
 
 
 def test_missing_binaries_are_listed(repo, workdir, capsys):

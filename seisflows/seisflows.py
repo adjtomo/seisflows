@@ -336,9 +336,7 @@ working state before the workflow can be resumed
                                "the current working directory. If that dir "
                                "is not found, SPECFEM2D will be downloaded, "
                                "configured and compiled automatically in the "
-                               "current working directory. For Example 4 this "
-                               "is the SPECFEM3D directory, see "
-                               "`--specfem3d_repo`")
+                               "current working directory.")
     examples.add_argument("--specfem3d_repo", type=str, nargs="?",
                           default=None,
                           help="Only for Example 4. Path to the SPECFEM3D "
