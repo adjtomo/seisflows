@@ -63,7 +63,7 @@ viable once the master job stops blocking.
 
 ## Done
 
-**Current total:** `pytest seisflows/tests` → 195 passed, 4 deselected (slow)
+**Current total:** `pytest seisflows/tests` → 206 passed, 4 deselected (slow)
 
 - **`seisflows/system/cluster.py`**
   - `Cluster._dependency_flag(job_id)` — new, raises `NotImplementedError`
@@ -147,7 +147,7 @@ viable once the master job stops blocking.
   this entry are the current ones.)
   - `Dispatcher.run(funcs, **kwargs)` (`seisflows/workflow/dispatch.py`) —
     the one call that task-list functions use instead of `system.run()`, as
-    `self.dispatcher.run(...)`. Blocking systems: identical to
+    `self._dispatcher.run(...)`. Blocking systems: identical to
     `system.run()`. Non-blocking (`system.blocking == False`): the calling
     task is simply *entered twice*. First entry dispatches
     (`run(blocking=False)`), records `PENDING:<job_id>:<attempt>` as the
@@ -250,7 +250,7 @@ viable once the master job stops blocking.
   - The pattern, repeated inline in each task that checks a model (a few
     times, deliberately explicit rather than hidden behind a helper):
     ```python
-    if self.dispatcher.nonblocking:
+    if self._dispatcher.nonblocking:
         self.solver.check_model_files(path=path_model)  # values on compute
         run_list.insert(0, self._check_model_single)
     else:
@@ -286,7 +286,7 @@ viable once the master job stops blocking.
 - **Dispatcher extracted from `Forward`.** The submission machinery was
   cluttering the workflow class, whose job is the science. It now lives in
   `seisflows/workflow/dispatch.py`:
-  - `Dispatcher` (one per workflow, `self.dispatcher`, created in
+  - `Dispatcher` (one per workflow, `self._dispatcher`, created in
     `Forward.__init__`): `run()`, `nonblocking`, `resuming`, the preflight
     marker (`marker`, `flag_preflight_failure`, `clear_preflight_failure`),
     and the suspend/resume/retry logic. `task(name)` is a context manager
@@ -296,7 +296,7 @@ viable once the master job stops blocking.
     there too (`WorkflowSuspended` is still imported into `forward.py`).
   - `Forward` keeps `run()`, the `WorkflowSuspended` catch, the
     `_supports_nonblocking` gate in `check()`, and `_check_model_single`
-    (it needs `self.solver`). `Migration` calls `self.dispatcher.run()` /
+    (it needs `self.solver`). `Migration` calls `self._dispatcher.run()` /
     `.resuming`.
   - The dispatcher holds a reference to its workflow and reads/writes task
     state through `workflow._states` / `workflow.checkpoint()` instead of
@@ -420,9 +420,8 @@ viable once the master job stops blocking.
     See Not done for an apparent pre-existing problem with when it is reset.
   - `NoiseInversion` no longer opts out: `_supports_nonblocking` is True
     everywhere, with a test that guards it.
-  - Not touched: `workflow/test_flow.py` (`TestFlow`) calls `system.run()`
-    directly. It is the manual smoke test of the system module itself, not
-    a `Forward` workflow, so it doesn't use the dispatcher.
+  - `workflow/test_flow.py` (`TestFlow`) was left alone at this point, and
+    later converted, see "TestFlow can test a non-blocking main job".
   - Tests (`test_workflow.py`, real `NoiseInversion` methods against fakes,
     driving each task across several simulated processes): one suspend per
     force for synthetic data / RT misfit / line-search evaluation, the
@@ -674,6 +673,57 @@ node (28 cores), `NSTEP` 2000, `XYZ` components, `--ntask` sources and
   workflow guard, the listing, and the argparse flags.
 - Docs: `docs/specfem3d_example.rst`, in the examples toctree.
 
+### TestFlow can test a non-blocking main job (no SPECFEM needed)
+
+Requested by the user (2026-10-19): check the *system* module's non-blocking
+parts on a cluster without compiling SPECFEM there.
+
+- `TestFlow` is now a `Forward` subclass, so it gets the state file, the
+  `Dispatcher` and the suspend/resume loop of every other workflow. Its
+  tests call `self._dispatcher.run()` instead of `system.run()`, so the same
+  five tests run blocking (as before) or with `blocking: False`.
+  Set `seisflows par blocking False` (+ `submit_to`) and `seisflows submit`.
+- Re-entry rules apply (see the dispatch docs): each test clears the log
+  directory only `if not self._dispatcher.resuming`, and sets `rerun`
+  inside the test (`setup()` runs again in every process and resets it).
+  The checks of log files ignore `sflog*`/`parameters*` copies, which `Pbs`
+  backs up into the log directory at every resume (qsub can't append).
+- New test, non-blocking only: `test_preflight_failure_is_not_retried`. The
+  task function writes the preflight marker to scratch and exits; the main
+  job must stop without a re-run despite `rerun=2` and remove the marker.
+  That checks the shared file system between compute and master as well.
+- The hello world test also reads `system.job_times()` of its job (the job id
+  comes from the state file): a warning, not a failure, if it is None. **This
+  is the check for the guessed PBS fields.**
+- "was expected to fail but did not" used to be a CRITICAL log message that
+  carried on; it is an assertion now. Consequence: the generic local
+  `cluster` system fails the single-job-failure test, because
+  `Cluster.run(single=True)` ignores the return code of its one task
+  (pre-existing, found by running it, not changed). `workstation` can't pass
+  the array tests either (tasks run serially and stop at the first failure).
+  The target is a real scheduler.
+- When every test passes the state file is reset, so submitting again runs
+  everything again (other workflows would skip finished tasks).
+- **Bug found and fixed on the way: `dispatcher` was in every
+  `parameters.yaml`.** `seisflows configure` writes each *public* attribute
+  of a workflow as a parameter, and `self.dispatcher` (added in `70cfb1ae`)
+  appeared as `dispatcher: <seisflows.workflow.dispatch.Dispatcher object at
+  0x...>`. Harmless (the workflow ignores it) but wrong; the attribute is now
+  `_dispatcher` everywhere and a test fails if a non-parameter becomes public.
+  Existing parameter files can have the line deleted. The same mechanism made
+  an early `self.system = ...` in `TestFlow.__init__` write `system: null`
+  over the module choice, which is why it reads `self._modules` instead.
+- Tests (`tests/test_testflow.py`): a `_SimulatedScheduler` stand-in that runs
+  the dispatched tasks at once and remembers which failed. Blocking (one
+  process, five jobs), non-blocking (seven processes, six jobs, a resume job
+  waiting on each), the right tasks fail, it runs again after passing, the
+  preflight test exists only non-blocking and runs one job despite `rerun`,
+  the strict assertion, job times reported/missing, `__test__ = False`.
+  Mutation checked: removing the `resuming` guard fails 7 of them.
+- Not run on a real scheduler. First real use: `seisflows par workflow
+  test_flow`, a cluster system, `blocking False`, on Chinook, then Miyabi.
+  Expect ~6 trips through the queue (a few minutes each if it is busy).
+
 ## Not done / come back to this
 
 - **Real-cluster validation — started, not finished.** First real run
@@ -790,4 +840,4 @@ node (28 cores), `NSTEP` 2000, `XYZ` components, `--ntask` sources and
    trailer `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`;
    never a bare `git stash`; remove stray `sflog.txt` before commits.
 6. Tests: `micromamba run -n seisflows python -m pytest seisflows/tests`
-   (195 passed, 4 slow deselected as of the last run).
+   (206 passed, 4 slow deselected as of the last run).

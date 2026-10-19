@@ -20,6 +20,11 @@
   cores by default). Uses an already compiled SPECFEM3D (`--specfem3d_repo`),
   `--ntask` events, `--nsta` stations on a grid, and can be set up for a
   cluster with `--system`, `--par` and `--par_yaml`. See the docs.
+- `TestFlow` can test a non-blocking main job (`blocking: False`), so the
+  system module's job dependencies, failure handling and job times can be
+  checked on a cluster without SPECFEM. It now starts over each time it passes,
+  and a test that should fail but does not is an error.
+- Bugfix: parameter files no longer list a `dispatcher` entry
 - Bugfix: `Specfem3D` wrote a malformed `ATTENUATION` value to the Par_file
 - Logging: `sflog.txt` is the high-level story of the workflow and the files in
   `logs/` the detail (see the working directory docs). A resumed non-blocking

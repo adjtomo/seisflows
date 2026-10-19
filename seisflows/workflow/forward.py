@@ -79,7 +79,7 @@ class Forward:
     ***
     """
     # Whether every `system.run()` call in this workflow's task list goes
-    # through `self.dispatcher.run()` (see `Dispatcher.run`) and so can be
+    # through `self._dispatcher.run()` (see `Dispatcher.run`) and so can be
     # run with `system.blocking == False`. Subclasses that add task-list
     # functions with direct `system.run()` calls must set this back to False
     _supports_nonblocking = True
@@ -123,7 +123,7 @@ class Forward:
         self._optional_modules = ["preprocess"]
 
         # How task-list functions get their work onto the system module
-        self.dispatcher = Dispatcher(self)
+        self._dispatcher = Dispatcher(self)
 
         # Read in any existing state file which keeps track of workflow tasks
         self._states = {task.__name__: 0 for task in self.task_list}
@@ -165,7 +165,7 @@ class Forward:
                     sys.exit(-1)
 
         # A workflow resumed to collect dispatched work doesn't repeat itself
-        self.dispatcher.begin_resume()
+        self._dispatcher.begin_resume()
 
     @property
     def task_list(self):
@@ -210,7 +210,7 @@ class Forward:
             self._modules[req_mod].check()
 
         # Non-blocking dispatch needs every `system.run()` in the task list
-        # to go through `self.dispatcher.run()`; refuse rather than half-work
+        # to go through `self._dispatcher.run()`; refuse rather than half-work
         if not getattr(self._modules.system, "blocking", True):
             assert(self._supports_nonblocking), (
                 f"`system.blocking` is False but workflow "
@@ -356,7 +356,7 @@ class Forward:
                     # Print called func name, e.g., test_func -> TEST FUNC
                     _log_name = func.__name__.replace("_", " ").upper()
                     logger.info(msg.mnr(_log_name))
-                    with self.dispatcher.task(func.__name__):
+                    with self._dispatcher.task(func.__name__):
                         func()
                     n += 1
                     self._states[func.__name__] = 1  # completed
@@ -371,7 +371,7 @@ class Forward:
                     status = "SUSPENDED"
                     break
                 except Exception as e:
-                    self.dispatcher.end_resume()
+                    self._dispatcher.end_resume()
                     self._states[func.__name__] = -1  # failed
                     self.checkpoint()
                     raise
@@ -383,7 +383,7 @@ class Forward:
                 status = "STOPPED"
                 break
 
-        self.dispatcher.end_resume()
+        self._dispatcher.end_resume()
         self.checkpoint()
         # A suspended workflow has not completed anything yet to report
         if status != "SUSPENDED":
@@ -406,7 +406,7 @@ class Forward:
         try:
             self.solver.validate_model_values(path=path_model)
         except Exception as e:
-            self.dispatcher.flag_preflight_failure(e)
+            self._dispatcher.flag_preflight_failure(e)
             raise
 
     def generate_synthetic_data(self, **kwargs):
@@ -428,13 +428,13 @@ class Forward:
         # Check the target model. The master job only looks at file names if
         # dispatch is non-blocking; the values are checked on compute nodes
         logger.debug("checking true/target model")
-        if self.dispatcher.nonblocking:
+        if self._dispatcher.nonblocking:
             self.solver.check_model_files(path=kwargs["path_model"])
             run_list.insert(0, self._check_model_single)
         else:
             self.solver.check_model_values(path=kwargs["path_model"])
 
-        self.dispatcher.run(run_list, **kwargs)
+        self._dispatcher.run(run_list, **kwargs)
 
     def _generate_synthetic_data_single(self, path_model=None, 
                                         _copy_function=unix.ln, **kwargs):
@@ -555,13 +555,13 @@ class Forward:
         # The master job only looks at file names if dispatch is non-blocking;
         # the values are checked on compute nodes
         logger.debug("checking model")
-        if self.dispatcher.nonblocking:
+        if self._dispatcher.nonblocking:
             self.solver.check_model_files(path=path_model)
             run_list.insert(0, self._check_model_single)
         else:
             self.solver.check_model_values(path=path_model)
 
-        self.dispatcher.run(run_list, path_model=path_model,
+        self._dispatcher.run(run_list, path_model=path_model,
                             save_residuals=save_residuals,
                             save_forward_arrays=save_forward_arrays,
                             **kwargs

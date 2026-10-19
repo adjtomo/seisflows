@@ -71,8 +71,39 @@ running as expected. Errors in the parameter file or encountered during TestFlow
 need to be addressed by the User. Individual job log files can be found in 
 `logs/*`. 
 
-Due to the difficult nature of anticipating all quirks of a given compute 
-system, Users running on un-tested systems may encounter errors while running 
+Testing a non-blocking main job
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TestFlow can also check a `non-blocking main job
+<running_on_chinook.html>`__ (``blocking: False``) without any SPECFEM binaries,
+for systems that support it (e.g., ``chinook``, ``miyabi``). Set the parameter
+before submitting:
+
+.. code:: bash
+
+    seisflows par blocking False
+    seisflows par submit_to debug   # a queue for the short main job
+    seisflows submit
+
+Each test then dispatches its job, and the main job finishes. The scheduler
+starts it again once the job is done, and it picks up where it left off, which
+is what is being tested. Because each trip through the queue takes time, the
+workflow takes longer to finish than it does when blocking. ``sflog.txt`` shows
+a line for each resumption, and how long each job queued and ran for. TestFlow
+checks that:
+
+- the main job is resumed after each job, including a job that failed,
+- the tasks of an array that failed are the ones that are run again,
+- the queue and run times of jobs can be read from the scheduler (otherwise a
+  warning says that they cannot, which only affects the log),
+- a check that fails on a compute node is not run again, which also checks that
+  the main job and the compute nodes share a file system.
+
+TestFlow starts over each time that it passes, so it can be submitted again
+after changing a parameter.
+
+Due to the difficult nature of anticipating all quirks of a given compute
+system, Users running on un-tested systems may encounter errors while running
 TestFlow. Please feel free to `open a GitHub Issue 
 <https://github.com/adjtomo/seisflows/issues>`__ if you cannot succesfully run
 TestFlow.

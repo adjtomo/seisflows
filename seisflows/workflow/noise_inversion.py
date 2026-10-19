@@ -297,7 +297,7 @@ class NoiseInversion(Inversion):
         # Check the target model. The master job only looks at file names if
         # dispatch is non-blocking; the values are checked on compute nodes
         logger.info("checking true/target model parameters:")
-        if self.dispatcher.nonblocking:
+        if self._dispatcher.nonblocking:
             self.solver.check_model_files(path=kwargs["path_model"])
         else:
             self.solver.check_model_values(path=kwargs["path_model"])
@@ -313,9 +313,9 @@ class NoiseInversion(Inversion):
             run_list = [self._generate_synthetic_data_single]
             # The model only needs checking before the first dispatch, later
             # ones only happen once that one has passed
-            if self.dispatcher.nonblocking and force == forces[0]:
+            if self._dispatcher.nonblocking and force == forces[0]:
                 run_list.insert(0, self._check_model_single)
-            self.dispatcher.run(run_list, key=_state_check, **kwargs)
+            self._dispatcher.run(run_list, key=_state_check, **kwargs)
 
             self._states[_state_check] = 1
             self.checkpoint()
@@ -472,7 +472,7 @@ class NoiseInversion(Inversion):
                 f"residuals_{{src}}_{self.evaluation}_RT.txt"
                 )
             # saves to `scratch/solver/{source_name}/E_FWD_ARR` or `N_FWD_ARR`
-            with self.dispatcher.keyed(_state_check):
+            with self._dispatcher.keyed(_state_check):
                 super().evaluate_initial_misfit(
                     save_residuals=save_residuals, sum_residuals=False,
                     save_forward_arrays=self.fwd_arr_path, **kwargs
@@ -535,7 +535,7 @@ class NoiseInversion(Inversion):
 
                 # Fwd arrays will not be deleted until all simulations for a 
                 # given FORCE are finished, that is, when we run the T adj sims
-                with self.dispatcher.keyed(_state_check):
+                with self._dispatcher.keyed(_state_check):
                     super().run_adjoint_simulations(
                         load_forward_arrays=self.fwd_arr_path,
                         del_loaded_forward_arrays=bool(cmpnt == "T")  # last
@@ -1232,7 +1232,7 @@ class NoiseInversion(Inversion):
         # adjoint simulation (tasktime=self.system.tasktime * 2)
         # This task dispatches twice (here, then in the original function
         # below) so each needs its own key, this one is not the task's name
-        self.dispatcher.run([generate_event_kernels],
+        self._dispatcher.run([generate_event_kernels],
                             key="postprocess_event_kernels_combine",
                             single=True, tasktime=self.system.tasktime * 1)
 
@@ -1261,7 +1261,7 @@ class NoiseInversion(Inversion):
         # the values are checked on compute nodes, see below
         path_model = os.path.join(self.path.eval_func, "model")
         logger.info(f"`m_try` model parameters for line search evaluation:")
-        if self.dispatcher.nonblocking:
+        if self._dispatcher.nonblocking:
             self.solver.check_model_files(path=path_model)
         else:
             self.solver.check_model_values(path=path_model)
@@ -1310,10 +1310,10 @@ class NoiseInversion(Inversion):
             # The model values only need checking before the first force of
             # a step, the rest only run once that one has passed
             force_list = run_list
-            if self.dispatcher.nonblocking and force == next(iter(cfg)):
+            if self._dispatcher.nonblocking and force == next(iter(cfg)):
                 force_list = [self._check_model_single] + run_list
 
-            self.dispatcher.run(
+            self._dispatcher.run(
                 force_list, key=_state_check, path_model=path_model,
                 save_residuals=os.path.join(
                     self.path.eval_func, "residuals",

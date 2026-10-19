@@ -469,7 +469,7 @@ class _FakeSystem:
 class _DummySystemWorkflow(Forward):
     """
     Workflow whose second task dispatches to the system through
-    `self.dispatcher.run()` and then does some 'finish' work, mirroring e.g.
+    `self._dispatcher.run()` and then does some 'finish' work, mirroring e.g.
     `Forward.evaluate_initial_misfit`
     """
     def __init__(self, **kwargs):
@@ -485,7 +485,7 @@ class _DummySystemWorkflow(Forward):
 
     def dispatching_task(self):
         self.calls.append("dispatching_task:start")
-        self.dispatcher.run([self.before], x=1)
+        self._dispatcher.run([self.before], x=1)
         self.calls.append("dispatching_task:finish")
 
     def after(self):
@@ -545,7 +545,7 @@ def test_dispatcher_outside_a_task_is_blocking(tmpdir):
     `Forward.run()`, there's no task to suspend, so it just blocks
     """
     workflow = _make_workflow(tmpdir, blocking=False)
-    workflow.dispatcher.run([workflow.before])
+    workflow._dispatcher.run([workflow.before])
 
     assert(workflow.system.runs == [(None, None)])
     assert(workflow.system.submits == [])
@@ -733,9 +733,9 @@ class _TwoKeyWorkflow(_DummySystemWorkflow):
     """A task that dispatches twice, each under its own key"""
     def dispatching_task(self):
         self.calls.append("start")
-        self.dispatcher.run([self.before], key="first")
+        self._dispatcher.run([self.before], key="first")
         self.calls.append("first done")
-        self.dispatcher.run([self.before], key="second")
+        self._dispatcher.run([self.before], key="second")
         self.calls.append("second done")
 
 
@@ -778,8 +778,8 @@ def test_dispatcher_rejects_second_dispatch_in_one_task(tmpdir):
     """
     class _TwoDispatches(_DummySystemWorkflow):
         def dispatching_task(self):
-            self.dispatcher.run([self.before])
-            self.dispatcher.run([self.before])
+            self._dispatcher.run([self.before])
+            self._dispatcher.run([self.before])
 
     state_file = os.path.join(str(tmpdir), "sfstate.txt")
     with open(state_file, "w") as f:
@@ -802,8 +802,8 @@ def test_resuming_flag_guards_unsafe_preamble(tmpdir):
 
     class _Guarded(_DummySystemWorkflow):
         def dispatching_task(self):
-            seen.append(self.dispatcher.resuming)
-            self.dispatcher.run([self.before])
+            seen.append(self._dispatcher.resuming)
+            self._dispatcher.run([self.before])
 
     state_file = os.path.join(str(tmpdir), "sfstate.txt")
     with open(state_file, "w") as f:
@@ -917,7 +917,7 @@ def test_blocking_checks_model_values_on_master(tmpdir):
 
 def test_nonblocking_checks_files_on_master_and_values_on_compute(tmpdir):
     workflow = _synthetic_data_workflow(tmpdir, blocking=False)
-    with workflow.dispatcher.task("generate_synthetic_data"):  # as `run()`
+    with workflow._dispatcher.task("generate_synthetic_data"):  # as `run()`
         with pytest.raises(WorkflowSuspended):
             workflow.generate_synthetic_data()
 
@@ -937,7 +937,7 @@ def test_compute_side_check_passes_silently(tmpdir):
     workflow._check_model_single(path_model="m")
 
     assert(workflow.solver.validated == ["m"])
-    assert(not os.path.exists(workflow.dispatcher.marker))
+    assert(not os.path.exists(workflow._dispatcher.marker))
 
 
 def test_workflow_with_dispatcher_survives_pickling(tmpdir):
@@ -954,7 +954,7 @@ def test_workflow_with_dispatcher_survives_pickling(tmpdir):
     with pytest.raises(AssertionError, match="bad model"):
         funcs[0](path_model="m")
 
-    with open(workflow.dispatcher.marker) as f:
+    with open(workflow._dispatcher.marker) as f:
         assert("bad model" in f.read())
 
 
@@ -965,7 +965,7 @@ def test_compute_side_check_failure_writes_marker_and_raises(tmpdir):
     with pytest.raises(AssertionError, match="Poisson"):
         workflow._check_model_single(path_model="m")
 
-    with open(workflow.dispatcher.marker) as f:
+    with open(workflow._dispatcher.marker) as f:
         assert("AssertionError: Poisson's ratio out of bounds" in f.read())
 
 
@@ -1117,7 +1117,7 @@ def _line_search_workflow(tmpdir, statuses, step_count=1, blocking=True,
 def _run_line_search(workflow):
     """Run `perform_line_search` the way `Forward.run()` would"""
     try:
-        with workflow.dispatcher.task("perform_line_search"):
+        with workflow._dispatcher.task("perform_line_search"):
             workflow.perform_line_search()
     except WorkflowSuspended:
         return "SUSPENDED"
@@ -1259,8 +1259,8 @@ def test_dispatcher_keyed_context_sets_the_default_key(tmpdir):
     """
     class _Keyed(_DummySystemWorkflow):
         def dispatching_task(self):
-            with self.dispatcher.keyed("custom_key"):
-                self.dispatcher.run([self.before])
+            with self._dispatcher.keyed("custom_key"):
+                self._dispatcher.run([self.before])
 
     workflow = _make_workflow(tmpdir, _Keyed)
     workflow.run()
@@ -1310,7 +1310,7 @@ def _noise_workflow(tmpdir, kernels, iteration=2, step_count=0, **system_kw):
 def _run_task(workflow, func):
     """Run a task function the way `Forward.run()` would"""
     try:
-        with workflow.dispatcher.task(func.__name__):
+        with workflow._dispatcher.task(func.__name__):
             func()
     except WorkflowSuspended:
         return "SUSPENDED"

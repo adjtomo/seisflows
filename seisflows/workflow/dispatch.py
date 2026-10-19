@@ -4,7 +4,7 @@ Submission of workflow tasks to the system module, blocking or not.
 
 Everything that decides HOW a task-list function's work reaches the
 scheduler lives here, so that the workflow classes can stay about the
-science: a task calls `self.dispatcher.run(funcs, ...)` where it would
+science: a task calls `self._dispatcher.run(funcs, ...)` where it would
 otherwise have called `self.system.run(funcs, ...)`.
 
 With `system.blocking` True (default) that IS `system.run()`: the master job

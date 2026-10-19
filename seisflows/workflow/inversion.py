@@ -619,13 +619,13 @@ class Inversion(Migration):
         # The master job only looks at file names if dispatch is non-blocking;
         # the values are checked on compute nodes
         logger.debug("checking `m_try` for line search evaluation")
-        if self.dispatcher.nonblocking:
+        if self._dispatcher.nonblocking:
             self.solver.check_model_files(path=path_model)
             run_list.insert(0, self._check_model_single)
         else:
             self.solver.check_model_values(path=path_model)
 
-        self.dispatcher.run(
+        self._dispatcher.run(
             run_list, key=f"evaluate_line_search_misfit_{self.evaluation}",
             path_model=path_model,
             save_residuals=os.path.join(
