@@ -25,6 +25,14 @@
   is its own process with its own log and time limit, and failed tasks are found
   from marker files and re-run. Supported by the `Slurm`, `Chinook`, `Pbs` and
   `Miyabi` systems, and `TestFlow` can test it.
+- **Breaking:** `seisflows clean` removes only the large files that can be made
+  again by running more simulations (forward arrays, model databases, kernels,
+  models, synthetics), in categories that can be included or excluded, and keeps
+  the parameter, state and log files, optimization vectors, output and the
+  directory structure. `--dry_run` prints every file that would be removed.
+  Every file removed is recorded in `scratch/system/clean_manifest.txt`. What it
+  used to do, remove everything but the parameter file, is `seisflows clean
+  --all` (which `seisflows restart` uses).
 - Model values are checked on the compute nodes rather than the master job
   when non-blocking. A failed check stops the workflow without retries.
 - **Breaking:** the `stop_after` task names `evaluate_line_search_misfit` and

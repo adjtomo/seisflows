@@ -17,11 +17,12 @@ facilitates interface with the underlying SeisFlows package.
 import os
 import sys
 import argparse
+import textwrap
 from glob import glob
 from inspect import getmro
 
 from seisflows import logger, ROOT_DIR, NAMES, __version__
-from seisflows.tools import unix, msg
+from seisflows.tools import unix, msg, clean as clean_tools
 from seisflows.tools.config import load_yaml, custom_import, import_seisflows
 from seisflows.tools.specfem import (getpar, setpar, getpar_vel_model,
                                      setpar_vel_model, check_source_names)
@@ -155,11 +156,41 @@ def sfparser():
                          help="Skip the clean warning check statement")
     restart.add_argument("-d", "--direct", **_direct_kwargs)
     # =========================================================================
+    _categories = "\n".join(textwrap.fill(
+        f"{name}{'' if usual else ' (only if included)'}: {description}",
+        width=78, initial_indent="  ", subsequent_indent="      ")
+        for name, (usual, description) in clean_tools.CATEGORIES.items())
     clean = subparser.add_parser(
-        "clean", help="Remove files relating to an active working environment",
-        description="""Delete all SeisFlows related files in the working 
-        directory, except for the parameter file."""
+        "clean", help="Remove the large files of a working directory",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=f"""Remove the large files of the working directory that 
+can be made again by running more simulations (e.g., forward arrays, 
+databases, kernels), and keep the rest: the parameter file, state file, logs,
+optimization vectors, residuals, output and the directory structure with the
+run directory of every event. Meant for a workflow that has finished or
+that is stopped between iterations, a workflow that carries on right after 
+this may need files that were removed. Use --dry_run to see exactly which 
+files would be removed. The files are put in categories:
+
+{_categories}
+
+Every file removed is added to scratch/system/clean_manifest.txt. Use --all to
+remove every SeisFlows file instead, leaving only the parameter file."""
     )
+    clean.add_argument("-n", "--dry_run", action="store_true",
+                       help="Print every file that would be removed and its "
+                            "size, and remove nothing")
+    clean.add_argument("-a", "--all", dest="all_files", action="store_true",
+                       help="Remove everything that belongs to the working "
+                            "directory (scratch, output, logs, state file) "
+                            "except for the parameter file, not just the "
+                            "large files")
+    clean.add_argument("-i", "--include", nargs="+", metavar="CATEGORY",
+                       choices=list(clean_tools.CATEGORIES), default=None,
+                       help="Also remove these categories of files")
+    clean.add_argument("-e", "--exclude", nargs="+", metavar="CATEGORY",
+                       choices=list(clean_tools.CATEGORIES), default=None,
+                       help="Do not remove these categories of files")
     clean.add_argument("-f", "--force", action="store_true",
                        help="Skip the warning check that precedes the clean "
                        "function")
@@ -859,13 +890,28 @@ class SeisFlows:
             system.submit(workdir=self._args.workdir,
                           parameter_file=self._args.parameter_file)
 
-    def clean(self, force=False, **kwargs):
+    def clean(self, force=False, all_files=False, dry_run=False,
+              include=None, exclude=None, **kwargs):
         """
-        Clean the SeisFlows working directory except for the parameter file.
+        Clean the SeisFlows working directory of the large files that can be
+        made again by running more simulations, keeping the parameter file,
+        state file, logs, optimization vectors and the directory structure,
+        so that the workflow can be set up to carry on. Or, with `all_files`,
+        remove everything except for the parameter file.
 
         :type force: bool
         :param force: ignore the warning check that precedes the clean()
             function, useful if you don't want any input messages popping up
+        :type all_files: bool
+        :param all_files: remove every SeisFlows file, not just the large ones
+        :type dry_run: bool
+        :param dry_run: print what would be removed (every file, unless
+            `all_files`) and remove nothing
+        :type include: list of str
+        :param include: categories of files to remove that are not by default,
+            see `seisflows.tools.clean.CATEGORIES`
+        :type exclude: list of str
+        :param exclude: categories of files to not remove
         """
 
         # Check if the filepaths exist
@@ -876,31 +922,87 @@ class SeisFlows:
                   )
             sys.exit(-1)
 
+        pars = load_yaml(self._args.parameter_file)
+        workdir = self._args.workdir
+
+        def path_of(name, default=None):
+            """Path from the parameter file, relative to the working dir"""
+            path = pars.get(f"path_{name}") or default
+            return os.path.join(workdir, path) if path else None
+
+        if all_files:
+            paths = [path_of(name) for name in
+                     ["scratch", "output", "log_files", "state_file",
+                      "output_log"] if path_of(name)]
+            # Special case for data path, only delete if it's empty
+            if path_of("data") and os.path.isdir(path_of("data")) and \
+                    not os.listdir(path_of("data")):
+                paths.append(path_of("data"))
+            paths = [path for path in paths if os.path.lexists(path)]
+
+            if dry_run:
+                print(msg.cli("The following would be removed, nothing is "
+                              "removed by a dry run:", header="clean",
+                              border="="))
+                for path in paths:
+                    nfiles, nbytes = clean_tools.tree_summary(path)
+                    print(f"{os.path.relpath(path, workdir)}  {nfiles} files, "
+                          f"{clean_tools.human_size(nbytes)}")
+                return
+
+            if force:
+                check = "y"
+            else:
+                check = input(msg.cli("This will remove all workflow objects "
+                                      "leaving only the parameter file. Are "
+                                      "you sure you want to continue? "
+                                      "(y/[n])", header="clean", border="="))
+            if check == "y":
+                unix.rm(paths)
+            return
+
+        # Only the large files that can be made again
+        scratch = path_of("scratch", "scratch")
+        categories = clean_tools.select_categories(include, exclude)
+        found = clean_tools.find_files(
+            scratch, solver=path_of("solver"), eval_func=path_of("eval_func"),
+            eval_grad=path_of("eval_grad"), categories=categories)
+
+        if dry_run:
+            print(clean_tools.format_files(found, workdir, list_files=True))
+            print("\ndry run, nothing was removed")
+            return
+        if not any(found.values()):
+            print("no files to remove")
+            return
+
+        print(clean_tools.format_files(found, workdir))
         if force:
             check = "y"
         else:
-            check = input(msg.cli("This will remove all workflow objects "
-                                  "leaving only the parameter file. Are "
-                                  "you sure you want to continue? "
-                                  "(y/[n])", header="clean", border="="))
-
+            check = input(msg.cli("The files above will be removed. The "
+                                  "directory structure, parameters, state, "
+                                  "logs and optimization vectors are kept. "
+                                  "Use --dry_run to see every file. Are you "
+                                  "sure you want to continue? (y/[n])",
+                                  header="clean", border="="))
         if check == "y":
-            pars = load_yaml(self._args.parameter_file)
-            for name in ["scratch", "output", "log_files", 
-                         "state_file", "output_log"]:
-                path = f"path_{name}"
-                if path in pars:
-                    unix.rm(pars[path])
-            # Special case for data path, only delete if it's empty
-            if not os.listdir(pars["path_data"]):
-                unix.rm(pars["path_data"])
-
+            record = os.path.join(scratch, "system", "clean_manifest.txt")
+            nfiles, nbytes, failed = clean_tools.remove_files(
+                found, workdir, record=record)
+            print(f"removed {nfiles} files, "
+                  f"{clean_tools.human_size(nbytes)}. A list of them is in "
+                  f"{os.path.relpath(record, workdir)}")
+            if failed:
+                print(f"could not remove {len(failed)} files:")
+                for fid in failed:
+                    print(f"    {os.path.relpath(fid, workdir)}")
 
     def restart(self, force=False, **kwargs):
         """
         Restart simply means clean the workding dir and submit a new workflow.
         """
-        self.clean(force=force)
+        self.clean(force=force, all_files=True)
         self.submit()
 
     def debug(self, **kwargs):

@@ -46,7 +46,7 @@ help dialogue, you can type ``seisflows`` or ``seisflows -h``
         submit              Submit initial workflow to system
         resume              Re-submit previous workflow to system
         restart             Remove current environment and submit new workflow
-        clean               Remove files relating to an active working environment
+        clean               Remove the large files of a working directory
         par                 View and edit SeisFlows parameter file
         sempar              View and edit SPECFEM parameter file
         check               Check state of an active environment
@@ -489,35 +489,110 @@ the task list, ensuring that no processing is run on login nodes.
 seisflows clean
 ^^^^^^^^^^^^^^^
 
-The ``clean`` function is used to clear an existing working directory.
-It deletes all SeisFlows created files and directories using paths in
-the parameter file, but does not delete the parameter file itself. Use
-the ``-f/--force`` flag to skip over the ‘are you sure?’ check
-statement.
+The ``clean`` function removes the large files of a working directory that
+can be made again by running more simulations (forward arrays, model databases,
+kernels, and so on), and keeps the rest: the parameter file, state file, logs,
+the optimization vectors, residuals, ``output/`` and the directory structure,
+including the run directory of every event. It is for a workflow that has
+finished, or is stopped between iterations, where the space is needed. A
+workflow that carries on right after cleaning may need files that were removed
+(e.g., the forward arrays that the adjoint simulations read), which then have to
+be made again.
+
+.. warning::
+
+    Use ``--dry_run`` first. It prints every file that would be removed, and its
+    size, and removes nothing.
 
 .. code:: bash
 
-    seisflows clean -h 
+    seisflows clean --dry_run   # every file that would be removed
+    seisflows clean             # shows how much, asks, removes
+    seisflows clean -f          # does not ask
+
+The files are put in categories, which are shown by ``seisflows clean -h``.
+Each file is in one category, so leaving one out never removes its files
+under the name of another one:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Category
+     - Files
+   * - ``forward_arrays``
+     - Forward wavefields and absorbing boundaries that SPECFEM saves for the
+       adjoint simulations (``proc*_save_forward_arrays*``,
+       ``proc*_absorb_*``), and the ``*_FWD_ARR`` directories of a noise
+       inversion. Usually the largest.
+   * - ``vtk``
+     - ``proc*.vt?`` files of the databases.
+   * - ``databases``
+     - The other ``proc??????_*`` files of the run directories, the model and
+       mesh databases (``DATABASES_MPI``, ``DATA``, ``OUTPUT_FILES`` and the
+       ``LOCAL_PATH`` of the Par_file).
+   * - ``kernels``
+     - Event kernels, the gradient and the misfit kernel of ``eval_grad``.
+   * - ``models``
+     - Copies of models in ``eval_func/model`` and ``eval_grad/model``. The
+       optimization vectors in ``scratch/optimize`` that they come from are
+       kept.
+   * - ``traces``
+     - Synthetic waveforms, adjoint sources and ``SEM`` of the run directories.
+   * - ``obs``
+     - Observed waveforms of the run directories. Only if included.
+   * - ``solver_logs``
+     - Timestamps and other small output of SPECFEM. Only if included.
+
+Choose what is removed with ``-i/--include`` (also remove) and
+``-e/--exclude`` (do not remove):
+
+.. code:: bash
+
+    seisflows clean --dry_run -e forward_arrays      # keep the largest files
+    seisflows clean -i obs solver_logs               # as well as the others
+
+Only regular files below the scratch directory are removed, never a directory,
+or a link or anything that a link points to (the ``mainsolver`` link, or a
+model that a directory links to). The files that were removed are added to
+``scratch/system/clean_manifest.txt``, with their category and size.
+
+Use ``--all`` to instead remove everything: all SeisFlows created files and
+directories using the paths in the parameter file, but not the parameter
+file itself (this is what ``clean`` used to do). ``--dry_run`` says which
+directories and files that is.
+
+.. code:: bash
+
+    seisflows clean -h
 
 
 .. parsed-literal::
 
-    usage: seisflows clean [-h] [-f]
-    
-    Delete all SeisFlows related files in the working directory, except for the
-    parameter file.
-    
-    optional arguments:
-      -h, --help   show this help message and exit
-      -f, --force  Skip the warning check that precedes the clean function
+    usage: seisflows clean [-h] [-n] [-a] [-i CATEGORY [CATEGORY ...]]
+                           [-e CATEGORY [CATEGORY ...]] [-f]
+
+    options:
+      -h, --help            show this help message and exit
+      -n, --dry_run         Print every file that would be removed and its size,
+                            and remove nothing
+      -a, --all             Remove everything that belongs to the working
+                            directory (scratch, output, logs, state file) except
+                            for the parameter file, not just the large files
+      -i CATEGORY [CATEGORY ...], --include CATEGORY [CATEGORY ...]
+                            Also remove these categories of files
+      -e CATEGORY [CATEGORY ...], --exclude CATEGORY [CATEGORY ...]
+                            Do not remove these categories of files
+      -f, --force           Skip the warning check that precedes the clean
+                            function
 
 
 seisflows restart
 ^^^^^^^^^^^^^^^^^
 
-The ``restart`` function is a convenience function which wraps ``clean``
-and ``submit``. It is used to restart workflows using the same parameter
-file. It also takes the ``-f/--force`` flag that the clean function
+The ``restart`` function is a convenience function which wraps ``clean
+--all`` and ``submit``. It is used to restart workflows using the same
+parameter file. It also takes the ``-f/--force`` flag that the clean function
 defines.
 
 .. code:: bash

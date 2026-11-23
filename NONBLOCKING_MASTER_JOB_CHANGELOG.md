@@ -825,6 +825,37 @@ cluster.
   with `pack`, then a failed task, a time-out, a rerun, a non-blocking
   resume).
 
+### `seisflows clean` for large files (separate task, 2026-11-23)
+
+Not part of the non-blocking work. `seisflows clean` now removes the large,
+regenerable files and `--all` is the old behavior (`restart` uses `--all`).
+Written from the description of the user's standalone `clean_scratch.py`
+(simutils), which was not read verbatim, so check it against these categories.
+
+- `seisflows/tools/clean.py`: `CATEGORIES`, `find_files` (all categories are
+  classified first, then the chosen ones are returned, so a forward array is
+  never removed as a 'database'), `remove_files` (appends to
+  `scratch/system/clean_manifest.txt`: category, size, path), `format_files`.
+  Only regular files really below scratch; no links followed or removed (the
+  user's script iterated over the characters of a path string in its
+  `-f/-g` blocks, a `/` matching the root; nothing like that here).
+- Categories: `forward_arrays`, `vtk`, `databases` (`proc??????_*` in `DATA`,
+  `OUTPUT_FILES`, `DATABASES_MPI` and the Par_file `LOCAL_PATH`), `kernels`,
+  `models`, `traces`; only with `-i`: `obs`, `solver_logs`. Never touched:
+  `output/`, `optimize/`, residuals, `system/`, logs, state, `DATA/Par_file`.
+- Patterns were written from the code (SPECFEM3D/3D_GLOBE names), NOT checked
+  against a real SPECFEM2D run directory (`DATA/proc*_*.bin`, and what 2D puts in
+  `OUTPUT_FILES`).
+- For the future `seisflows restore`: the manifest says what was removed, models
+  come back from `optimize/m_new.npz` (+ `p_new`, `alpha` for `m_try`), the
+  databases from the mesher/`import_model`, obs from `path_data`. A thrifty
+  inversion that was cleaned of `forward_arrays` has `was_thrifty: 1` in the
+  state file, so its next iteration skips the initial misfit and the adjoint
+  simulations then have no forward arrays; restore (or clean) has to reset it.
+- Not done: `scratch/preprocess` (Pyaflowa ASDF data and figures) is never
+  touched, a mid-workflow clean has no check that the state file is between
+  iterations.
+
 ## Not done / come back to this
 
 - **`job_times` "queued" is the wait for the FIRST task, not the last** (left
