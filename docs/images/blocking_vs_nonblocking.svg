@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="548" viewBox="0 0 680 548" role="img">
+<title>Blocking versus non-blocking SeisFlows on Slurm, with the parameters that control each kind of job</title>
+<desc>Two timelines. Master jobs, controlled by submit_to and walltime, are teal. Compute jobs, controlled by partition and tasktime, are coral. In the blocking timeline the master job runs the whole time. In the non-blocking one it exits after each dispatch and a dependent job resumes it.</desc>
+<style>
+text { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.t { font-size: 14px; fill: #2C2C2A; }
+.th { font-size: 14px; font-weight: 500; fill: #2C2C2A; }
+.ts { font-size: 12px; fill: #5F5E5A; }
+.teal rect { fill: #E1F5EE; stroke: #0F6E56; stroke-width: 0.5; }
+.teal .th { fill: #085041; }
+.teal .ts { fill: #0F6E56; }
+.coral rect { fill: #FAECE7; stroke: #993C1D; stroke-width: 0.5; }
+.coral .th { fill: #712B13; }
+.coral .ts { fill: #993C1D; }
+.box { fill: none; stroke: #888780; stroke-width: 0.5; stroke-dasharray: 4 3; }
+.arr { fill: none; stroke: #5F5E5A; stroke-width: 1.5; }
+.dashed { stroke-dasharray: 4 3; }
+.rule { stroke: #D3D1C7; stroke-width: 0.5; }
+</style>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect x="0.5" y="0.5" width="679" height="547" rx="8" fill="#FFFFFF" stroke="#D3D1C7" stroke-width="1"/>
+
+<text class="th" x="40" y="36">Blocking (default)</text>
+<text class="ts" x="640" y="36" text-anchor="end">blocking: True</text>
+
+<text class="t" x="40" y="74" dominant-baseline="central">Master job</text>
+<g class="teal"><rect x="40" y="86" width="76" height="20" rx="10"/><text class="ts" x="78" y="96" text-anchor="middle" dominant-baseline="central">submit_to</text></g>
+<g class="teal"><rect x="122" y="86" width="68" height="20" rx="10"/><text class="ts" x="156" y="96" text-anchor="middle" dominant-baseline="central">walltime</text></g>
+<text class="t" x="40" y="154" dominant-baseline="central">Compute jobs</text>
+<g class="coral"><rect x="40" y="166" width="76" height="20" rx="10"/><text class="ts" x="78" y="176" text-anchor="middle" dominant-baseline="central">partition</text></g>
+<g class="coral"><rect x="122" y="166" width="68" height="20" rx="10"/><text class="ts" x="156" y="176" text-anchor="middle" dominant-baseline="central">tasktime</text></g>
+
+<g class="teal">
+<rect x="240" y="70" width="400" height="28" rx="4"/>
+<text class="ts" x="440" y="84" text-anchor="middle" dominant-baseline="central">Holds its allocation, polls sacct until each job is done</text>
+</g>
+<rect class="box" x="270" y="150" width="44" height="28" rx="4"/>
+<g class="coral">
+<rect x="314" y="150" width="98" height="28" rx="4"/>
+<text class="th" x="363" y="164" text-anchor="middle" dominant-baseline="central">Job 1</text>
+</g>
+<rect class="box" x="436" y="150" width="50" height="28" rx="4"/>
+<g class="coral">
+<rect x="486" y="150" width="88" height="28" rx="4"/>
+<text class="th" x="530" y="164" text-anchor="middle" dominant-baseline="central">Job 2</text>
+</g>
+<line class="arr" x1="282" y1="100" x2="282" y2="148" marker-end="url(#arrow)"/>
+<line class="arr" x1="448" y1="100" x2="448" y2="148" marker-end="url(#arrow)"/>
+<text class="ts" x="240" y="206">walltime must cover the whole workflow</text>
+
+<line class="rule" x1="40" y1="226" x2="640" y2="226"/>
+
+<text class="th" x="40" y="254">Non-blocking</text>
+<text class="ts" x="640" y="254" text-anchor="end">blocking: False</text>
+
+<text class="t" x="40" y="292" dominant-baseline="central">Master job</text>
+<g class="teal"><rect x="40" y="304" width="76" height="20" rx="10"/><text class="ts" x="78" y="314" text-anchor="middle" dominant-baseline="central">submit_to</text></g>
+<g class="teal"><rect x="122" y="304" width="68" height="20" rx="10"/><text class="ts" x="156" y="314" text-anchor="middle" dominant-baseline="central">walltime</text></g>
+<text class="t" x="40" y="372" dominant-baseline="central">Compute jobs</text>
+<g class="coral"><rect x="40" y="384" width="76" height="20" rx="10"/><text class="ts" x="78" y="394" text-anchor="middle" dominant-baseline="central">partition</text></g>
+<g class="coral"><rect x="122" y="384" width="68" height="20" rx="10"/><text class="ts" x="156" y="394" text-anchor="middle" dominant-baseline="central">tasktime</text></g>
+
+<g class="teal">
+<rect x="240" y="288" width="52" height="28" rx="4"/>
+<text class="ts" x="266" y="302" text-anchor="middle" dominant-baseline="central">run</text>
+</g>
+<rect class="box" x="292" y="288" width="120" height="28" rx="4"/>
+<text class="ts" x="352" y="302" text-anchor="middle" dominant-baseline="central">afterany job 1</text>
+<g class="teal">
+<rect x="412" y="288" width="52" height="28" rx="4"/>
+<text class="ts" x="438" y="302" text-anchor="middle" dominant-baseline="central">resume</text>
+</g>
+<rect class="box" x="464" y="288" width="110" height="28" rx="4"/>
+<text class="ts" x="519" y="302" text-anchor="middle" dominant-baseline="central">afterany job 2</text>
+<g class="teal">
+<rect x="574" y="288" width="52" height="28" rx="4"/>
+<text class="ts" x="600" y="302" text-anchor="middle" dominant-baseline="central">resume</text>
+</g>
+
+<rect class="box" x="292" y="368" width="22" height="28" rx="4"/>
+<g class="coral">
+<rect x="314" y="368" width="98" height="28" rx="4"/>
+<text class="th" x="363" y="382" text-anchor="middle" dominant-baseline="central">Job 1</text>
+</g>
+<rect class="box" x="464" y="368" width="22" height="28" rx="4"/>
+<g class="coral">
+<rect x="486" y="368" width="88" height="28" rx="4"/>
+<text class="th" x="530" y="382" text-anchor="middle" dominant-baseline="central">Job 2</text>
+</g>
+
+<path class="arr" d="M270 318 V332 H303 V366" marker-end="url(#arrow)"/>
+<path class="arr" d="M450 318 V332 H475 V366" marker-end="url(#arrow)"/>
+<path class="arr dashed" d="M412 366 V354 H424 V318" marker-end="url(#arrow)"/>
+<path class="arr dashed" d="M574 366 V354 H586 V318" marker-end="url(#arrow)"/>
+<text class="ts" x="240" y="424">walltime only has to cover one short stage</text>
+
+<line class="arr" x1="240" y1="448" x2="640" y2="448" marker-end="url(#arrow)"/>
+<text class="ts" x="640" y="468" text-anchor="end">time</text>
+
+<g class="teal"><rect x="40" y="488" width="16" height="16" rx="3"/></g>
+<text class="ts" x="64" y="496" dominant-baseline="central">Master job running</text>
+<g class="coral"><rect x="230" y="488" width="16" height="16" rx="3"/></g>
+<text class="ts" x="254" y="496" dominant-baseline="central">Compute job running</text>
+<rect class="box" x="440" y="488" width="16" height="16" rx="3"/>
+<text class="ts" x="464" y="496" dominant-baseline="central">Waiting in the queue</text>
+
+<line class="arr" x1="40" y1="522" x2="64" y2="522" marker-end="url(#arrow)"/>
+<text class="ts" x="74" y="522" dominant-baseline="central">sbatch submits a job</text>
+<line class="arr dashed" x1="230" y1="522" x2="254" y2="522" marker-end="url(#arrow)"/>
+<text class="ts" x="264" y="522" dominant-baseline="central">Slurm releases the resume job</text>
+</svg>

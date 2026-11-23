@@ -18,7 +18,76 @@ If you do not find your System supported, have a look at
 
     This docs page assumes that you were able to succesfully install SeisFlows 
     and SPECFEM2D on your cluster. See the `installation guide <index.html>`__
-    for instructions to install SeisFlows. 
+    for instructions to install SeisFlows.
+
+Blocking and non-blocking main jobs
+-----------------------------------
+
+SeisFlows runs as a 'main job' (or master job) that submits the compute jobs
+of a workflow (the solver, preprocessing, smoothing, and so on) to the
+scheduler. There are two ways for it to work, set by the ``blocking`` parameter
+of the system module:
+
+.. figure:: images/blocking_vs_nonblocking.svg
+   :width: 100%
+   :alt: Timelines of a blocking and a non-blocking SeisFlows workflow on Slurm
+
+   The main job (teal) and the compute jobs (coral) in time. The labels on the
+   left are the parameters that control each.
+
+**Blocking** (``blocking: True``, the default). The main job is a single job
+that lasts for the whole workflow. It submits each compute job and polls the
+scheduler until the job is done, holding its allocation while it waits.
+
+**Non-blocking** (``blocking: False``). The main job runs until it has
+submitted a compute job, and also a second job that the scheduler holds back
+until the first is done (``--dependency=afterany`` on Slurm, ``-W
+depend=afterany`` on PBS). It then exits. When the compute job ends, whether it
+succeeded or failed, the scheduler starts the held job, which resumes the
+workflow from its state file. It collects the outcome of the job, re-runs any
+tasks that failed (up to ``rerun`` times), and carries on to the next stage.
+No job has to outlast one stage of the workflow.
+
+Both kinds of main job run the same Python workflow, including the serial work
+between compute jobs (reading misfits, updating the model, moving files), on a
+compute node. Only the waiting is different.
+
+Four parameters control the jobs, and they apply to different jobs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 82
+
+   * - Parameter
+     - Controls
+   * - ``submit_to``
+     - The partition or queue that the main job is submitted to, the first and
+       every resumed one. If not given it is ``partition`` (``queue`` on
+       Miyabi).
+   * - ``walltime``
+     - The time limit of each main job, in minutes. For a blocking main job
+       this has to cover the whole workflow. For a non-blocking one it only has
+       to cover one stage and the setup that is repeated when it resumes.
+   * - ``partition``
+     - The partition that the compute jobs are submitted to (``queue`` on
+       Miyabi), which also sets how many cores per node they request.
+   * - ``tasktime``
+     - The time limit of each compute job, in minutes.
+
+A non-blocking main job does little computing, so it can be sent to a short or
+debug queue with ``submit_to`` while the compute jobs use ``partition``. These
+jobs usually start sooner than long ones, and do not hold a large partition.
+Each resumed main job is a new job in the queue, which adds its queue time to
+the time that the workflow takes. ``sflog.txt`` reports how long each job
+queued and ran for. See `TestFlow <#testflow>`__ to check that a non-blocking
+main job works on your system before running a research problem.
+
+.. note::
+
+    Non-blocking main jobs are supported by the ``slurm``, ``chinook`` and
+    ``maui`` systems and the ``pbs`` and ``miyabi`` systems, and by the
+    workflows that ship with SeisFlows. ``seisflows check`` says so if your
+    choices do not support them.
 
 TestFlow
 ---------
@@ -75,9 +144,9 @@ Testing a non-blocking main job
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TestFlow can also check a `non-blocking main job
-<running_on_chinook.html>`__ (``blocking: False``) without any SPECFEM binaries,
-for systems that support it (e.g., ``chinook``, ``miyabi``). Set the parameter
-before submitting:
+<#blocking-and-non-blocking-main-jobs>`__ (``blocking: False``) without any
+SPECFEM binaries, for systems that support it (e.g., ``chinook``, ``miyabi``).
+Set the parameter before submitting:
 
 .. code:: bash
 
