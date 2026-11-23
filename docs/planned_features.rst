@@ -206,3 +206,202 @@ Related notes
 ``docs/claude_contexts/NONBLOCKING_MASTER_JOB_CHANGELOG.md`` has a section on
 ``seisflows clean`` with the same findings in more detail, and the thrifty
 inversion is described in `Tips and Tricks <tips_and_tricks.html>`__.
+
+--------------
+
+Less time in the queue on busy clusters
+---------------------------------------
+
+**Status:** ideas, not implemented (November 2026). Written down after a
+student's inversion on Miyabi took 171 hours for about 1 hour of compute.
+
+Where the time goes
+~~~~~~~~~~~~~~~~~~~
+
+On a cluster with long queue times, the time of a workflow is the number of
+trips through the queue, not the simulations. Every dispatch of a non-blocking
+workflow waits twice: once as a compute job and once as the main job that
+resumes the workflow. An iteration of an inversion is about 6 or 7 dispatches:
+the initial misfit, the adjoint simulations, the kernel summing and smoothing
+(a single-process job), and one dispatch for each step of the line search (the
+unit step was rejected in 3 of the 4 iterations, so 3 or 4 of these).
+
+Work that is done: ``pack``/``njob`` (see `cluster_setup
+<cluster_setup.html#packing-tasks-into-fewer-jobs>`__) makes a stage wait once
+instead of in waves of ``ntask_max`` jobs, ``partition_single`` sends the
+single-process job to a short queue, and a thrifty inversion skips the initial
+misfit from the third iteration on. The ideas below take trips away.
+
+The three below were chosen to be written down. Others that were considered:
+
+- **Better first line-search step.** Start at the last accepted step length (or
+  a fraction of the unit step), so that the unit step is not rejected every
+  iteration. Saves 1 or 2 dispatches an iteration, but it changes how the
+  optimizer behaves, so it is a decision for the User.
+- **Parallel line search.** Evaluate several trial steps (e.g., 1, 0.5, 0.25) in
+  one dispatch and take the best that reduces the misfit. About 1.5 times the
+  simulations of a sequential search but one trip instead of up to five. Needs
+  the line search plugins to take several steps at once, and a solver directory
+  for each step (so, not combined with thrifty).
+- **A pilot job with a worker pool.** One long allocation runs a loop that picks
+  up task files from the shared file system, so that after the first wait no
+  stage waits in the queue. The idle time is only the serial steps between
+  stages. The pack mode runner (``system/pack.py``) already runs each task as
+  a subprocess with markers, which is most of a worker. The largest change and
+  the largest win.
+
+Merging the main job into the last compute job (so that there is no resume trip)
+is a separate idea that is not written here.
+
+Run the single-process stages in the main job
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**What is wanted.** Kernel summing and smoothing are dispatched as a
+single-process job (``system.run(single=True)``), which is a trip through the
+queue and a resume trip for about 4 minutes of work. The main job is already on
+a compute node, so it could do the work itself and carry on, in blocking and
+non-blocking mode alike. This saves about one dispatch (both trips) an
+iteration.
+
+**What was found.**
+
+- The only callers with ``single=True`` are ``Migration.
+  postprocess_event_kernels`` (``mask_source_event_kernels``,
+  ``combine_event_kernels``, ``smooth_misfit_kernel``; inherited by
+  ``Inversion``) and ``NoiseInversion``, which dispatches
+  ``generate_event_kernels`` first (key ``postprocess_event_kernels_combine``)
+  and then the one above.
+- The functions are closures and methods of the workflow, so they can be called
+  in the main process. ``Workstation.run`` already does this for a workstation:
+  it sets task id 0 (``set_task_id``), runs the functions in this process and
+  writes their output to a log file in ``logs/``, with a check of ``tasktime``
+  after each function.
+- ``Dispatcher.run`` is where a dispatch is chosen. A single-process stage that
+  runs inline never suspends the workflow, so on non-blocking it just returns
+  after the work, with no state key of its own to record (the task's key is
+  written when it completes).
+- They call SPECFEM binaries through ``solver.combine`` and ``solver.smooth``,
+  which use ``system.mpiexec`` with ``nproc`` processes. A main job is
+  submitted as one process: ``Pbs.submit_call_header`` has ``select=1:
+  mpiprocs=1`` and ``Chinook.submit_call_header`` has ``--ntasks=1``. On Slurm
+  ``srun`` cannot start more tasks than the job has. OpenMPI under PBS refuses
+  more processes than slots. So the main job has to be asked for ``nproc``
+  cores when this is on. Miyabi queues give whole nodes, so the cores are there,
+  but the slots are not.
+
+**Proposed design.**
+
+1. A system parameter, e.g. ``single_inline`` (name to decide), default False,
+   for ``Cluster`` systems. ``Dispatcher.run`` calls the ``Workstation.run``
+   behaviour of the system for ``single=True`` when it is on, before any of the
+   non-blocking code.
+2. Main job size: when on, ``submit_call_header`` asks for ``nproc`` cores (PBS
+   ``mpiprocs=min(nproc, node_size)``, Slurm ``--ntasks=nproc``), and the
+   ``walltime`` of the main job has to cover the stage. Check that on
+   ``check()`` (e.g., warn if ``walltime`` is less than ``tasktime``).
+3. ``partition_single`` is not used when it is on. Say so in its docs.
+
+**Cautions.**
+
+- A main job that runs out of walltime in the middle of the stage ends without
+  a resume job being queued (the next one is only queued by a dispatch), so the
+  workflow just stops. ``seisflows submit`` carries on from the state file, but
+  nothing says so. A warning when the stage starts, with the walltime that is
+  left, would help.
+- The smoothing can take much longer for large models (12 minutes for each
+  parameter in the SPECFEM3D example with Gaussian smoothing), and a main job on
+  ``debug-g`` has 30 minutes.
+- Everything before the dispatch in ``postprocess_event_kernels`` runs again when
+  the main job resumes, which is safe now and stays safe if the stage is
+  inline (it removes the old ``misfit_kernel`` before it starts).
+
+**Tests.** The simulated scheduler in ``tests/test_testflow.py`` and the
+dummy workflows in ``tests/test_workflow.py`` can show that an inline stage
+does not suspend, runs with task id 0, and does not dispatch. TestFlow could get
+a check of its own (a single-process function that runs on the main job and
+prints the number of cores it has), which is the part that needs a real
+cluster.
+
+Fuse the forward and adjoint simulations into one dispatch
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**What is wanted.** ``evaluate_initial_misfit`` and ``run_adjoint_simulations``
+are two dispatches, so two trips to the queue (and two resumes) an iteration.
+Each event needs its own forward simulation before its adjoint one, and nothing
+from the other events, so both can be one job.
+
+**What was found.**
+
+- The run list of ``Forward.evaluate_initial_misfit`` is ``prepare_data_for_
+  solver``, ``run_forward_simulations`` and ``evaluate_objective_function``. The
+  last one writes the adjoint sources of that event
+  (``preprocess.quantify_misfit`` with ``save_adjsrcs``, in the run directory
+  at ``traces/adj``), so after it the adjoint simulation of the event can run.
+- ``run_forward_simulations`` saves the forward arrays for any workflow that is
+  not ``Forward`` (``flag_save_forward``), and they stay in the run directory of
+  the event, which is where the adjoint simulation reads them.
+- ``Migration.run_adjoint_simulations`` dispatches ``_run_adjoint_simulation_
+  single`` for each event, and ``Inversion`` overrides it to choose where the
+  kernels are saved. The kernels summing is the first step that needs every
+  event.
+- A thrifty iteration skips the forward stage, so it has only the adjoint
+  stage, as now.
+
+**Proposed design.** A parameter of ``Migration``/``Inversion`` (e.g.,
+``fuse_adjoint``, default False). When on, ``evaluate_initial_misfit`` appends
+``_run_adjoint_simulation_single`` to its run list and ``run_adjoint_simulations``
+is skipped (it checks its state key, or is removed from ``task_list``). The
+``tasktime`` has to cover a forward and an adjoint simulation (about 3 + 5
+minutes in the Miyabi inversion), which the docs have to say. A failed event
+re-runs both. ``NoiseInversion`` has several forward simulations (a force each)
+before its adjoint ones and is left out.
+
+**Tests.** The run list that each dispatch gets, with the dummy workflows of
+``tests/test_workflow.py``, with and without thrifty. Nothing needs SPECFEM.
+
+Multi-node packed jobs
+~~~~~~~~~~~~~~~~~~~~~~
+
+**What is wanted.** On Miyabi the limit that binds is the number of jobs that
+run at once for a project (3 or 4, see ``qstat --limit``), not the nodes. A job
+may ask for several nodes: 8 in ``short-g`` and 16 in ``debug-g``. A packed job
+with several nodes could run several tasks at the same time, one on each node,
+so that ``njob`` jobs of 8 nodes run 8 times as many tasks at once. A stage of
+54 events of 4 minutes would take minutes of compute rather than an hour, and
+could fit into the 30 minutes of ``debug-g``, whose queue is much shorter.
+
+**What was found.**
+
+- A task is already allowed more than one node: ``Pbs.run_call`` asks for
+  ``select={nodes}:mpiprocs=...`` with ``nodes`` from ``nproc`` and the node
+  size. The packed job runs its tasks one after the other, in
+  ``system.pack.run_chunk``, a loop of subprocesses.
+- The solvers start their binaries with ``system.mpiexec`` (``solver.
+  _run_binary``), which starts the processes on the nodes of the job, so tasks
+  that run at the same time would all start on the same ones. Each needs its own
+  nodes: a host list from ``$PBS_NODEFILE`` (or ``scontrol show hostnames
+  $SLURM_JOB_NODELIST``) passed to ``mpirun``'s ``--host``/``-hostfile`` (or
+  ``srun --nodelist``), by something the solver can read (e.g., an environment
+  variable that ``mpiexec`` is built from).
+- The GPU nodes of Miyabi have one GPU, so one task for each node.
+- The markers and logs of ``pack`` do not change.
+
+**Proposed design.** A parameter (e.g., ``nodes_per_job``, with ``njob``).
+``run_chunk`` starts as many tasks at once as there are groups of ``nodes`` in
+the job, each with its own hosts, and gives the next task of the block to the
+first group that is free. The time limit of a job becomes ``tasktime`` times the
+number of rounds (the block size divided by the groups, rounded up), plus the
+buffer. Tasks in a block pick up work in turn, so the block sizes can stay even.
+
+**Cautions.**
+
+- Find out the node limit of the project first (``qstat --limit``). The
+  Miyabi guide's table of limits was ambiguous about it (the number of nodes
+  that the project can use at once, and per job).
+- It uses more node-hours at once, which tokens are charged for, but the same
+  number in all (tasks times node-hours of a task), apart from nodes that wait
+  for the last task of a block.
+- How ``mpirun`` of Miyabi behaves with a host list inside a PBS job has to be
+  tried: this is the part that has to be tested on the cluster. TestFlow could
+  print the hostname of each task, and check that tasks that run together are on
+  different nodes.
