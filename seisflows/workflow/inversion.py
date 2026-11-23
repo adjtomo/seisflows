@@ -761,13 +761,22 @@ class Inversion(Migration):
         # Thrifty Inversion keeps last function evaluation for next iteration
         # and use it as the current gradient evaluation
         if self.is_thrifty:
-            unix.rm(self.path.eval_grad)
+            # This can run again if the job that ran it ended part way. The
+            # line search leaves its trial model in `eval_func`, so one
+            # without it has been moved already, and moving it again would
+            # replace the good `eval_grad` with the empty one made below
+            if os.path.exists(os.path.join(self.path.eval_func, "model")):
+                unix.rm(self.path.eval_grad)
 
-            # Eval func model now defines the current model 'm_new'
-            unix.mv(self.path.eval_func, self.path.eval_grad)
-            logger.debug("thrifty finalize moving `eval_func` -> `eval_grad`")
-            unix.mkdir(self.path.eval_func)
-            unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
+                # Eval func model now defines the current model 'm_new'
+                unix.mv(self.path.eval_func, self.path.eval_grad)
+                logger.debug("thrifty finalize moving `eval_func` -> "
+                             "`eval_grad`")
+                unix.mkdir(self.path.eval_func)
+                unix.mkdir(os.path.join(self.path.eval_func, "residuals"))
+            else:
+                logger.debug("thrifty finalize found `eval_func` already "
+                             "moved to `eval_grad`")
 
             # Flag to tell `evaluate_initial_misfit` in next iteration to
             # skip the initial misfit evaluation and use the previous line 

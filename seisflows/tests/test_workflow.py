@@ -1461,6 +1461,8 @@ def _finalize_iteration(workflow, thrifty):
     os.makedirs(workflow.system.path.log_files, exist_ok=True)
     for path in [workflow.path.eval_grad, workflow.path.eval_func]:
         os.makedirs(path, exist_ok=True)
+    # The line search leaves its trial model here
+    os.makedirs(os.path.join(workflow.path.eval_func, "model"), exist_ok=True)
     workflow.finalize_iteration()
 
 
@@ -1489,6 +1491,30 @@ def test_was_thrifty_follows_the_previous_iteration(tmpdir):
     workflow.checkpoint()
     resumed = _DummyInversion(workdir=str(tmpdir), path_state_file=state_file)
     assert(resumed._was_thrifty is False)
+
+
+def test_thrifty_finalize_can_be_repeated(tmpdir):
+    """
+    A job that ends after the thrifty move but before the workflow is
+    checkpointed runs the finalize again. That must not swap the moved
+    `eval_grad` for the empty `eval_func` that the first run left
+    """
+    state_file = os.path.join(str(tmpdir), "sfstate.txt")
+    with open(state_file, "w") as f:
+        f.write("# SeisFlows State File\n")
+    workflow = _FinalizingInversion(workdir=str(tmpdir),
+                                    path_state_file=state_file, thrifty=True)
+    workflow.iteration = 2
+    _finalize_iteration(workflow, thrifty=True)
+    kept = os.path.join(workflow.path.eval_grad, "model")
+    assert(os.path.exists(kept))
+    assert(os.path.isdir(os.path.join(workflow.path.eval_func, "residuals")))
+
+    # Repeat, without the line search having put a model in `eval_func`
+    workflow.thrifty_now = True
+    workflow.finalize_iteration()
+    assert(os.path.exists(kept))
+    assert(workflow._was_thrifty is True)
 
 
 def test_was_thrifty_survives_a_process_restart(tmpdir):

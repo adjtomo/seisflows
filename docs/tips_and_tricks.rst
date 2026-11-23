@@ -60,6 +60,33 @@ the task file with a text editor and change states.
    line option to edit the file `seisflows state`, and with a more sophisticated
    system that can single out particular job failures to re-run.
 
+Thrifty inversion
+-----------------
+
+An iteration of an inversion starts by simulating the current model to get its
+misfit and the forward wavefields that the adjoint simulations need. But the
+line search of the previous iteration has just done that for the model that it
+accepted: its last simulation is of that model. A *thrifty* inversion reuses
+it, and skips the first simulation stage of the iterations that can. With
+``Inversion`` this is turned on with
+
+.. code:: bash
+
+    seisflows par thrifty True
+
+and it needs no extra disk space, because the forward wavefields are kept in
+the solver directories either way. On a cluster the stage that is skipped can
+be a lot of time, as it is one more trip through the queue.
+
+A thrifty inversion needs the optimization module to be L-BFGS, because its
+backtracking line search accepts the last model that it simulates (a bracketing
+line search may accept an earlier one). The first iteration always uses a
+bracketing line search, so it is the third iteration that is the first to skip
+the stage. An iteration also does the full evaluation if the optimization was
+restarted in the one before it. The log says so when it decides, e.g.,
+``optimization has been restarted, defaulting to standard inversion
+workflow``.
+
 Tasktime vs. Walltime
 ---------------------
 
