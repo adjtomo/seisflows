@@ -724,6 +724,20 @@ parts on a cluster without compiling SPECFEM there.
   test_flow`, a cluster system, `blocking False`, on Chinook, then Miyabi.
   Expect ~6 trips through the queue (a few minutes each if it is busy).
 
+### L-BFGS restart loop (found in a student's Miyabi log, 2026-11-20)
+
+Not part of the non-blocking work (`main` has it too), but found by reading a
+non-blocking inversion log. A failed L-BFGS line search restarted forever
+because `LBFGS.restart` left the failed search direction `p_new` on disk.
+Fixed in `LBFGS.restart` (writes `p_new = -g_new`, as NLCG does) with tests in
+`test_optimize.py`. Full write-up with log and code references:
+[BUG_LBFGS_RESTART_LOOP.md](BUG_LBFGS_RESTART_LOOP.md). Status: fixed in the
+working tree, not committed.
+
+Same log, other findings (see the memory note `project-pack-mode-queue-widths`
+and the `pack` / `njob` plan): array jobs throttled with `-J 0-53%3` run in
+18 sequential waves that each re-queue, which is what pack mode is for.
+
 ## Not done / come back to this
 
 - **Real-cluster validation — started, not finished.** First real run

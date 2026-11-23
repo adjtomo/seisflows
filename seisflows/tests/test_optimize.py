@@ -272,6 +272,54 @@ def test_optimize_attempt_line_search_restart(tmpdir,
     assert(optimize.attempt_line_search_restart() == True)
 
 
+@pytest.mark.parametrize("optimizer", [LBFGS, NLCG])
+def test_optimize_restart_resets_search_direction(
+        tmpdir, setup_optimization_vectors, optimizer):
+    """
+    A failed line search is restarted with `restart()`. The search direction
+    on disk has to be steepest descent afterwards, otherwise the restarted line
+    search repeats the failed one exactly and `attempt_line_search_restart`
+    allows another restart, forever.
+    """
+    optimize = optimizer(path_optimize=tmpdir, path_output=tmpdir,
+                         step_len_max=None, step_len_min=None)
+    optimize.setup()
+
+    # A search direction that is not steepest descent, as L-BFGS or NLCG would
+    # produce after the first iteration
+    g_new = optimize.load_vector("g_new")
+    p_new = g_new.copy()
+    p_new.update(vector=np.array([-99.99, -99.99]))
+    optimize.save_vector(name="p_new", m=p_new)
+    assert(optimize.attempt_line_search_restart() is True)
+
+    optimize.restart()
+
+    p_new = optimize.load_vector("p_new")
+    assert(np.allclose(p_new.vector.astype(float),
+                       -1 * g_new.vector.astype(float)))
+    # A second failure cannot restart the line search again
+    assert(optimize.attempt_line_search_restart() is False)
+
+
+def test_lbfgs_restart_clears_memory(tmpdir, setup_optimization_vectors):
+    """
+    Restarting L-BFGS forgets the gradient history and counts the restarted
+    iteration as the first, so that the next iteration builds memory again
+    """
+    lbfgs = LBFGS(path_optimize=tmpdir, path_output=tmpdir,
+                  step_len_max=None, step_len_min=None)
+    lbfgs.setup()
+    lbfgs._LBFGS_iter = 5
+    lbfgs._memory_used = 3
+
+    lbfgs.restart()
+
+    assert(lbfgs._LBFGS_iter == 1)
+    assert(lbfgs._memory_used == 0)
+    assert(lbfgs._restarted is True)
+
+
 def test_line_search_recover_from_failure(tmpdir, setup_optimization_vectors):
     """
     Run a small optimization problem to try to reduce the Rosenbrock

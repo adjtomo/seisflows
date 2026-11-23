@@ -37,6 +37,10 @@
 - Bugfix: `NLCG` checkpointing failed (read-only array, undefined variable)
 - Bugfix: a thrifty inversion no longer skips the initial misfit evaluation
   of an iteration that follows a restarted one
+- Bugfix: a failed L-BFGS line search restarted forever. `LBFGS.restart` did
+  not reset the search direction to steepest descent, so the restarted line
+  search repeated the failed one and was restarted again. It now sets
+  `p_new = -g_new` as `NLCG` does, so a second failure ends the workflow.
 
 ## v3.5.6
 - Bugfix SPECFEM3D unexpected removal of executables during forward runs

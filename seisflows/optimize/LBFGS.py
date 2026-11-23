@@ -195,16 +195,32 @@ class LBFGS(Gradient):
     def restart(self):
         """
         Restart the L-BFGS optimization algorithm by clearing out stored
-        gradient memory. The workflow will need to call `compute_direction` and
-        `initialize_search` afterwards to properly re-instantiate the line
-        search machinery. 
+        gradient memory, and set the search direction `p_new` on disk to
+        steepest descent (the inverse gradient `-g_new`). The workflow only
+        needs to call `initialize_search` afterwards to re-instantiate the line
+        search machinery.
+
+        .. note::
+            Writing `p_new` here is what stops a failed line search from
+            restarting forever. A restarted line search that is not given a new
+            search direction repeats the failed one exactly, and
+            `attempt_line_search_restart` keeps seeing a search direction that
+            is not steepest descent, and keeps allowing restarts. NLCG does
+            the same in its `restart`.
         """
         logger.info("restarting L-BFGS optimization algorithm")
+
+        # The search direction after a restart is steepest descent. Gradient
+        # not preconditioned, to match the first L-BFGS iteration
+        g_new = self.load_vector("g_new")
+        p_new = g_new.copy()
+        p_new.update(vector=-1 * g_new.vector)
+        self.save_vector("p_new", p_new)
 
         # Clear internal memory back to default values
         self._line_search.clear_search_history()
         self._restarted = True
-        self._LBFGS_iter = 0  # will be incremented to 1 by `compute_direction`
+        self._LBFGS_iter = 1  # this iteration is a steepest descent iteration
         self._memory_used = 0
 
         # Clear out previous gradient information. Check file existence first
