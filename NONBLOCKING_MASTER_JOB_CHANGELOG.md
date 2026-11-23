@@ -738,6 +738,43 @@ Same log, other findings (see the memory note `project-pack-mode-queue-widths`
 and the `pack` / `njob` plan): array jobs throttled with `-J 0-53%3` run in
 18 sequential waves that each re-queue, which is what pack mode is for.
 
+### Partition parameters, one form on every system (2026-11-23)
+
+First step of the pack-mode work ([BUG note above](BUG_LBFGS_RESTART_LOOP.md)
+and the plan in the memory note `project-pack-mode-queue-widths`): single-core
+stages (`run(single=True)`) no longer have to wait in the compute queue.
+
+- The user's decision: `partition_master`, `partition_compute`,
+  `partition_single` on every system, so it is clear where jobs go. They
+  replace `partition`/`queue`/`rscgrp` (compute) and `submit_to` (master).
+  `partition_compute` and `partition_single` default to None and take
+  `partition_master`. Public attributes are the raw values, so
+  `seisflows configure` writes `null` and the file keeps saying "follows the
+  master"; `Cluster._partition(single=)` resolves them.
+- Old names are read from the kwargs with a warning (`Cluster.
+  _legacy_partitions`). Unknown kwargs are otherwise silently swallowed by
+  `Workstation`, so without that an old parameter file would have sent the
+  compute jobs to the default partition.
+- Node counts and `mpiprocs` of a run call follow the partition it goes to
+  (`Cluster._nodes_on`), because partitions differ in cores per node (Chinook
+  `debug` 24, `t1small` 28).
+- Routing of `partition_single` is implemented for `Slurm`/`Chinook` and
+  `Pbs`/`Miyabi`. `Frontera`, `Maui` and `Fujitsu`/`Wisteria` have the
+  parameters but run single jobs on `partition_compute`; `Maui` is renamed
+  without being able to test it (its `ancil_partition` became
+  `partition_master`, and its node size for 'nesi_prepost' is a guess).
+- Gotcha for non-blocking runs: with `partition_master: debug-g` and
+  `partition_compute` unset, the simulations also go to `debug-g` (30 min max).
+  Set `partition_compute`.
+- Thrifty inversion looked over (2026-11-23): works as designed with
+  non-blocking dispatch, since `_was_thrifty` and `_restarted` are persisted
+  and every line-search evaluation writes adjoint sources and forward arrays.
+  Iteration 2 can never be thrifty (iteration 1 uses a bracketing line
+  search), so the saving starts with iteration 3. Added a guard so that a
+  finalize that is run again cannot replace `eval_grad` with the empty
+  `eval_func`, and a docs section (`tips_and_tricks.rst`). Still no end-to-end
+  test of two thrifty iterations.
+
 ## Not done / come back to this
 
 - **Real-cluster validation — started, not finished.** First real run

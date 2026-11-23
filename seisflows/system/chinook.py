@@ -18,19 +18,14 @@ class Chinook(Slurm):
     """
     System Chinook
     --------------
-    University of Alaska Fairbanks HPC Chinook, SLURM based system
+    University of Alaska Fairbanks HPC Chinook, SLURM based system. Chinook
+    has various partitions which each have their own number of cores per
+    compute node. Available are: debug, analysis, t1small, t2small, t1standard,
+    t2standard. A non-blocking master job likely goes on 'debug' and compute
+    jobs on 't1small' or larger.
 
     Parameters
     ----------
-    :type partition: str
-    :param partition: Chinook has various partitions which each have their
-        own number of cores per compute node. Available are: analysis, t1small,
-        t2small, t1standard, t2standard, gpu
-    :type submit_to: str
-    :param submit_to: (Optional) partition to submit the main/master job which 
-        is a serial Python task that controls the workflow. Likely this should 
-        go on 'debug' for small jobs or 't1small' for mid-to-large jobs. If not
-        given, defaults to `partition`.
 
     Paths
     -----
@@ -40,14 +35,12 @@ class Chinook(Slurm):
     __doc__ = Slurm.__doc__ + __doc__
 
 
-    def __init__(self, mpiexec="mpiexec", partition="t1small", 
-                 submit_to=None,**kwargs):
+    def __init__(self, mpiexec="mpiexec", partition_master="t1small",
+                 **kwargs):
         """Chinook init"""
-        super().__init__(**kwargs)
+        super().__init__(partition_master=partition_master, **kwargs)
 
         self.mpiexec = mpiexec
-        self.partition = partition
-        self.submit_to = submit_to or self.partition
 
         self._partitions = {"debug": 24, "t1small": 28, "t2small": 28,
                             "t1standard": 28, "t2standard": 28, "analysis": 28
@@ -76,7 +69,7 @@ class Chinook(Slurm):
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
             f"--ntasks=1",
-            f"--partition={self.submit_to}",
+            f"--partition={self.partition_master}",
             f"--time={self.walltime}"
         ])
         return _call
@@ -111,14 +104,16 @@ class Chinook(Slurm):
             env = "SEISFLOWS_TASKID=0," 
         else:
             env = ""
-        
+
+        partition = self._partition(single=single)
+
         _call = " ".join([
              f"sbatch",
              f"{self.slurm_args or ''}",
              f"--job-name={self.title}",
-             f"--nodes={self.nodes}",
+             f"--nodes={self._nodes_on(partition)}",
              f"--ntasks={self.nproc:d}",
-             f"--partition={self.partition}",
+             f"--partition={partition}",
              f"--time={tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",
              f"--array={array}",

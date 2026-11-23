@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="680" height="548" viewBox="0 0 680 548" role="img">
 <title>Blocking versus non-blocking SeisFlows on Slurm, with the parameters that control each kind of job</title>
-<desc>Two timelines. Master jobs, controlled by submit_to and walltime, are teal. Compute jobs, controlled by partition and tasktime, are coral. In the blocking timeline the master job runs the whole time. In the non-blocking one it exits after each dispatch and a dependent job resumes it.</desc>
+<desc>Two timelines. Master jobs, controlled by partition_master and walltime, are teal. Compute jobs, controlled by partition_compute and tasktime, are coral. In the blocking timeline the master job runs the whole time. In the non-blocking one it exits after each dispatch and a dependent job resumes it.</desc>
 <style>
 text { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
 .t { font-size: 14px; fill: #2C2C2A; }
@@ -26,11 +26,11 @@ text { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-seri
 <text class="ts" x="640" y="36" text-anchor="end">blocking: True</text>
 
 <text class="t" x="40" y="74" dominant-baseline="central">Master job</text>
-<g class="teal"><rect x="40" y="86" width="76" height="20" rx="10"/><text class="ts" x="78" y="96" text-anchor="middle" dominant-baseline="central">submit_to</text></g>
-<g class="teal"><rect x="122" y="86" width="68" height="20" rx="10"/><text class="ts" x="156" y="96" text-anchor="middle" dominant-baseline="central">walltime</text></g>
+<g class="teal"><rect x="40" y="86" width="112" height="20" rx="10"/><text class="ts" x="96" y="96" text-anchor="middle" dominant-baseline="central">partition_master</text></g>
+<g class="teal"><rect x="158" y="86" width="68" height="20" rx="10"/><text class="ts" x="192" y="96" text-anchor="middle" dominant-baseline="central">walltime</text></g>
 <text class="t" x="40" y="154" dominant-baseline="central">Compute jobs</text>
-<g class="coral"><rect x="40" y="166" width="76" height="20" rx="10"/><text class="ts" x="78" y="176" text-anchor="middle" dominant-baseline="central">partition</text></g>
-<g class="coral"><rect x="122" y="166" width="68" height="20" rx="10"/><text class="ts" x="156" y="176" text-anchor="middle" dominant-baseline="central">tasktime</text></g>
+<g class="coral"><rect x="40" y="166" width="120" height="20" rx="10"/><text class="ts" x="100" y="176" text-anchor="middle" dominant-baseline="central">partition_compute</text></g>
+<g class="coral"><rect x="166" y="166" width="68" height="20" rx="10"/><text class="ts" x="200" y="176" text-anchor="middle" dominant-baseline="central">tasktime</text></g>
 
 <g class="teal">
 <rect x="240" y="70" width="400" height="28" rx="4"/>
@@ -56,11 +56,11 @@ text { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-seri
 <text class="ts" x="640" y="254" text-anchor="end">blocking: False</text>
 
 <text class="t" x="40" y="292" dominant-baseline="central">Master job</text>
-<g class="teal"><rect x="40" y="304" width="76" height="20" rx="10"/><text class="ts" x="78" y="314" text-anchor="middle" dominant-baseline="central">submit_to</text></g>
-<g class="teal"><rect x="122" y="304" width="68" height="20" rx="10"/><text class="ts" x="156" y="314" text-anchor="middle" dominant-baseline="central">walltime</text></g>
+<g class="teal"><rect x="40" y="304" width="112" height="20" rx="10"/><text class="ts" x="96" y="314" text-anchor="middle" dominant-baseline="central">partition_master</text></g>
+<g class="teal"><rect x="158" y="304" width="68" height="20" rx="10"/><text class="ts" x="192" y="314" text-anchor="middle" dominant-baseline="central">walltime</text></g>
 <text class="t" x="40" y="372" dominant-baseline="central">Compute jobs</text>
-<g class="coral"><rect x="40" y="384" width="76" height="20" rx="10"/><text class="ts" x="78" y="394" text-anchor="middle" dominant-baseline="central">partition</text></g>
-<g class="coral"><rect x="122" y="384" width="68" height="20" rx="10"/><text class="ts" x="156" y="394" text-anchor="middle" dominant-baseline="central">tasktime</text></g>
+<g class="coral"><rect x="40" y="384" width="120" height="20" rx="10"/><text class="ts" x="100" y="394" text-anchor="middle" dominant-baseline="central">partition_compute</text></g>
+<g class="coral"><rect x="166" y="384" width="68" height="20" rx="10"/><text class="ts" x="200" y="394" text-anchor="middle" dominant-baseline="central">tasktime</text></g>
 
 <g class="teal">
 <rect x="240" y="288" width="52" height="28" rx="4"/>

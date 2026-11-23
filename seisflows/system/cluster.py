@@ -94,11 +94,71 @@ class Cluster(Workstation):
         self.environs = environs or ""
         self.blocking = blocking
     
-        # These define cluster status codes for jobs queued/running, 
+        # These define cluster status codes for jobs queued/running,
         # completed, or failed. Must be filled in by child classes.
         self._failed_states = []
         self._completed_states = []
         self._pending_states = []
+
+        # Systems with partitions fill this in, it is a lookup of partition
+        # name to cores per node
+        self._partitions = {}
+
+    @staticmethod
+    def _legacy_partitions(kwargs, compute="partition"):
+        """
+        Before v3.6.0 the partition of the compute jobs was `partition`
+        (`queue` on PBS, `rscgrp` on Fujitsu) and the partition of the master
+        job was `submit_to`, which defaulted to the compute one. Parameter
+        files that still use those names would have them silently ignored, so
+        read them out of `kwargs` here and warn.
+
+        :type kwargs: dict
+        :param kwargs: keyword arguments given to a system module. The old
+            names are removed from it
+        :type compute: str
+        :param compute: the old name of the compute partition on this system
+        :rtype: tuple
+        :return: (`partition_master`, `partition_compute`) taken from the old
+            names, each None if its old name was not given
+        """
+        old_compute = kwargs.pop(compute, None)
+        old_master = kwargs.pop("submit_to", None)
+        if old_compute or old_master:
+            logger.warning(f"system parameters `{compute}` and `submit_to` "
+                           f"have been renamed `partition_compute` and "
+                           f"`partition_master`, please update the "
+                           f"parameter file")
+        return old_master or old_compute, old_compute
+
+    def _partition(self, single=False):
+        """
+        The partition that a job is submitted to. `partition_compute` and
+        `partition_single` take the value of `partition_master` if they were
+        not given.
+
+        :type single: bool
+        :param single: True for the single-process jobs that run once per
+            stage (e.g., kernel summing and smoothing), False for the compute
+            jobs that run once per task
+        :rtype: str
+        :return: name of the partition
+        """
+        if single:
+            return self.partition_single or self.partition_master
+        return self.partition_compute or self.partition_master
+
+    def _nodes_on(self, partition):
+        """
+        The number of nodes that `nproc` cores need on a partition, because
+        partitions can differ in cores per node
+
+        :type partition: str
+        :param partition: name of the partition, a key of `_partitions`
+        :rtype: int
+        :return: number of nodes
+        """
+        return int(np.ceil(self.nproc / float(self._partitions[partition])))
 
     @property
     def submit_call_header(self):

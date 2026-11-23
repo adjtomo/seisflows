@@ -93,7 +93,7 @@ class SFExample3D:
             'chinook' or 'miyabi'. Defaults to 'workstation'
         :type par: list of str
         :param par: SeisFlows parameters to set once the parameter file is made
-            as 'KEY=VALUE' strings, e.g., ['partition=t1small', 'walltime=30']
+            as 'KEY=VALUE' strings, e.g., ['partition_compute=t1small', 'walltime=30']
         :type par_yaml: str
         :param par_yaml: path to a YAML file of SeisFlows parameters to set,
             for settings that are re-used (e.g., one file per cluster).

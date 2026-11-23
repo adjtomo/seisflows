@@ -122,8 +122,8 @@ does not exist.
 .. code:: bash
 
     seisflows examples run 4 --specfem3d_repo ~/specfem3d --mpiexec mpiexec \
-        --system chinook --par partition=t1small submit_to=debug \
-        walltime=30 tasktime=40 blocking=False
+        --system chinook --par partition_master=debug \
+        partition_compute=t1small walltime=30 tasktime=40 blocking=False
 
 Settings that you use again, such as everything that your cluster needs, are
 better kept in a YAML file, which is also where you can put any other
@@ -133,8 +133,8 @@ change one value.
 .. code:: yaml
 
     # chinook.yaml
-    partition: t1small
-    submit_to: debug
+    partition_master: debug
+    partition_compute: t1small
     walltime: 30
     tasktime: 40
     blocking: False

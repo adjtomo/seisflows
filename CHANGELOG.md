@@ -9,6 +9,16 @@
   Supported by the `Slurm`, `Chinook`, `Maui`, `Pbs` and `Miyabi` systems and
   by the `Forward`, `Migration`, `Inversion` and `NoiseInversion` workflows.
   `blocking` defaults to True (unchanged behavior).
+- **Breaking:** the system parameters that choose where jobs are submitted have
+  the same form on every system: `partition_master` (the main job),
+  `partition_compute` (the jobs that run once per task) and `partition_single`
+  (the jobs that run once per stage, e.g. summing and smoothing kernels).
+  They replace `partition`, `queue` (PBS), `rscgrp` (Wisteria) and `submit_to`.
+  `partition_compute` and `partition_single` take the value of
+  `partition_master` if not given. The old names still work, with a warning.
+  `partition_single` is used by the `Slurm`, `Chinook`, `Pbs` and `Miyabi`
+  systems, so that a single-core job does not wait for hours in the queue of the
+  compute jobs.
 - Model values are checked on the compute nodes rather than the master job
   when non-blocking. A failed check stops the workflow without retries.
 - **Breaking:** the `stop_after` task names `evaluate_line_search_misfit` and
@@ -37,6 +47,8 @@
 - Bugfix: `NLCG` checkpointing failed (read-only array, undefined variable)
 - Bugfix: a thrifty inversion no longer skips the initial misfit evaluation
   of an iteration that follows a restarted one
+- Bugfix: a thrifty inversion could swap its `eval_grad` directory for an empty
+  one if the job that finalized an iteration ended part way and was run again
 - Bugfix: a failed L-BFGS line search restarted forever. `LBFGS.restart` did
   not reset the search direction to steepest descent, so the restarted line
   search repeated the failed one and was restarted again. It now sets

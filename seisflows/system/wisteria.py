@@ -45,15 +45,8 @@ class Wisteria(Fujitsu):
     ---------------
     University of Tokyo HPC Wisteria, running Fujitsu job scheduler
 
-    Parameters
-    ----------
-    :type group: str
-    :param group: User's group for allocating and charging resources. In the 
-        pjsub script this is the '-g' option.
-    :type rscgrp: str
-    :param rscgrp: the resource group (i.e., partition) to submit jobs to. In 
-        the pjsub script this is the '-L rscgrp' option.
-        Available `rscgrp`s for Wisteria are:
+    Partitions are the resource groups of Wisteria, the '-L rscgrp' option of
+    the pjsub script. Available resource groups are:
 
         - debug-o: Odyssey debug, 30 min max, [1, 144] nodes available
         - short-o: Odyssey short, 8 hr. max, [1, 72] nodes available
@@ -68,6 +61,12 @@ class Wisteria(Fujitsu):
         - share-short: Aquarius GPU short queue, 2 hr. max, 1, 2, 4 GPU avail.
         - share: Aquarius GPU-exclusive, available 1, 2 and 4 GPU, select 
           using `gpu`
+
+    Parameters
+    ----------
+    :type group: str
+    :param group: User's group for allocating and charging resources. In the 
+        pjsub script this is the '-g' option.
     :type gpu: int
     :param gpu: if not None, tells SeisFlows to use the GPU version of SPECFEM,
         the integer value of `gpu` will set the number of requested GPUs for a
@@ -94,15 +93,13 @@ class Wisteria(Fujitsu):
     """
     __doc__ = Fujitsu.__doc__ + __doc__
 
-    def __init__(self, group=None, rscgrp=None, gpu=None, submit_to=None,
-                 conda_env=None, conda_modules=None, **kwargs):
+    def __init__(self, group=None, gpu=None, conda_env=None,
+                 conda_modules=None, **kwargs):
         """Wisteria init"""
         super().__init__(**kwargs)
 
         self.group = group
-        self.rscgrp = rscgrp
         self.gpu = gpu
-        self.submit_to = submit_to or self.rscgrp
         self.conda_env = conda_env
 
         if conda_modules is None:
@@ -115,7 +112,7 @@ class Wisteria(Fujitsu):
         self.conda_modules = conda_modules
 
         # Wisteria resource groups and their cores per node
-        self._rscgrps = {
+        self._partitions = {
                 # Node-occupied resource allocation (Odyssey)
                 "debug-o": 48, "short-o": 48, "regular-o": 48, "priority-o": 48,
                 # Node-occupied resource allocation (Aquarius)

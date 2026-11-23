@@ -38,12 +38,10 @@ class Maui(Slurm):
     :type cluster: str
     :param cluster: cluster to submit jobs to. Available are Maui and
         Mahuika
-    :type partition: str
-    :param partition: partition of the cluster to submit jobs to.
     :type ancil_cluster: str
     :param ancil_cluster: name of the ancilary cluster used for pre-
-        post-processing tasks.
-    :type ancil_partition: name of the partition of the ancilary cluster
+        post-processing tasks. The master job runs on `partition_master` of
+        this cluster, and the compute jobs on `partition_compute` of `cluster`
     :type ancil_tasktime: int
     :param ancil_tasktime: Tasktime in minutes for pre and post-processing
         jobs submitted to Maui ancil.
@@ -55,24 +53,28 @@ class Maui(Slurm):
     __doc__ = Slurm.__doc__ + __doc__
 
     def __init__(self, account=None, cpus_per_task=1, cluster="maui",
-                 partition="nesi_research", ancil_cluster="maui_ancil",
-                 ancil_partition="nesi_prepost", ancil_tasktime=1, **kwargs):
+                 partition_master="nesi_prepost",
+                 partition_compute="nesi_research",
+                 ancil_cluster="maui_ancil", ancil_tasktime=1, **kwargs):
         """Maui init"""
-        super().__init__(**kwargs)
+        # `ancil_partition` was the partition of the master job
+        kwargs["submit_to"] = (kwargs.pop("ancil_partition", None) or
+                               kwargs.get("submit_to"))
+        super().__init__(partition_master=partition_master,
+                         partition_compute=partition_compute, **kwargs)
 
         self.account = account
         self.cluster = cluster
-        self.partition = partition
         self.cpus_per_task = cpus_per_task
         self.ancil_cluster = ancil_cluster
-        self.ancil_partition = ancil_partition
         self.ancil_tasktime = ancil_tasktime
         if self.environs and "SLURM_MEM_PER_CPU" not in self.environs:
             self.environs = f"{self.environs},SLURM_MEM_PER_CPU"
         else:
             self.environs = "SLURM_MEM_PER_CPU"
 
-        self._partitions = {"nesi_research": 40}
+        # Cores per node of 'nesi_prepost' is not verified
+        self._partitions = {"nesi_research": 40, "nesi_prepost": 40}
         self._available_clusters = ["maui", "mahuika"]
 
     def check(self):
@@ -121,7 +123,7 @@ class Maui(Slurm):
             f"{self.slurm_args or ''}",
             f"--account={self.account}",
             f"--cluster={self.ancil_cluster}",
-            f"--partition={self.ancil_partition}",
+            f"--partition={self.partition_master}",
             f"--job-name={self.title}",
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
@@ -148,7 +150,7 @@ class Maui(Slurm):
              f"--account={self.account}",
              f"--job-name={self.title}",
              f"--clusters={self.cluster}",
-             f"--partition={self.partition}",
+             f"--partition={self._partition()}",
              f"--cpus-per-task={self.cpus_per_task}",
              f"--nodes={self.nodes:d}",
              f"--ntasks={self.nproc:d}",
@@ -172,7 +174,7 @@ class Maui(Slurm):
              f"--account={self.account}",
              f"--job-name={self.title}",
              f"--clusters={self.ancil_cluster}",
-             f"--partition={self.ancil_partition}",
+             f"--partition={self._partition(single=True)}",
              f"--cpus-per-task={self.cpus_per_task}",
              f"--nodes={self.nodes:d}",
              f"--ntasks={self.nproc:d}",

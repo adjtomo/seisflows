@@ -131,7 +131,7 @@ def test_submit_depends_on_appends_dependency_flag(tmpdir):
     resubmitted master job until `job_id` finishes
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     with patch("seisflows.system.cluster.subprocess.run") as mock_run:
@@ -141,14 +141,14 @@ def test_submit_depends_on_appends_dependency_flag(tmpdir):
     assert(mock_run.called)
     submit_call = mock_run.call_args[0][0]
     assert("--dependency=afterany:123456" in submit_call)
-    assert("--partition=debug" in submit_call)  # submit_to, not partition
+    assert("--partition=debug" in submit_call)  # master, not compute
     assert(system.submit_workflow in submit_call)
 
 
 def test_submit_without_depends_on_omits_dependency_flag(tmpdir):
     """A normal (first) submission should not carry a dependency flag"""
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     with patch("seisflows.system.cluster.subprocess.run") as mock_run:
@@ -165,7 +165,7 @@ def test_submit_direct_ignores_depends_on(tmpdir):
     dependency to -- `depends_on` should be silently ignored, not raise
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     with patch("seisflows.system.cluster.subprocess.run") as mock_run:
@@ -183,7 +183,7 @@ def test_slurm_run_blocking_false_returns_job_id_without_monitoring(tmpdir):
     polling/waiting for it to finish)
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     mock_submit_result = MagicMock()
@@ -207,7 +207,7 @@ def test_slurm_run_blocking_true_still_monitors(tmpdir):
     existed
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     mock_submit_result = MagicMock()
@@ -232,7 +232,7 @@ def test_submit_resume_appends_log_and_skips_backup(tmpdir):
     first (backing up on every resume would pile up numbered copies)
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
     with open(system.path.output_log, "w") as f:
         f.write("log from an earlier master job invocation\n")
@@ -251,7 +251,7 @@ def test_submit_first_submission_backs_up_log(tmpdir, monkeypatch):
     # the workdir when SeisFlows runs for real
     monkeypatch.chdir(tmpdir)
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
     with open(system.path.output_log, "w") as f:
         f.write("log from a previous workflow\n")
@@ -270,7 +270,7 @@ def test_submit_resume_failure_is_not_silent(tmpdir):
     ignored like a failed first submission is
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     error = subprocess.CalledProcessError(1, "sbatch")
@@ -285,7 +285,7 @@ def test_submit_resume_returns_job_id_and_captures_scheduler_output(tmpdir):
     the log, the job id is returned for the workflow to log in its own words
     """
     system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=1,
-                     submit_to="debug")
+                     partition_master="debug", partition_compute="t1small")
     system.setup()
 
     with patch("seisflows.system.cluster.subprocess.run") as mock_run:
@@ -627,3 +627,100 @@ def test_pbs_job_times_unknown(tmpdir):
         mock_run.return_value.stdout = "Job Id: 56.opbs\n    qtime = x\n"
         assert(system.job_times("56.opbs") is None)
     assert(Cluster.job_times(system, "56") is None)
+
+
+# -----------------------------------------------------------------------------
+# Partitions: master, compute and single-process jobs
+# -----------------------------------------------------------------------------
+
+def test_partitions_default_to_the_master_partition(tmpdir):
+    """`partition_compute` and `partition_single` follow `partition_master`
+    unless given"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir),
+                     partition_master="debug")
+    assert(system._partition() == "debug")
+    assert(system._partition(single=True) == "debug")
+
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir),
+                     partition_master="debug", partition_compute="t1small")
+    assert(system._partition() == "t1small")
+    assert(system._partition(single=True) == "debug")
+
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir),
+                     partition_master="debug", partition_compute="t1small",
+                     partition_single="analysis")
+    assert(system._partition(single=True) == "analysis")
+
+
+def test_partitions_are_the_only_partition_parameters(tmpdir):
+    """The parameter file is written from public attributes, so the old names
+    must not be left over as ones"""
+    for system in [Chinook(workdir=str(tmpdir), path_system=str(tmpdir)),
+                   _miyabi(tmpdir)]:
+        names = set(vars(system))
+        assert({"partition_master", "partition_compute",
+                "partition_single"} <= names)
+        assert(not {"partition", "submit_to", "queue"} & names)
+        # Unset, so that the parameter file keeps saying they follow the master
+        assert(system.partition_compute is None)
+        assert(system.partition_single is None)
+
+
+def test_old_partition_parameters_are_still_read(tmpdir, caplog):
+    """A parameter file from before the rename must not have its partitions
+    silently dropped, the compute jobs would go to the wrong place"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir),
+                     partition="t2small", submit_to="debug")
+    assert(system.partition_master == "debug")
+    assert(system.partition_compute == "t2small")
+    assert("renamed" in caplog.text)
+
+    # `submit_to` defaulted to `partition`
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir),
+                     partition="t2small")
+    assert(system.partition_master == "t2small")
+    assert(system.partition_compute == "t2small")
+
+    system = _miyabi(tmpdir, queue="short-g", submit_to="debug-g")
+    assert(system.partition_master == "debug-g")
+    assert(system.partition_compute == "short-g")
+
+
+def test_check_rejects_an_unknown_partition(tmpdir):
+    with open(os.path.join(str(tmpdir), "parameters.yaml"), "w") as f:
+        f.write("# parameters\n")
+    for kwargs in [dict(partition_master="nope"),
+                   dict(partition_compute="nope"),
+                   dict(partition_single="nope")]:
+        system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir),
+                         **kwargs)
+        with pytest.raises(AssertionError) as e:
+            system.check()
+        assert("nope" in str(e.value))
+
+
+def test_slurm_single_job_goes_to_the_single_partition(tmpdir):
+    """Node counts follow the partition too, 'debug' has 24 cores per node and
+    't1small' 28"""
+    system = Chinook(workdir=str(tmpdir), path_system=str(tmpdir), ntask=2,
+                     nproc=28, partition_master="debug",
+                     partition_compute="t1small")
+    array_call = system.run_call(executable="x")
+    assert("--partition=t1small" in array_call)
+    assert("--nodes=1 " in array_call)
+
+    single_call = system.run_call(executable="x", single=True)
+    assert("--partition=debug" in single_call)
+    assert("--nodes=2 " in single_call)
+
+
+def test_pbs_single_job_goes_to_the_single_partition(tmpdir):
+    system = _miyabi(tmpdir, partition_master="debug-g",
+                     partition_compute="short-g")
+    assert(" -q short-g " in system.run_call(executable="x"))
+    assert(" -q debug-g " in system.run_call(executable="x", single=True))
+    assert(" -q debug-g " in system.submit_call_header + " ")
+
+    system = _miyabi(tmpdir, partition_master="debug-g",
+                     partition_compute="short-g", partition_single="short-g")
+    assert(" -q short-g " in system.run_call(executable="x", single=True))

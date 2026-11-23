@@ -75,7 +75,7 @@ Miyabi-C's compute nodes, and vice versa.
     Miyabi's job management system does not support multibyte (non-ASCII)
     characters anywhere in a job submission -- job names, project codes,
     directory names, etc. The ``Miyabi`` system module enforces this for
-    its own parameters (``title``, ``group``, ``queue``) in ``check()``,
+    its own parameters (``title``, ``group``, ``partition_*``) in ``check()``,
     but this restriction also applies more broadly (e.g., to your working
     directory path).
 
@@ -103,7 +103,7 @@ jobs some other way (e.g., inherited via ``-V``, if your site allows it).
 
     This mechanism (and this module's defaults more generally) is
     currently only set up/tested for Miyabi-G (GPU). Running on Miyabi-C
-    should work by selecting a ``-c`` ``queue``, but has not been
+    should work by selecting a ``-c`` queue, but has not been
     exercised.
 
 4. Validate with TestFlow
@@ -138,10 +138,13 @@ Running ``seisflows configure`` will populate your parameter file with all
     # Project code used to charge tokens (PBS '-W group_list=')
     seisflows par group <your project code>
 
-    # Node-occupied use queue, e.g. one of:
+    # Node-occupied use queues, e.g. one of:
     #   debug-g, short-g, regular-g (Miyabi-G, aarch64 + GH200)
     #   debug-c, short-c, regular-c (Miyabi-C, x86_64)
-    seisflows par queue debug-g
+    # for the main job, the simulations, and the single-process jobs (which
+    # follow the main job's queue unless given)
+    seisflows par partition_master debug-g
+    seisflows par partition_compute short-g
 
 .. note::
 
@@ -283,8 +286,9 @@ if something breaks or you are extending ``system.Pbs``/``system.Miyabi``:
 8. Troubleshooting
 ~~~~~~~~~~~~~~~~~~~~
 
-- **"PBS 'queue' must match one of [...]"** -- the ``queue`` parameter must
-  be one of Miyabi's node-occupied use queues (see Section 4 above, or
+- **"`partition_compute` ('...') must be one of [...]"** -- the
+  ``partition_master``, ``partition_compute`` and ``partition_single``
+  parameters must each be one of Miyabi's node-occupied use queues (see Section 4 above, or
   the ``Miyabi`` class docstring for the current list and their node/
   walltime limits).
 - **"qsub: invalid option -- '-'" (or similar, mentioning single

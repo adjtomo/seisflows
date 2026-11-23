@@ -49,6 +49,20 @@ class Slurm(Cluster):
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
         '--key1=value1 --key2=value2"
+    :type partition_master: str
+    :param partition_master: partition that the master job is submitted to, the
+        job that runs the workflow, including each one that resumes it when
+        `blocking` is False. A non-blocking master job does little computing so
+        it can go to a short or debug partition.
+    :type partition_compute: str
+    :param partition_compute: partition that the compute jobs (the ones that
+        run once for every task, e.g. the simulations) are submitted to. It
+        decides the cores per node. If None, takes the value of
+        `partition_master`.
+    :type partition_single: str
+    :param partition_single: partition that the single-process jobs (the ones
+        that run once per stage, e.g. summing and smoothing kernels) are
+        submitted to. If None, takes the value of `partition_master`.
 
     Paths
     -----
@@ -61,7 +75,8 @@ class Slurm(Cluster):
     # `Frontera`) must set this back to False
     _supports_nonblocking = True
 
-    def __init__(self, ntask_max=100, slurm_args="", **kwargs):
+    def __init__(self, ntask_max=100, slurm_args="", partition_master=None,
+                 partition_compute=None, partition_single=None, **kwargs):
         """
         Slurm-specific setup parameters
 
@@ -69,6 +84,7 @@ class Slurm(Cluster):
         :param ntask_max: set the maximum number of simultaneously running array
             job processes that are submitted to a cluster at one time.
         """
+        old_master, old_compute = self._legacy_partitions(kwargs)
         super().__init__(**kwargs)
 
         # Overwrite the existing 'mpiexec'
@@ -77,9 +93,11 @@ class Slurm(Cluster):
         self.ntask_max = ntask_max
         self.slurm_args = slurm_args
 
+        self.partition_master = old_master or partition_master
+        self.partition_compute = old_compute or partition_compute
+        self.partition_single = partition_single
+
         # Must be overwritten by child class
-        self.partition = None
-        self.submit_to = None
         self._partitions = {}
 
         # Define SLURM-dependent job states used for monitoring queue
@@ -96,15 +114,18 @@ class Slurm(Cluster):
         """
         super().check()
 
+        for name, partition in [
+                ("partition_master", self.partition_master),
+                ("partition_compute", self._partition()),
+                ("partition_single", self._partition(single=True))]:
+            assert(partition in self._partitions), (
+                f"`{name}` ('{partition}') must be one of "
+                f"{list(self._partitions)}"
+            )
+
         assert(self.node_size is not None), (
             f"Slurm system child classes require defining the node_size or "
             f"the number of cores per node inherent to the compute system.")
-
-        assert(self.partition in self._partitions), \
-            f"Cluster partition name must match {self._partitions}"
-
-        assert(self.submit_to in self._partitions), \
-            f"Submission partition name must match {self._partitions}"
 
         assert("--parsable" in self.run_call()), (
             f"System `run_call` requires SBATCH argument '--parsable' "
@@ -115,15 +136,13 @@ class Slurm(Cluster):
     @property
     def nodes(self):
         """Defines the number of nodes which is derived from system node size"""
-        _nodes = np.ceil(self.nproc / float(self.node_size))
-        _nodes = _nodes.astype(int)
-        return _nodes
+        return self._nodes_on(self._partition())
 
     @property
     def node_size(self):
-        """Defines the node size of a given cluster partition. This is a hard
+        """Defines the node size of the compute partition. This is a hard
         set number defined by the system architecture"""
-        return self._partitions[self.partition]
+        return self._partitions[self._partition()]
 
     @property
     def submit_call_header(self):
@@ -140,9 +159,10 @@ class Slurm(Cluster):
             f"sbatch",
             f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
+            f"--partition={self.partition_master}",
             f"--output={self.path.output_log}",
             f"--error={self.path.output_log}",
-            f"--ntasks-per-node={self.node_size}",
+            f"--ntasks-per-node={self._partitions[self.partition_master]}",
             f"--nodes=1",
             f"--time={self.walltime}"
         ])
@@ -178,13 +198,16 @@ class Slurm(Cluster):
             env = "SEISFLOWS_TASKID=0," 
         else:
             env = ""
-        
+
+        partition = self._partition(single=single)
+
         _call = " ".join([
              f"sbatch",
              f"{self.slurm_args or ''}",
              f"--job-name={self.title}",
-             f"--nodes={self.nodes}",
-             f"--ntasks-per-node={self.node_size:d}",
+             f"--partition={partition}",
+             f"--nodes={self._nodes_on(partition)}",
+             f"--ntasks-per-node={self._partitions[partition]:d}",
              f"--ntasks={self.nproc:d}",
              f"--time={tasktime}",
              f"--output={os.path.join(self.path.log_files, '%A_%a')}",

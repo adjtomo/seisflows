@@ -77,11 +77,23 @@ class Pbs(Cluster):
 
     Parameters
     ----------
-    :type queue: str
-    :param queue: Name of the PBS queue (or routing queue) that jobs are
-        submitted to, set with the qsub '-q' option. Must be overwritten by
-        child classes with a machine-specific set of available queues (see
-        `_queues`).
+    :type partition_master: str
+    :param partition_master: name of the PBS queue (or routing queue) that the
+        master job is submitted to, set with the qsub '-q' option. The master
+        job runs the workflow, including each one that resumes it when
+        `blocking` is False. A non-blocking master job does little computing
+        so it can go to a short or debug queue.
+    :type partition_compute: str
+    :param partition_compute: queue that the compute jobs (the ones that run
+        once for every task, e.g. the simulations) are submitted to. It
+        decides the cores per node. If None, takes the value of
+        `partition_master`.
+    :type partition_single: str
+    :param partition_single: queue that the single-process jobs (the ones that
+        run once per stage, e.g. summing and smoothing kernels) are submitted
+        to. If None, takes the value of `partition_master`. Child classes must
+        define `_partitions`, a lookup of the queues they have to their cores
+        per node.
     :type group: str
     :param group: project/account code used to charge core-hours, set with
         the qsub '-W group_list=<group>' option (on some PBS Professional
@@ -113,8 +125,9 @@ class Pbs(Cluster):
     # implemented below
     _supports_nonblocking = True
 
-    def __init__(self, ntask_max=100, queue=None, group=None, pbs_args="",
-                 **kwargs):
+    def __init__(self, ntask_max=100, group=None, pbs_args="",
+                 partition_master=None, partition_compute=None,
+                 partition_single=None, **kwargs):
         """
         PBS-specific setup parameters
 
@@ -123,19 +136,21 @@ class Pbs(Cluster):
             array job (sub)processes that are submitted to a cluster at one
             time.
         """
+        old_master, old_compute = self._legacy_partitions(kwargs, "queue")
         super().__init__(**kwargs)
 
         # Overwrite the existing 'mpiexec'
         if self.mpiexec is None:
             self.mpiexec = "mpiexec"
         self.ntask_max = ntask_max
-        self.queue = queue
         self.group = group
         self.pbs_args = pbs_args
+        self.partition_master = old_master or partition_master
+        self.partition_compute = old_compute or partition_compute
+        self.partition_single = partition_single
 
         # Must be overwritten by child class
-        self.submit_to = None
-        self._queues = {}
+        self._partitions = {}
 
         # Define PBS-dependent job states used for monitoring the queue.
         # 'COMPLETED'/'FAILED' are not native PBS states -- they are
@@ -154,30 +169,31 @@ class Pbs(Cluster):
         """
         super().check()
 
-        assert(self._queues), (
-            f"PBS system child classes require defining `_queues`, a "
+        assert(self._partitions), (
+            f"PBS system child classes require defining `_partitions`, a "
             f"lookup of queue name to node_size (cores-per-node) inherent "
             f"to the compute system.")
 
-        assert(self.queue in self._queues), \
-            f"PBS `queue` must match one of {list(self._queues.keys())}"
-
-        assert(self.submit_to in self._queues), \
-            f"PBS `submit_to` queue must match one of " \
-            f"{list(self._queues.keys())}"
+        for name, partition in [
+                ("partition_master", self.partition_master),
+                ("partition_compute", self._partition()),
+                ("partition_single", self._partition(single=True))]:
+            assert(partition in self._partitions), (
+                f"`{name}` ('{partition}') must be one of "
+                f"{list(self._partitions)}"
+            )
 
     @property
     def nodes(self):
         """Defines the number of nodes which is derived from system node
         size"""
-        _nodes = np.ceil(self.nproc / float(self.node_size))
-        return int(_nodes)
+        return self._nodes_on(self._partition())
 
     @property
     def node_size(self):
-        """Defines the node size (cores-per-node) of a given queue. This is a
-        hard set number defined by the system architecture"""
-        return self._queues[self.queue]
+        """Defines the node size (cores-per-node) of the compute queue. This is
+        a hard set number defined by the system architecture"""
+        return self._partitions[self._partition()]
 
     @property
     def submit_call_header(self):
@@ -198,7 +214,7 @@ class Pbs(Cluster):
             f"-N {self.title}",
             f"-o {self.path.output_log}",
             f"-j oe",
-            f"-q {self.submit_to}",
+            f"-q {self.partition_master}",
             f"-l select=1:mpiprocs=1",
             f"-l walltime={walltime}",
         ])
@@ -253,7 +269,8 @@ class Pbs(Cluster):
         walltime = self._fmt_walltime(tasktime)
 
         use_array = not (single or self.ntask == 1)
-        mpiprocs = min(self.nproc, self.node_size)
+        partition = self._partition(single=single)
+        mpiprocs = min(self.nproc, self._partitions[partition])
 
         _call_list = [
             f"qsub",
@@ -261,8 +278,8 @@ class Pbs(Cluster):
             f"-N {self.title}",
             f"-j oe",
             f"-o {self.path.log_files}{os.sep}",
-            f"-q {self.queue}",
-            f"-l select={self.nodes}:mpiprocs={mpiprocs}",
+            f"-q {partition}",
+            f"-l select={self._nodes_on(partition)}:mpiprocs={mpiprocs}",
             f"-l walltime={walltime}",
         ]
         if self.group:

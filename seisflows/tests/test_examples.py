@@ -278,10 +278,10 @@ def test_command_line_accepts_the_example_arguments(workdir, monkeypatch):
     monkeypatch.setattr(sys, "argv", [
         "seisflows", "examples", "run", "4", "--specfem3d_repo", "/x",
         "--nproc", "28", "--nsta", "25", "--perturb", "-5", "--system",
-        "chinook", "--par", "partition=t1small", "walltime=30",
+        "chinook", "--par", "partition_compute=t1small", "walltime=30",
         "--par_yaml", "c.yaml"])
     args = sfparser()[0].parse_args()
     assert((args.choice, args.specfem3d_repo, args.perturb, args.system,
             args.par, args.par_yaml) ==
-           (4, "/x", -5., "chinook", ["partition=t1small", "walltime=30"],
+           (4, "/x", -5., "chinook", ["partition_compute=t1small", "walltime=30"],
             "c.yaml"))

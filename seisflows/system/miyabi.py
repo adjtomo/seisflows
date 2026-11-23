@@ -75,15 +75,11 @@ class Miyabi(Pbs):
     JCAHPC HPC Miyabi (Univ. of Tsukuba / Univ. of Tokyo), PBS Professional
     based system
 
-    Parameters
-    ----------
-    :type queue: str
-    :param queue: Name of the (node-occupied use) queue used for job
-        submission. `select` (i.e., number of nodes, calculated internally
-        from `nproc`/`node_size`) determines which of the following
-        queues is ultimately used when submitting to a routing queue
-        ('regular-g'/'regular-c'); Users may also submit directly to a
-        specific queue. Available queues are:
+    Partitions are the (node-occupied use) queues of Miyabi. `select` (i.e.,
+    number of nodes, calculated internally from `nproc`/`node_size`)
+    determines which queue is ultimately used when submitting to a routing
+    queue ('regular-g'/'regular-c'); Users may also submit directly to a
+    specific queue. Available queues are:
 
         Miyabi-G (GPU/aarch64, 72 cores + 1x GH200 GPU per node):
             - debug-g: 30 min max, [1, 16] nodes
@@ -104,15 +100,13 @@ class Miyabi(Pbs):
 
         (see User's Guide Table 5-5 and Table 5-7 for the full/current
         listing, including token/budget-restricted node limits.)
+
+    Parameters
+    ----------
     :type group: str
     :param group: Project code used to charge tokens for job execution, set
         with the PBS '-W group_list=<group>' option. Required by Miyabi for
         any job that consumes tokens.
-    :type submit_to: str
-    :param submit_to: (Optional) queue used to submit the main/master job,
-        which is a serial Python task that controls the workflow. Likely
-        this should be 'debug-g'/'debug-c' for small jobs. If not given,
-        defaults to `queue`.
     :type conda_env: str
     :param conda_env: (Optional) name or full path of the Conda environment
         SeisFlows is installed in. If given, job submission/execution is
@@ -127,15 +121,13 @@ class Miyabi(Pbs):
     """
     __doc__ = Pbs.__doc__ + __doc__
 
-    def __init__(self, mpiexec="mpirun", queue="debug-g", group=None,
-                 submit_to=None, conda_env=None, **kwargs):
+    def __init__(self, mpiexec="mpirun", partition_master="debug-g",
+                 group=None, conda_env=None, **kwargs):
         """Miyabi init"""
-        super().__init__(**kwargs)
+        super().__init__(partition_master=partition_master, **kwargs)
 
         self.mpiexec = mpiexec
-        self.queue = queue
         self.group = group
-        self.submit_to = submit_to or self.queue
         self.conda_env = conda_env
 
         # Node-occupied use queues only, see Caveat 2 above. Node sizes
@@ -144,7 +136,7 @@ class Miyabi(Pbs):
         # (Table 5-5, Table 5-7). Queue-specific node count/walltime limits
         # are documented above but not hard-enforced here, since they may be
         # revised by JCAHPC independently of this module.
-        self._queues = {
+        self._partitions = {
             # Miyabi-G: NVIDIA GH200 (Arm Neoverse V2, 72 cores/node)
             "debug-g": 72, "short-g": 72, "regular-g": 72,
             "small-g": 72, "medium-g": 72, "large-g": 72, "x-large-g": 72,
@@ -167,8 +159,9 @@ class Miyabi(Pbs):
         # Miyabi Caveat 1: job management system does not support multibyte
         # (i.e., non-ASCII) characters anywhere in the qsub directives
         for val, name in [(self.title, "title"), (self.group, "group"),
-                           (self.queue, "queue"),
-                           (self.submit_to, "submit_to")]:
+                          (self.partition_master, "partition_master"),
+                          (self.partition_compute, "partition_compute"),
+                          (self.partition_single, "partition_single")]:
             assert(str(val).isascii()), (
                 f"Miyabi's job management system does not support "
                 f"multibyte characters, but `system.{name}`=='{val}' "

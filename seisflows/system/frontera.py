@@ -45,14 +45,11 @@ class Frontera(Slurm):
         to activate the conda environment AFTER ssh'ing from compute to login
         node, to ensure that the newly submitted job has access to the SeisFlows
         environment
-    :type partition: str
-    :param partition: Chinook has various partitions which each have their
-        own number of cores per compute node. Available are: small, normal,
-        large, development, flex
-    :type submit_to: str 
-    :param submit_to: (Optional) partition to submit the main/master job which 
-        is a serial Python task that controls the workflow. Likely this should
-        be 'small' or 'development'. If not given, defaults to `partition`.
+    :type partition_master: str
+    :param partition_master: Frontera has various partitions which each have
+        their own number of cores per compute node. Available are: small,
+        normal, large, development, flex. This one is where the master job
+        goes, likely 'small' or 'development'.
     :type allocation: str
     :param allocation: Name of allocation/project on the Frontera system.
         Required if you have more than one active allocation.
@@ -66,15 +63,14 @@ class Frontera(Slurm):
     # submission and does not implement `blocking=False`/`job_outcome()`
     _supports_nonblocking = False
 
-    def __init__(self, user=None, conda_env=None, partition="development",
-                 submit_to=None, allocation=None, mpiexec="ibrun", **kwargs):
+    def __init__(self, user=None, conda_env=None,
+                 partition_master="development", allocation=None,
+                 mpiexec="ibrun", **kwargs):
         """Frontera init"""
-        super().__init__(**kwargs)
+        super().__init__(partition_master=partition_master, **kwargs)
 
         self.user = user or os.environ["USER"]  # alt. getpass.getuser()
         self.conda_env = conda_env or os.environ["CONDA_DEFAULT_ENV"]
-        self.partition = partition
-        self.submit_to = submit_to or self.partition
         self.allocation = allocation
         self.mpiexec = mpiexec
 
@@ -91,7 +87,7 @@ class Frontera(Slurm):
                           "development": 1}
 
         # Hard set `ntask_max` based on TACCS 'QOSMaxJobsPerUserLimit' 
-        self.ntask_max = self._max_jobs[self.partition]
+        self.ntask_max = self._max_jobs[self._partition()]
 
     def check(self):
         """
@@ -99,16 +95,19 @@ class Frontera(Slurm):
         """
         super().check()
 
-        assert(self.partition in self._acceptable_partitions), \
-            f"Frontera `partition` must be in {self._acceptable_partitions}"
+        assert(self._partition() in self._acceptable_partitions), (
+            f"Frontera `partition_compute` must be in "
+            f"{self._acceptable_partitions}"
+        )
 
-        assert(self._max_jobs[self.partition] > 1), (
-            f"Frontera partition '{self.partition}' does not allow more than 1 "
+        assert(self._max_jobs[self._partition()] > 1), (
+            f"Frontera partition '{self._partition()}' does not allow more "
+            f"than 1 "
             f"simultaneously running job, meaning SeisFlows will not work. "
             f"please choose a different partition"
             )
 
-        if self.tasktime > 60 and self.partition == "flex":
+        if self.tasktime > 60 and self._partition() == "flex":
             logger.warning("Frontera's 'Flex' partition may cancel jobs that "
                            "exceed 60 minute wall time. Consider choosing a "
                            "different partition if this may be a problem")
@@ -127,7 +126,7 @@ class Frontera(Slurm):
         _call = " ".join([
             f"sbatch",
             f"--job-name={self.title}",  # -J
-            f"--partition={self.partition}",  # -p
+            f"--partition={self.partition_master}",  # -p
             f"--output={self.path.output_log}",  # -o
             f"--error={self.path.output_log}",
             f"--nodes=1",  # -N
@@ -153,7 +152,7 @@ class Frontera(Slurm):
             f"sbatch",
             f"{self.slurm_args or ''}",
             f"--job-name={self.title}",
-            f"--partition={self.partition}",
+            f"--partition={self._partition()}",
             f"--output={os.path.join(self.path.log_files, '%A')}",
             f"--ntasks={self.nproc:d}",
             f"--nodes={self.nodes}",

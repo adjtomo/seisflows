@@ -391,7 +391,8 @@ working state before the workflow can be resumed
                           help="Only for Example 4. SeisFlows parameters to "
                                "set once the parameter file has been made, "
                                "which may override the example's own, e.g., "
-                               "`--par partition=t1small walltime=30 "
+                               "`--par partition_master=debug "
+                               "partition_compute=t1small walltime=30 "
                                "blocking=False`")
     examples.add_argument("--par_yaml", type=str, nargs="?", default=None,
                           help="Only for Example 4. Path to a YAML file of "

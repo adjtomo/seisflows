@@ -52,31 +52,50 @@ Both kinds of main job run the same Python workflow, including the serial work
 between compute jobs (reading misfits, updating the model, moving files), on a
 compute node. Only the waiting is different.
 
-Four parameters control the jobs, and they apply to different jobs:
+Five parameters control the jobs, and they apply to different jobs. The three
+partition parameters have the same form on every system, whatever the system
+calls its partitions (a queue on PBS systems such as Miyabi, a resource group
+on Wisteria):
 
 .. list-table::
    :header-rows: 1
-   :widths: 18 82
+   :widths: 22 78
 
    * - Parameter
      - Controls
-   * - ``submit_to``
-     - The partition or queue that the main job is submitted to, the first and
-       every resumed one. If not given it is ``partition`` (``queue`` on
-       Miyabi).
+   * - ``partition_master``
+     - The partition that the main job is submitted to, the first and every
+       resumed one.
    * - ``walltime``
      - The time limit of each main job, in minutes. For a blocking main job
        this has to cover the whole workflow. For a non-blocking one it only has
        to cover one stage and the setup that is repeated when it resumes.
-   * - ``partition``
-     - The partition that the compute jobs are submitted to (``queue`` on
-       Miyabi), which also sets how many cores per node they request.
+   * - ``partition_compute``
+     - The partition that the compute jobs are submitted to, the ones that run
+       once for every task (e.g., the simulations). It also sets how many cores
+       per node they request. If not given it is ``partition_master``.
+   * - ``partition_single``
+     - The partition that the single-process jobs are submitted to, the ones
+       that run once per stage (e.g., summing and smoothing the kernels). If
+       not given it is ``partition_master``. Supported by the ``slurm``,
+       ``chinook``, ``pbs`` and ``miyabi`` systems.
    * - ``tasktime``
-     - The time limit of each compute job, in minutes.
+     - The time limit of each compute and single-process job, in minutes.
+
+.. note::
+
+    These replace ``partition`` (``queue`` on Miyabi, ``rscgrp`` on Wisteria)
+    and ``submit_to``. A parameter file that still uses them works, with a
+    warning, but the compute partition was ``partition`` and now is
+    ``partition_compute``, and the main job's was ``submit_to`` (which
+    defaulted to ``partition``) and now is ``partition_master``.
 
 A non-blocking main job does little computing, so it can be sent to a short or
-debug queue with ``submit_to`` while the compute jobs use ``partition``. These
-jobs usually start sooner than long ones, and do not hold a large partition.
+debug queue with ``partition_master``, where the single-process jobs follow it
+unless ``partition_single`` says otherwise, while the compute jobs use
+``partition_compute``. These jobs usually start sooner than long ones, and do
+not hold a large partition. A single-process job that has to wait in the queue
+of the compute jobs can take hours to start for a few minutes of work.
 Each resumed main job is a new job in the queue, which adds its queue time to
 the time that the workflow takes. ``sflog.txt`` reports how long each job
 queued and ran for. See `TestFlow <#testflow>`__ to check that a non-blocking
@@ -151,7 +170,8 @@ Set the parameter before submitting:
 .. code:: bash
 
     seisflows par blocking False
-    seisflows par submit_to debug   # a queue for the short main job
+    seisflows par partition_master debug   # a queue for the short main job
+    seisflows par partition_compute t1small
     seisflows submit
 
 Each test then dispatches its job, and the main job finishes. The scheduler
@@ -227,10 +247,10 @@ related docstrings and selecting valid options.
 
 .. note::
 
-    Example: some systems require a `partition` parameter, which tells 
-    SeisFlows where to submit simulation jobs. Users should know which 
-    partition they want to submit their jobs, based on the size of the 
-    simulations and available cores per node.
+    Example: the `partition_master` and `partition_compute` parameters tell
+    SeisFlows where to submit the main job and the simulation jobs. Users
+    should know which partition they want to submit their jobs, based on the
+    size of the simulations and available cores per node.
 
 Once you have set your parameter file, you should run the 'check' command to see
 if the internal check functions still pass.

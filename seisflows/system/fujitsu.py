@@ -37,6 +37,17 @@ class Fujitsu(Cluster):
     :param pjm_args: Any (optional) additional PJM arguments that will       
         be passed to the pjsub scripts. Should be in the form:                  
         '--key1=value1 --key2=value2"    
+    :type partition_master: str
+    :param partition_master: resource group (the '-L rscgrp' option) that the
+        master job is submitted to. A master job does little computing so it
+        can go to a short or debug resource group.
+    :type partition_compute: str
+    :param partition_compute: resource group that the compute jobs are
+        submitted to. It decides the cores per node. If None, takes the value
+        of `partition_master`. 
+    :type partition_single: str
+    :param partition_single: not used by this system, single-process jobs go
+        to `partition_compute`
 
     Paths
     -----
@@ -44,7 +55,8 @@ class Fujitsu(Cluster):
     """
     __doc__ = Cluster.__doc__ + __doc__
 
-    def __init__(self, ntask_max=None, pjm_args="", **kwargs):
+    def __init__(self, ntask_max=None, pjm_args="", partition_master=None,
+                 partition_compute=None, partition_single=None, **kwargs):
         """
         Fujitsu-specific setup parameters
 
@@ -52,6 +64,7 @@ class Fujitsu(Cluster):
         :param ntask_max: set the maximum number of simultaneously running 
             job processes that are submitted to a cluster at one time.
         """
+        old_master, old_compute = self._legacy_partitions(kwargs, "rscgrp")
         super().__init__(**kwargs)
 
         # Overwrite the existing 'mpiexec'
@@ -59,13 +72,14 @@ class Fujitsu(Cluster):
             self.mpiexec = "mpiexec"
         self.ntask_max = ntask_max or self.ntask
         self.pjm_args = pjm_args
+        self.partition_master = old_master or partition_master
+        self.partition_compute = old_compute or partition_compute
+        self.partition_single = partition_single
 
         # Must be filled in by child class
         self.group = None
-        self.rscgrp = None
         self.gpu = None
-        self.submit_to = None
-        self._rscgrps = {}
+        self._partitions = {}
     
         # Define PJM-dependent job states used for monitoring queue which
         # can be found in the User manual
@@ -79,15 +93,17 @@ class Fujitsu(Cluster):
         """
         super().check()
 
-        assert(self.node_size is not None), (                                    
-            f"Fujitsu system child classes require defining the node_size or "     
-            f"the number of cores per node inherent to the compute system.")     
-                                                                                 
-        assert(self.rscgrp in self._rscgrps), \
-            f"Cluster resource group must match {self._rscgrps}"  
+        for name, partition in [
+                ("partition_master", self.partition_master),
+                ("partition_compute", self._partition())]:
+            assert(partition in self._partitions), (
+                f"`{name}` ('{partition}') must be one of "
+                f"{list(self._partitions)}"
+            )
 
-        assert(self.submit_to in self._rscgrps), \
-            f"Cluster resource group must match {self._rscgrps}"  
+        assert(self.node_size is not None), (
+            f"Fujitsu system child classes require defining the node_size or "
+            f"the number of cores per node inherent to the compute system.")
 
     @property
     def nodes(self):
@@ -100,7 +116,7 @@ class Fujitsu(Cluster):
     def node_size(self):
         """Defines the node size of a given cluster partition. This is a hard
         set number defined by the system architecture"""
-        return self._rscgrps[self.rscgrp]
+        return self._partitions[self._partition()]
 
     @property
     def submit_call_header(self):
@@ -122,7 +138,7 @@ class Fujitsu(Cluster):
         _call = " ".join([
             f"pjsub",
             f"{self.pjm_args or ''}",
-            f"-L rscgrp={self.submit_to}",  # resource group
+            f"-L rscgrp={self.partition_master}",  # resource group
             f"-g {self.group}",  # project code
             f"-N {self.title}",  # job name
             f"-o {self.path.output_log}",  # write stdout to file
@@ -154,7 +170,7 @@ class Fujitsu(Cluster):
         _call = " ".join([
              f"pjsub",
              f"{self.pjm_args or ''}",
-             f"-L rscgrp={self.rscgrp}",  # resource group
+             f"-L rscgrp={self._partition()}",  # resource group
              f"-g {self.group}",  # project code
              f"-N {self.title}",  # job name
              f"-o {os.path.join(self.path.log_files, '%j')}", 
@@ -164,7 +180,7 @@ class Fujitsu(Cluster):
         ])
 
         # GPU-exclusive vs. hybrid nodes require different submit arugments
-        if self.gpu and self.rscgrp.startswith("share"):
+        if self.gpu and self._partition().startswith("share"):
             _call += f" -L gpu={self.gpu}"
         else:
             _call += f" -L node={self.nodes}"
