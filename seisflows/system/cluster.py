@@ -12,6 +12,7 @@ actually submitting to any job scheduler.
 """
 import os
 import sys
+import json
 import subprocess
 import time
 import numpy as np
@@ -21,6 +22,8 @@ from seisflows.tools import msg
 from seisflows.tools.unix import nproc
 from seisflows.tools.config import pickle_function_list, copy_file
 from seisflows.system.workstation import Workstation
+from seisflows.system.pack import (parse_array, split_tasks, pack_tasktime,
+                                   job_key)
 
 
 class Cluster(Workstation):
@@ -72,12 +75,20 @@ class Cluster(Workstation):
     # implicitely. Should not be edited unless using custom submit/run scripts
     submit_workflow = os.path.join(ROOT_DIR, "system", "runscripts", "submit")
     run_functions = os.path.join(ROOT_DIR, "system", "runscripts", "run")
+    run_chunk = os.path.join(ROOT_DIR, "system", "runscripts", "run_chunk")
 
     # Whether `run(blocking=False)` + `submit(depends_on=...)` are implemented
     # for this class. Must be set explicitly (not inferred) by each child
     # class that supports it, because a child that overrides `run()` itself
     # (e.g. `Frontera`) would otherwise inherit a True it can't honor
     _supports_nonblocking = False
+
+    # Pack mode, for the systems that implement it (see `system.pack`). Must
+    # be set explicitly, like `_supports_nonblocking`, because a child that
+    # overrides `run()` itself (e.g. `Frontera`) would otherwise inherit it
+    _supports_pack = False
+    pack = False
+    njob = None
 
     def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
                  environs="", blocking=True, **kwargs):
@@ -103,6 +114,63 @@ class Cluster(Workstation):
         # Systems with partitions fill this in, it is a lookup of partition
         # name to cores per node
         self._partitions = {}
+
+    @property
+    def _markers(self):
+        """Directory of the files that tasks of packed jobs leave when done"""
+        return os.path.join(self.path.scratch, "tasks")
+
+    def _pack_tasks(self, funcs_fid, array, single):
+        """
+        If `pack` is True, split the tasks that are to be run into `njob`
+        blocks, one for each element of the array that is submitted instead,
+        and write them to a file for the elements to read. Nothing is packed
+        if there are no more jobs than tasks (e.g., a rerun of a few tasks), or
+        for single-process jobs.
+
+        :type funcs_fid: str
+        :param funcs_fid: path of the pickle file of functions to run, which
+            the file of blocks is named after
+        :type array: str
+        :param array: the tasks to run, as given to `run`. If None, all tasks
+        :type single: bool
+        :param single: True for a single-process job
+        :rtype: tuple or NoneType
+        :return: None if the tasks are not packed, otherwise (blocks of task
+            ids, path of the file of blocks, array string of the jobs to
+            submit, number of tasks in the largest block)
+        """
+        if not self.pack or single:
+            return None
+
+        task_ids = parse_array(array or self.task_ids())
+        blocks = split_tasks(task_ids, self.njob)
+        if len(blocks) == len(task_ids):
+            return None
+
+        chunks_fid = f"{os.path.splitext(funcs_fid)[0]}_chunks.json"
+        with open(chunks_fid, "w") as f:
+            json.dump({str(i): block for i, block in enumerate(blocks)}, f)
+        logger.info(f"packing {len(task_ids)} tasks into {len(blocks)} jobs of "
+                    f"up to {len(blocks[0])}")
+
+        return blocks, chunks_fid, f"0-{len(blocks) - 1}", len(blocks[0])
+
+    def _record_blocks(self, job_id, blocks):
+        """
+        Keep the blocks of a packed job that has been submitted, for
+        `job_outcome` to know which tasks it was to run (see
+        `system.pack.failed_tasks`)
+
+        :type job_id: str
+        :param job_id: ID of the job, from the scheduler
+        :type blocks: list of list of int
+        :param blocks: the blocks of task ids, as given by `_pack_tasks`
+        """
+        path = os.path.join(self._markers, job_key(job_id))
+        os.makedirs(path, exist_ok=True)
+        with open(os.path.join(path, "chunks.json"), "w") as f:
+            json.dump({str(i): block for i, block in enumerate(blocks)}, f)
 
     @staticmethod
     def _legacy_partitions(kwargs, compute="partition"):
@@ -388,6 +456,17 @@ class Cluster(Workstation):
             f"dispatch. Set `blocking: True`, or use a system that does "
             f"(currently the SLURM-based systems, e.g. 'chinook')"
         )
+
+        if self.pack:
+            assert(self._supports_pack), (
+                f"`system.pack` is True but system "
+                f"'{self.__class__.__name__}' does not support packing tasks "
+                f"into fewer jobs. Set `pack: False`"
+            )
+            assert(isinstance(self.njob, int) and
+                   1 <= self.njob <= self.ntask), (
+                f"`njob`, the number of jobs to pack tasks into, must be an "
+                f"integer from 1 to `ntask` ({self.ntask}), not {self.njob}")
 
     def run(self, funcs, single=False, tasktime=None, _retry=0, **kwargs):
         """

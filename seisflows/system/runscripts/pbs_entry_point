@@ -27,7 +27,7 @@
 # calling 'submit'/'run' to make sure that fallback resolves correctly.
 #
 # Reads (set via '-v'):
-#   SEISFLOWS_ENTRY_POINT              'submit' or 'run'
+#   SEISFLOWS_ENTRY_POINT              'submit', 'run' or 'run_chunk'
 #   SEISFLOWS_RUNSCRIPTS_DIR            absolute path to this directory
 #                                       (NOT derived from this script's own
 #                                       path -- qsub copies submitted
@@ -39,7 +39,9 @@
 #                                       not work here)
 #   SEISFLOWS_WORKDIR                  working directory to `cd` into
 #   SEISFLOWS_PARAMETER_FILE           (for 'submit')
-#   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS  (for 'run')
+#   SEISFLOWS_FUNCS, SEISFLOWS_KWARGS  (for 'run' and 'run_chunk')
+#   SEISFLOWS_CHUNKS, SEISFLOWS_TASKTIME, SEISFLOWS_LOGDIR,
+#   SEISFLOWS_MARKERS                  (for 'run_chunk', the packed jobs)
 # ==============================================================================
 
 cd "${SEISFLOWS_WORKDIR}"
@@ -54,9 +56,15 @@ case "${SEISFLOWS_ENTRY_POINT}" in
         exec python "${SEISFLOWS_RUNSCRIPTS_DIR}/run" \
             --funcs "${SEISFLOWS_FUNCS}" --kwargs "${SEISFLOWS_KWARGS}"
         ;;
+    run_chunk)
+        exec python "${SEISFLOWS_RUNSCRIPTS_DIR}/run_chunk" \
+            --funcs "${SEISFLOWS_FUNCS}" --kwargs "${SEISFLOWS_KWARGS}" \
+            --chunks "${SEISFLOWS_CHUNKS}" --tasktime "${SEISFLOWS_TASKTIME}" \
+            --logdir "${SEISFLOWS_LOGDIR}" --markers "${SEISFLOWS_MARKERS}"
+        ;;
     *)
-        echo "pbs_entry_point: SEISFLOWS_ENTRY_POINT must be 'submit' or " \
-             "'run', got '${SEISFLOWS_ENTRY_POINT}'" >&2
+        echo "pbs_entry_point: SEISFLOWS_ENTRY_POINT must be 'submit', " \
+             "'run' or 'run_chunk', got '${SEISFLOWS_ENTRY_POINT}'" >&2
         exit 1
         ;;
 esac

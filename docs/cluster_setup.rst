@@ -108,6 +108,50 @@ main job works on your system before running a research problem.
     workflows that ship with SeisFlows. ``seisflows check`` says so if your
     choices do not support them.
 
+Packing tasks into fewer jobs
+-----------------------------
+
+A scheduler treats every element of an array as a job of its own, and each one
+waits in the queue. If the queue is long, or only a few jobs may run at once
+(e.g., a limit on the number of running jobs for your project), a stage of 54
+tasks can take far longer than the simulations do: with three jobs allowed at
+once it runs in 18 waves, and each wave waits in the queue again.
+
+With ``pack: True`` the tasks of an array are packed into ``njob`` jobs, each of
+which runs its share of the tasks one after the other. A stage then waits in
+the queue once (for the last of its jobs to start) rather than once for every
+wave. Choose ``njob`` to be the number of jobs that the scheduler lets run at
+once; ``1`` is the extreme, one job runs every task.
+
+.. code:: bash
+
+    seisflows par pack True
+    seisflows par njob 3
+
+How it works:
+
+- The tasks are split into blocks of neighbouring ids that are as even as they
+  can be, e.g., 54 tasks into 4 jobs are 14, 14, 13 and 13 tasks. They are
+  expected to take about the same time.
+- The time limit of a job is ``tasktime`` times the number of tasks in it, plus
+  10%, so ``tasktime`` still means the time of **one** task and your partition
+  has to allow the product (e.g., 18 tasks of 10 minutes is a job of 198
+  minutes). ``ntask_max`` does not apply.
+- Each task is run on its own, by its own process, so it has its own log
+  (``logs/<job>_<task>.log``) and its own ``tasktime``. A task that fails or
+  runs out of time does not stop the tasks after it in the job.
+- When a task ends it leaves a marker file in ``scratch/system/tasks``. A task
+  without one (e.g., the job ended before it got to it) is a task that
+  failed, and it is the failed tasks that are run again, up to ``rerun``
+  times. A rerun of few tasks, no more than ``njob``, is a job for each.
+- Single-process jobs (e.g., summing the kernels) are not packed.
+
+``pack`` is supported by the ``slurm``, ``chinook``, ``pbs`` and ``miyabi``
+systems. On Miyabi the number of jobs that run at once is a limit of the
+project (see ``qstat --limit``), which is the ``njob`` to choose, or one less
+if other jobs of the project run at the same time. With ``njob: 1`` the job is
+not an array, as some PBS implementations do not accept an array of one.
+
 TestFlow
 ---------
 

@@ -63,6 +63,7 @@ from datetime import datetime
 
 from seisflows import logger, ROOT_DIR
 from seisflows.system.cluster import Cluster
+from seisflows.system.pack import pack_tasktime, failed_tasks
 from seisflows.tools import msg
 from seisflows.tools.config import (pickle_function_list, copy_file,
                                     import_seisflows)
@@ -77,6 +78,19 @@ class Pbs(Cluster):
 
     Parameters
     ----------
+    :type pack: bool
+    :param pack: if True, the tasks of an array are packed into `njob` jobs
+        that run their share of the tasks one after the other, rather than a
+        job for every task. Use it where jobs wait for a long time in the queue
+        or only a few can run at once, as then a stage waits in the queue once
+        rather than in several waves. The time limit of each job is `tasktime`
+        times the number of tasks in it, plus 10%, so it has to be allowed by
+        the queue. `ntask_max` does not apply.
+    :type njob: int
+    :param njob: number of jobs to pack the tasks into, if `pack` is True.
+        Between 1 (one job runs every task) and `ntask` (no packing). The tasks
+        are split into blocks of neighbouring ids that are as even as they
+        can be. Choose the number of jobs that the scheduler runs at once.
     :type partition_master: str
     :param partition_master: name of the PBS queue (or routing queue) that the
         master job is submitted to, set with the qsub '-q' option. The master
@@ -124,9 +138,10 @@ class Pbs(Cluster):
     # `run(blocking=False)`, `submit(depends_on=...)` and `job_outcome()` are
     # implemented below
     _supports_nonblocking = True
+    _supports_pack = True
 
-    def __init__(self, ntask_max=100, group=None, pbs_args="",
-                 partition_master=None, partition_compute=None,
+    def __init__(self, ntask_max=100, group=None, pbs_args="", pack=False,
+                 njob=None, partition_master=None, partition_compute=None,
                  partition_single=None, **kwargs):
         """
         PBS-specific setup parameters
@@ -145,6 +160,8 @@ class Pbs(Cluster):
         self.ntask_max = ntask_max
         self.group = group
         self.pbs_args = pbs_args
+        self.pack = pack
+        self.njob = njob
         self.partition_master = old_master or partition_master
         self.partition_compute = old_compute or partition_compute
         self.partition_single = partition_single
@@ -268,7 +285,7 @@ class Pbs(Cluster):
         tasktime = tasktime or self.tasktime
         walltime = self._fmt_walltime(tasktime)
 
-        use_array = not (single or self.ntask == 1)
+        use_array = not (single or self.ntask == 1 or array == "0-0")
         partition = self._partition(single=single)
         mpiprocs = min(self.nproc, self._partitions[partition])
 
@@ -558,6 +575,20 @@ class Pbs(Cluster):
                 level=self.log_level, **kwargs
                 )
 
+        # Pack the tasks into fewer jobs, run by 'run_chunk' instead of 'run'
+        blocks = None
+        entry_point, packed_variables = "run", ""
+        packed = self._pack_tasks(funcs_fid, array, single)
+        if packed:
+            blocks, chunks_fid, array, nblock = packed
+            entry_point = "run_chunk"
+            task_limit = tasktime or self.tasktime
+            packed_variables = (f",SEISFLOWS_CHUNKS={chunks_fid},"
+                                f"SEISFLOWS_TASKTIME={task_limit},"
+                                f"SEISFLOWS_LOGDIR={self.path.log_files},"
+                                f"SEISFLOWS_MARKERS={self._markers}")
+            tasktime = pack_tasktime(task_limit, nblock)
+
         # Pass everything the running task needs via job environment
         # variables ('-v') rather than as CLI arguments -- see module
         # docstring note. `SEISFLOWS_TASKID` is only needed for non-array
@@ -567,12 +598,16 @@ class Pbs(Cluster):
         # directory before running -- unlike SLURM's sbatch, PBS jobs do NOT
         # default to the submission directory (PBS User's Guides instead
         # recommend an explicit 'cd ${PBS_O_WORKDIR}' in job scripts)
-        variables = (f"SEISFLOWS_ENTRY_POINT=run,"
-                    f"SEISFLOWS_RUNSCRIPTS_DIR={self._runscripts_dir},"
-                    f"SEISFLOWS_WORKDIR={self.path.workdir},"
-                    f"SEISFLOWS_FUNCS={funcs_fid},"
-                    f"SEISFLOWS_KWARGS={kwargs_fid}")
-        if single or self.ntask == 1:
+        variables = (f"SEISFLOWS_ENTRY_POINT={entry_point},"
+                     f"SEISFLOWS_RUNSCRIPTS_DIR={self._runscripts_dir},"
+                     f"SEISFLOWS_WORKDIR={self.path.workdir},"
+                     f"SEISFLOWS_FUNCS={funcs_fid},"
+                     f"SEISFLOWS_KWARGS={kwargs_fid}{packed_variables}")
+
+        # A job of one element is not an array (some PBS implementations reject
+        # '0-0', see `run_call`), so it is told which task it is. For a packed
+        # job that is the one block, of index 0
+        if single or self.ntask == 1 or array == "0-0":
             variables += ",SEISFLOWS_TASKID=0"
         if self.environs:
             variables += f",{self.environs}"
@@ -596,6 +631,8 @@ class Pbs(Cluster):
                                          single=single, variables=variables)
                 job_ids.append(self._submit_run_call(run_call))
             job_id = ",".join(job_ids)
+            if blocks:
+                self._record_blocks(job_id, blocks)
             logger.debug(f"dispatched job {job_id} without waiting "
                          f"(blocking=False)")
             return job_id
@@ -606,9 +643,16 @@ class Pbs(Cluster):
                                  tasktime=tasktime, array=array,
                                  single=single, variables=variables)
         job_id = self._submit_run_call(run_call)
+        if blocks:
+            self._record_blocks(job_id, blocks)
 
         # Monitor the job queue until all jobs have finished
         status = self.monitor_job_status(job_id)
+
+        # The tasks of a packed job are what finished, not the job
+        packed_failed = failed_tasks(self._markers, job_id)
+        if packed_failed is not None:
+            status = -1 if packed_failed else 1
 
         # Failed job can either try to re-run, or simply exit the program
         if status == -1:
@@ -616,12 +660,15 @@ class Pbs(Cluster):
             # complete and attempt to rerun them up to a certain amount of
             # times
             if self.rerun and _attempts < self.rerun:
-                jobs, states = self.query_job_states(job_id, sort=True)
-                # Assumes that the (sorted) job index matches the task IDs
-                failed_array = []
-                for i, (job, state) in enumerate(zip(jobs, states)):
-                    if state in self._failed_states:
-                        failed_array.append(i)
+                if packed_failed is not None:
+                    failed_array = packed_failed
+                else:
+                    jobs, states = self.query_job_states(job_id, sort=True)
+                    # Assumes that the (sorted) job index matches the task IDs
+                    failed_array = []
+                    for i, (job, state) in enumerate(zip(jobs, states)):
+                        if state in self._failed_states:
+                            failed_array.append(i)
 
                 logger.info(f"attempt {_attempts+1}/{self.rerun} rerun "
                             f"{len(failed_array)} failed jobs")
@@ -721,6 +768,12 @@ class Pbs(Cluster):
         :return: (True if every task completed, comma-separated string of
             failed task ids, empty string if none failed)
         """
+        # A packed job reports which of its tasks failed in marker files, not
+        # in the states of its array elements
+        failed = failed_tasks(self._markers, job_id)
+        if failed is not None:
+            return not failed, ",".join(str(task) for task in failed)
+
         job_ids = job_id.split(",")
         if self.monitor_job_status(job_ids, wait_time_s=5) == 1:
             return True, ""

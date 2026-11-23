@@ -775,6 +775,46 @@ stages (`run(single=True)`) no longer have to wait in the compute queue.
   `eval_func`, and a docs section (`tips_and_tricks.rst`). Still no end-to-end
   test of two thrifty iterations.
 
+### Pack mode, Slurm and PBS (`pack`, `njob`; 2026-11-23)
+
+The feature behind the student's 171 h log (`-J 0-53%3`, 18 sequential waves
+that each re-queue). Slurm/Chinook and PBS/Miyabi done, not yet run on either
+cluster.
+
+- `seisflows/system/pack.py` (new): `parse_array`, `split_tasks` (even,
+  contiguous blocks, sizes differ by at most one), `pack_tasktime`
+  (`tasktime x largest block x 1.1`), `run_chunk` (one subprocess of the usual
+  `run` script per task with `SEISFLOWS_TASKID`, so no leaking of cwd/env/exit,
+  its own log `logs/<job>_<task>.log` and its own `tasktime`; continues after a
+  failure), `failed_tasks`, `main`. Entry script `runscripts/run_chunk`.
+- Markers: `scratch/system/tasks/<job key>/<task>.ok|.fail` and a copy of the
+  blocks as `chunks.json`, written by `Slurm.run` after submitting. A task
+  without a marker failed (job ended early), so `job_outcome` and the blocking
+  retry read the markers instead of the array states. `job_key` is the leading
+  digits of the id ('123[].opbs', '123[4].opbs', '123_4' -> '123') for PBS.
+- `Slurm.run` packs when `pack` and not `single` and the ids to run are more
+  than `njob`; otherwise it is the usual array (a rerun of few tasks).
+  `Dispatcher` and workflows are unchanged, they already pass `array=<failed>`.
+- Decided: no `%` throttle for the packed array (`njob` is the limit), no
+  `pack_buffer` parameter (10% constant), `njob` need not divide `ntask`, no
+  validation of the job time against the partition maximum (the scheduler
+  rejects it; Miyabi `short-g` is 8 h), no in-node concurrency (GPU nodes).
+- Shared by both: `Cluster._pack_tasks` (split + write the blocks file) and
+  `_record_blocks`; `Cluster.check` validates `njob` and `_supports_pack`
+  (True for `Slurm`/`Pbs`, False for `Frontera`, which overrides `run`).
+- PBS: the entry point `pbs_entry_point` has a `run_chunk` case fed by
+  `SEISFLOWS_CHUNKS/TASKTIME/LOGDIR/MARKERS` in `-v`. A packed job of one
+  element (`njob: 1`) is submitted without `-J` (`0-0` is rejected by some PBS
+  servers, see `run_call`) with `SEISFLOWS_TASKID=0`, so the block index is 0.
+  The array id the scheduler returns ('123[].opbs') and the element's
+  `PBS_JOBID` ('123[1].opbs') meet in `job_key`.
+- Miyabi: the running-job cap is per PROJECT (`qstat --limit`), so `njob` is
+  that number (the resume job is held `afterany`, so it does not use a slot
+  while the packed jobs run).
+- Not done: `job_times` still reports the first start only (it hides the tail
+  of a throttled array, less so now), TestFlow chunked mode, a real run on
+  Chinook/Miyabi (a failed task, a time-out, a rerun, a non-blocking resume).
+
 ## Not done / come back to this
 
 - **Real-cluster validation — started, not finished.** First real run

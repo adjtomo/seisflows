@@ -34,6 +34,7 @@ from seisflows import logger
 from seisflows.system.cluster import Cluster
 from seisflows.tools import msg
 from seisflows.tools.config import pickle_function_list
+from seisflows.system.pack import pack_tasktime, failed_tasks
 
 
 class Slurm(Cluster):
@@ -49,6 +50,19 @@ class Slurm(Cluster):
     :param slurm_args: Any (optional) additional SLURM arguments that will
         be passed to the SBATCH scripts. Should be in the form:
         '--key1=value1 --key2=value2"
+    :type pack: bool
+    :param pack: if True, the tasks of an array are packed into `njob` jobs
+        that run their share of the tasks one after the other, rather than a
+        job for every task. Use it where jobs wait for a long time in the queue
+        or only a few can run at once, as then a stage waits in the queue once
+        rather than in several waves. The time limit of each job is `tasktime`
+        times the number of tasks in it, plus 10%, so it has to be allowed by
+        the partition. `ntask_max` does not apply.
+    :type njob: int
+    :param njob: number of jobs to pack the tasks into, if `pack` is True.
+        Between 1 (one job runs every task) and `ntask` (no packing). The tasks
+        are split into blocks of neighbouring ids that are as even as they
+        can be. Choose the number of jobs that the scheduler runs at once.
     :type partition_master: str
     :param partition_master: partition that the master job is submitted to, the
         job that runs the workflow, including each one that resumes it when
@@ -74,9 +88,11 @@ class Slurm(Cluster):
     # implemented below. Children that override `run()` themselves (e.g.
     # `Frontera`) must set this back to False
     _supports_nonblocking = True
+    _supports_pack = True
 
-    def __init__(self, ntask_max=100, slurm_args="", partition_master=None,
-                 partition_compute=None, partition_single=None, **kwargs):
+    def __init__(self, ntask_max=100, slurm_args="", pack=False, njob=None,
+                 partition_master=None, partition_compute=None,
+                 partition_single=None, **kwargs):
         """
         Slurm-specific setup parameters
 
@@ -92,6 +108,8 @@ class Slurm(Cluster):
             self.mpiexec = "srun -u"
         self.ntask_max = ntask_max
         self.slurm_args = slurm_args
+        self.pack = pack
+        self.njob = njob
 
         self.partition_master = old_master or partition_master
         self.partition_compute = old_compute or partition_compute
@@ -299,6 +317,12 @@ class Slurm(Cluster):
         :return: (True if every task completed, comma-separated SLURM array
             string of failed task ids, empty string if none failed)
         """
+        # A packed job reports which of its tasks failed in marker files, not
+        # in the states of its array elements
+        failed = failed_tasks(self._markers, job_id)
+        if failed is not None:
+            return not failed, ",".join(str(task) for task in failed)
+
         if self.monitor_job_status(job_id, wait_time_s=5) == 1:
             return True, ""
 
@@ -400,18 +424,34 @@ class Slurm(Cluster):
                 level=self.log_level, **kwargs
                 )
 
+        executable = (f"{self.run_functions} --funcs {funcs_fid} "
+                      f"--kwargs {kwargs_fid}")
+
+        # Pack the tasks into fewer jobs
+        blocks = None
+        packed = self._pack_tasks(funcs_fid, array, single)
+        if packed:
+            blocks, chunks_fid, array, nblock = packed
+            executable = (f"{self.run_chunk} --funcs {funcs_fid} "
+                          f"--kwargs {kwargs_fid} --chunks {chunks_fid} "
+                          f"--tasktime {tasktime or self.tasktime} "
+                          f"--logdir {self.path.log_files} "
+                          f"--markers {self._markers}")
+            tasktime = pack_tasktime(tasktime or self.tasktime, nblock)
+
         # Get the run call that will be submitted to the system via subprocess
-        run_call = self.run_call(executable=f"{self.run_functions} "
-                                            f"--funcs {funcs_fid} "
-                                            f"--kwargs {kwargs_fid}",
-                                 tasktime=tasktime, array=array, single=single
-                                 )
+        run_call = self.run_call(executable=executable, tasktime=tasktime,
+                                 array=array, single=single)
         logger.debug(run_call)
 
         # RUN the job by submitting the sbatch directive to system
         stdout = subprocess.run(run_call, stdout=subprocess.PIPE,
                                 text=True, shell=True).stdout
         job_id = self._stdout_to_job_id(stdout)
+
+        # What the job is to run, for `job_outcome` to know which tasks did not
+        if blocks:
+            self._record_blocks(job_id, blocks)
 
         if not blocking:
             logger.debug(f"dispatched job {job_id} without waiting "
@@ -421,17 +461,24 @@ class Slurm(Cluster):
         # Monitor the job queue until all jobs have finished
         status = self.monitor_job_status(job_id)
 
+        # The tasks of a packed job are what finished, not the job
+        failed_array = failed_tasks(self._markers, job_id)
+        if failed_array is not None:
+            status = -1 if failed_array else 1
+
         # Failed job can either try to re-run, or simply exit the program
         if status == -1:  
             # Failure recovery mechanism. Determine which jobs did not complete
             # and attempt to rerun them up to a certain amount of times
             if self.rerun and _attempts < self.rerun:
-                jobs, states = self.query_job_states(job_id, sort=True)
-                # Here we are assuming that the job index matches the task IDs
-                failed_array = []
-                for i, (job, state) in enumerate(zip(jobs, states)):
-                    if state in self._failed_states:
-                        failed_array.append(i)
+                if failed_array is None:
+                    jobs, states = self.query_job_states(job_id, sort=True)
+                    # Here we are assuming that the job index matches the task
+                    # IDs
+                    failed_array = []
+                    for i, (job, state) in enumerate(zip(jobs, states)):
+                        if state in self._failed_states:
+                            failed_array.append(i)
                 array_str = ",".join([str(_) for _ in failed_array])
 
                 logger.info(f"attempt {_attempts+1}/{self.rerun} rerun "

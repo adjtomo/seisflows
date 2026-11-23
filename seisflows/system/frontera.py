@@ -62,6 +62,7 @@ class Frontera(Slurm):
     # `Frontera.run()` overrides `Slurm.run()` with its own ssh-based
     # submission and does not implement `blocking=False`/`job_outcome()`
     _supports_nonblocking = False
+    _supports_pack = False
 
     def __init__(self, user=None, conda_env=None,
                  partition_master="development", allocation=None,

@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""
+Only required when a cluster system runs in pack mode (`pack: True`)
+
+Runs the block of tasks that this element of a job array is responsible for,
+one after the other, each by the `run` script. See `seisflows.system.pack`.
+
+.. note::
+    Not to be called by the user, this script is to be called by system.run()
+
+.. rubric::
+    >> python run_chunk --funcs function_list.p --kwargs kwarg_dict.p \
+        --chunks chunks.json --tasktime 10 --logdir logs --markers markers
+"""
+from seisflows.system.pack import main
+
+if __name__ == "__main__":
+    main()
