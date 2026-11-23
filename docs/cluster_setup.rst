@@ -171,9 +171,9 @@ on your System:
     cd <path to working directory>  # empty directory on System
 
     # Generate a template parameter file
-    seisflows setup -f
+    seisflows init -f
 
-    # Set appropriate modules 
+    # Set appropriate modules
     seisflows par workflow test_flow
     seisflows par system <name of your system> 
     seisflows par solver null 

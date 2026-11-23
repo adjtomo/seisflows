@@ -143,4 +143,5 @@ found on `Google Scholar <https://scholar.google.com/scholar?cites=9435477750683
    extending
    CHANGELOG
    code_dev_plan
+   planned_features
 
