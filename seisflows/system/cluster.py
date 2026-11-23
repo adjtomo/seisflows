@@ -87,8 +87,6 @@ class Cluster(Workstation):
     # be set explicitly, like `_supports_nonblocking`, because a child that
     # overrides `run()` itself (e.g. `Frontera`) would otherwise inherit it
     _supports_pack = False
-    pack = False
-    njob = None
 
     def __init__(self, title=None, mpiexec="", ntask_max=None, walltime=10,
                  environs="", blocking=True, **kwargs):

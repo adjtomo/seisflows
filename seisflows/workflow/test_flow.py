@@ -7,6 +7,7 @@ TestFlow is intended for development and debugging purposes. It is used to
 ensure that these tasks are not done on large-scale, compute-intensive jobs.
 """
 import os
+import re
 import time
 import sys
 from glob import glob
@@ -33,11 +34,16 @@ class TestFlow(Forward):
           by the scheduler after each of these (so, the scheduler's job
           dependencies), that the queue and run times of jobs are available,
           and that a failed check on a compute node is not retried
+        - If `system.pack` is True: check that the tasks are run in `njob`
+          jobs, that a task that fails does not stop the tasks after it, and
+          that the tasks that failed are the ones that are run again
 
     .. note::
 
         You do not need to set System parameters `ntask`, `nproc`, `tasktime`,
-        `walltime`. These will be overwritten by the setup task.
+        `walltime`. These will be overwritten by the setup task. With
+        `system.pack` there are three tasks for each job, so that there are
+        some to pack.
 
     .. note::
 
@@ -106,6 +112,9 @@ class TestFlow(Forward):
         logger.info("running check for test workflow")
         if not self._modules["system"]:
             logger.warning("No `system` module chosen, skipping system tests")
+        else:
+            # The number of tasks that `njob` is checked against
+            self._force_system_parameters(self._modules["system"])
         for name, module in self._modules.items():
             if module:
                 module.check()
@@ -136,11 +145,45 @@ class TestFlow(Forward):
 
         # Force some internal module variables to keep testing lightweight
         logger.info("overwriting internal System parameters from given values")
-        self.system.ntask = 3
-        self.system.nproc = 1
-        self.system.tasktime = 1  # 15 seconds
-        self.system.walltime = 5  # 2.5 minutes
-        self.system.rerun = 0
+        self._force_system_parameters(self.system)
+
+    @staticmethod
+    def _force_system_parameters(system):
+        """
+        Set the system parameters that keep the tests small
+
+        :type system: seisflows.system.workstation.Workstation
+        :param system: the system module, which is changed
+        """
+        # Three tasks to each of the jobs that they are packed into
+        system.ntask = 3 * system.njob if system.pack else 3
+        system.nproc = 1
+        system.tasktime = 1  # 15 seconds
+        system.walltime = 5  # 2.5 minutes
+        system.rerun = 0
+
+    def _expected_logs(self, nfailed=0):
+        """
+        The number of log files that the array job of the tests leaves, and the
+        run again of `nfailed` tasks that failed. Without packing it is a log
+        for each task. A packed job has one of its own as well as one for each
+        task, unless it is a run again of fewer tasks than jobs, which are
+        the usual array.
+
+        :type nfailed: int
+        :param nfailed: number of tasks that are run again
+        :rtype: int
+        :return: number of log files
+        """
+        ntask = self.system.ntask
+        if not self.system.pack:
+            return ntask + nfailed
+
+        nlogs = ntask + min(self.system.njob, ntask)
+        if nfailed:
+            njob = min(self.system.njob, nfailed)
+            nlogs += nfailed + (njob if njob < nfailed else 0)
+        return nlogs
 
     def run(self):
         """
@@ -197,10 +240,21 @@ class TestFlow(Forward):
         log_files = [fid for fid in glob(os.path.join(
                          self.system.path.log_files, "*")) if not
                      os.path.basename(fid).startswith(("sflog", "parameters"))]
-        assert(len(log_files) == self.system.ntask), \
+        assert(len(log_files) == self._expected_logs()), \
             f"number of log files does not match expected number of tasks"
 
-        for i, fid in enumerate(sorted(log_files)):
+        # The tasks of a packed job are named by their own ids. The logs of
+        # the jobs themselves are named by the index of their array element
+        task_logs = log_files
+        if self.system.pack:
+            task_logs = [fid for fid in log_files
+                         if re.search(r"_task\d+\.log$", fid)]
+            assert(len(task_logs) == self.system.ntask), \
+                f"a log file for each task was expected"
+
+        for i, fid in enumerate(sorted(task_logs)):
+            if self.system.pack:
+                i = int(re.search(r"_task(\d+)\.log$", fid).group(1))
             with open(fid, "r") as f:
                 assert(f"hello world from task id: {i}" in f.read()), \
                     f"log file '{fid}' does not show correct log message"
@@ -291,7 +345,8 @@ class TestFlow(Forward):
         log_files = [fid for fid in glob(os.path.join(
                          self.system.path.log_files, "*")) if not
                      os.path.basename(fid).startswith(("sflog", "parameters"))]
-        assert(len(log_files) == 3), f"unexpected number of log files found"
+        assert(len(log_files) == self._expected_logs()), \
+            f"unexpected number of log files found"
 
         logger.info("finished successfully")
 
@@ -308,7 +363,8 @@ class TestFlow(Forward):
 
         # Set again every time as a non-blocking job runs setup() each time
         self.system.rerun = 1
-        self.system.ntask = 3
+        self._force_system_parameters(self.system)
+        self.system.rerun = 1
         failed_task_ids = [1, 2]  # 0 should pass, 1 and 2 should fail
 
         def _test_function(**kwargs):
@@ -336,7 +392,7 @@ class TestFlow(Forward):
         log_files = [fid for fid in glob(os.path.join(
                          self.system.path.log_files, "*")) if not
                      os.path.basename(fid).startswith(("sflog", "parameters"))]
-        nlog_files = self.system.ntask + len(failed_task_ids)
+        nlog_files = self._expected_logs(len(failed_task_ids))
         assert(len(log_files) == nlog_files), f"{nlog_files} log files expected"
 
         logger.info("finished successfully")

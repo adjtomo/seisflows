@@ -340,6 +340,11 @@ class Slurm(Cluster):
         Overwrites `system.cluster.Cluster.job_times`. Reads the submit,
         start and end time that `sacct` has for every task in the array.
 
+        .. note::
+            The time queued is until the FIRST task started. If the tasks
+            start in waves (e.g., an array throttled with `ntask_max`), the
+            waits for the later waves are in the time that it ran for.
+
         :type job_id: str
         :param job_id: ID returned by `run(blocking=False)`
         :rtype: (float, float) or NoneType

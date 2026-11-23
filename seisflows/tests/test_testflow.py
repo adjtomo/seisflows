@@ -13,6 +13,7 @@ import pytest
 import contextlib
 
 from seisflows.tools.config import Dict, set_task_id
+from seisflows.system.pack import split_tasks
 from seisflows.workflow.dispatch import WorkflowSuspended
 from seisflows.workflow.test_flow import TestFlow
 
@@ -21,10 +22,17 @@ class _SimulatedScheduler:
     """
     A system module that runs tasks as soon as they are submitted, writing the
     output of each task to its own log file like a scheduler does. Mimics the
-    blocking and non-blocking behavior of `system.Slurm`.
+    blocking and non-blocking behavior of `system.Slurm`. With `pack` it packs
+    tasks into `njob` jobs, as `system.Slurm` does, unless `packs` is False,
+    which is a system that says it packs but does not.
     """
-    def __init__(self, workdir, blocking):
+    def __init__(self, workdir, blocking, pack=False, njob=None, packs=True):
         self.blocking = blocking
+        self.pack = pack
+        self.njob = njob
+        self.packs = packs
+        self.njobs = []  # number of jobs of each run, a task is a job if not
+                         # packed
         self.path = Dict(log_files=os.path.join(workdir, "logs"),
                          par_file=os.path.join(workdir, "parameters.yaml"))
         self.ntask = self.nproc = self.tasktime = self.walltime = None
@@ -51,6 +59,15 @@ class _SimulatedScheduler:
 
         job_id = str(100 + len(self.jobs))
         self.jobs.append((job_id, task_ids))
+        blocks = [[task_id] for task_id in task_ids]
+        if self.pack and self.packs and not single:
+            blocks = split_tasks(task_ids, self.njob)
+        packed = len(blocks) < len(task_ids)
+        self.njobs.append(len(blocks))
+        if packed:
+            for i in range(len(blocks)):  # the log of each job
+                open(os.path.join(self.path.log_files, f"{job_id}_{i}"),
+                     "w").close()
         failed = []
         for task_id in task_ids:
             set_task_id(task_id)
@@ -61,8 +78,9 @@ class _SimulatedScheduler:
                         func(**kwargs)
             except SystemExit:
                 failed.append(task_id)
-            with open(os.path.join(self.path.log_files,
-                                   f"{job_id}_{task_id}"), "w") as f:
+            fid = f"{job_id}_task{task_id}.log" if packed else \
+                f"{job_id}_{task_id}"
+            with open(os.path.join(self.path.log_files, fid), "w") as f:
                 f.write(output.getvalue())
         self.job_failures[job_id] = failed
 
@@ -226,3 +244,47 @@ def test_nothing_but_parameters_is_public(tmpdir):
     assert(sorted(key for key in vars(workflow) if not key.startswith("_")) ==
            sorted(["stop_after", "generate_data", "export_traces",
                    "export_residuals", "path"]))
+
+
+# -----------------------------------------------------------------------------
+# Pack mode: tasks run in `njob` jobs
+# -----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("blocking", [True, False])
+@pytest.mark.parametrize("njob", [1, 2, 3])
+def test_packed_testflow_passes(tmpdir, blocking, njob):
+    """
+    The tests of an array run in `njob` jobs. A re-run of the two tasks that
+    failed is packed too if there are fewer jobs than that, otherwise it is the
+    usual array.
+    """
+    system = _SimulatedScheduler(str(tmpdir), blocking, pack=True, njob=njob)
+    processes, status = _run_to_completion(tmpdir, system)
+    assert(status == "COMPLETE")
+
+    ntask = 3 * njob
+    assert([len(ids) for _, ids in system.jobs][:1] == [ntask])
+    # The jobs of each run: the array, the single job, the array, the array,
+    # the re-run of two (one job each, or packed into `njob`)
+    rerun_jobs = 2 if njob >= 2 else 1
+    assert(system.njobs[:5] == [njob, 1, njob, njob, rerun_jobs])
+
+
+def test_packed_testflow_notices_tasks_that_were_not_packed(tmpdir):
+    """A system that is told to pack but runs a job for every task"""
+    system = _SimulatedScheduler(str(tmpdir), blocking=True, pack=True,
+                                 njob=2, packs=False)
+    with pytest.raises(AssertionError, match="number of log files"):
+        _run_to_completion(tmpdir, system)
+
+
+def test_testflow_gives_a_packing_system_tasks_to_pack(tmpdir):
+    """`ntask` is set by the workflow, and `njob` is checked against it"""
+    system = _SimulatedScheduler(str(tmpdir), blocking=True, pack=True, njob=4)
+    system.ntask = 1  # as a parameter file of a test workflow has it
+    _testflow(tmpdir, system)
+    assert(system.ntask == 12)
+
+    system = _SimulatedScheduler(str(tmpdir), blocking=True)
+    _testflow(tmpdir, system)
+    assert(system.ntask == 3)

@@ -80,6 +80,12 @@ class Workstation:
         saved whenever a number of parallel tasks are run on the system.
     ***
     """
+    # Pack mode is for the cluster systems that implement it (see
+    # `system.pack`), these are here so that the workflows can ask whether it
+    # is on of any system. Not parameters
+    pack = False
+    njob = None
+
     def __init__(self, ntask=1, nproc=1, tasktime=1, mpiexec=None, 
                  array=None, rerun=0, log_level="DEBUG", verbose=False, 
                  workdir=os.getcwd(), path_output=None, path_system=None, 

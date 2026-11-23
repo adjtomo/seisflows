@@ -785,7 +785,7 @@ cluster.
   contiguous blocks, sizes differ by at most one), `pack_tasktime`
   (`tasktime x largest block x 1.1`), `run_chunk` (one subprocess of the usual
   `run` script per task with `SEISFLOWS_TASKID`, so no leaking of cwd/env/exit,
-  its own log `logs/<job>_<task>.log` and its own `tasktime`; continues after a
+  its own log `logs/<job>_task<id>.log` and its own `tasktime`; continues after a
   failure), `failed_tasks`, `main`. Entry script `runscripts/run_chunk`.
 - Markers: `scratch/system/tasks/<job key>/<task>.ok|.fail` and a copy of the
   blocks as `chunks.json`, written by `Slurm.run` after submitting. A task
@@ -811,12 +811,33 @@ cluster.
 - Miyabi: the running-job cap is per PROJECT (`qstat --limit`), so `njob` is
   that number (the resume job is held `afterany`, so it does not use a slot
   while the packed jobs run).
+- Per-task logs are `logs/<job>_task<id>.log`, so that they are not mistaken
+  for the log of the array element (`<job>_<index>`, written by the scheduler).
+- TestFlow chunked mode (done): with `pack` it sets `ntask = 3 * njob` (and does
+  so in `check()` too, where `njob <= ntask` is checked), expects `ntask` task
+  logs plus one log per job, and a rerun of the two failed tasks packed
+  (fewer jobs than tasks) or the usual array (`TestFlow._expected_logs`).
+  `_SimulatedScheduler` in `test_testflow.py` packs like `Slurm` does, and can
+  be told not to to see that TestFlow notices. `pack`/`njob` are class
+  attributes of `Workstation` (not parameters) so any workflow can ask.
 - Not done: `job_times` still reports the first start only (it hides the tail
-  of a throttled array, less so now), TestFlow chunked mode, a real run on
-  Chinook/Miyabi (a failed task, a time-out, a rerun, a non-blocking resume).
+  of a throttled array, less so now), a real run on Chinook/Miyabi (TestFlow
+  with `pack`, then a failed task, a time-out, a rerun, a non-blocking
+  resume).
 
 ## Not done / come back to this
 
+- **`job_times` "queued" is the wait for the FIRST task, not the last** (left
+  as it is on purpose, 2026-11-23). The `queued Xh, ran Yh` line of `sflog.txt`
+  measures from submission to the first element starting, and `ran` from then to
+  the last ending. When elements of an array start in waves (a throttle such as
+  `-J 0-53%3`, or `pack` with fewer running slots than `njob`) the real wait for
+  the stage is in `ran`, so a long `ran` with a tiny `queued` does not mean slow
+  simulations. The fix, if it gets confusing: report the wait until the LAST
+  element started (`max(starts) - min(submits)`) and `ran` from there, in
+  `Slurm.job_times` and `Pbs.job_times`. Seen in the student's Miyabi log
+  (stages with `queued 2m, ran 4h`). The packed jobs make it less likely, not
+  impossible.
 - **Real-cluster validation — started, not finished.** First real run
   (2026-10-09, user, 2D example on Chinook, `t1small`, 1 source, one
   inversion iteration, `blocking: False`): **works.** Jobs queue behind the

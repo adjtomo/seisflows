@@ -148,7 +148,7 @@ def run_chunk(chunk, funcs, kwargs, tasktime, logdir, markers, job_id,
     :type tasktime: float
     :param tasktime: time limit of one task in minutes
     :type logdir: str
-    :param logdir: directory for the log of each task, `<job>_<task>.log`
+    :param logdir: directory for the log of each task, `<job>_task<id>.log`
     :type markers: str
     :param markers: directory of the markers of all packed jobs
     :type job_id: str
@@ -174,7 +174,7 @@ def run_chunk(chunk, funcs, kwargs, tasktime, logdir, markers, job_id,
     for task in chunk:
         # `SEISFLOWS_TASKID` is read before the array index of the scheduler
         env = dict(os.environ, SEISFLOWS_TASKID=str(task))
-        with open(os.path.join(logdir, f"{key}_{task}.log"), "w") as log:
+        with open(os.path.join(logdir, f"{key}_task{task}.log"), "w") as log:
             try:
                 result = subprocess.run(command, env=env, stdout=log,
                                         stderr=subprocess.STDOUT,

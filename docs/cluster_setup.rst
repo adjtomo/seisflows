@@ -138,7 +138,7 @@ How it works:
   has to allow the product (e.g., 18 tasks of 10 minutes is a job of 198
   minutes). ``ntask_max`` does not apply.
 - Each task is run on its own, by its own process, so it has its own log
-  (``logs/<job>_<task>.log``) and its own ``tasktime``. A task that fails or
+  (``logs/<job>_task<id>.log``) and its own ``tasktime``. A task that fails or
   runs out of time does not stop the tasks after it in the job.
 - When a task ends it leaves a marker file in ``scratch/system/tasks``. A task
   without one (e.g., the job ended before it got to it) is a task that
@@ -234,6 +234,25 @@ checks that:
 
 TestFlow starts over each time that it passes, so it can be submitted again
 after changing a parameter.
+
+Testing packed jobs
+~~~~~~~~~~~~~~~~~~~
+
+TestFlow can also check `packing tasks into fewer jobs
+<#packing-tasks-into-fewer-jobs>`__ (``pack: True``), which is a good way to
+find out whether your ``njob`` and the time limit that comes with it are
+allowed, before running a research problem:
+
+.. code:: bash
+
+    seisflows par pack True
+    seisflows par njob 3
+    seisflows submit
+
+TestFlow then runs its array of tests with three tasks for each of the ``njob``
+jobs, and checks that there are that many jobs (and a log for each task), that
+a task that fails does not stop the ones after it in its job, and that the
+tasks that failed are the ones that are run again.
 
 Due to the difficult nature of anticipating all quirks of a given compute
 system, Users running on un-tested systems may encounter errors while running

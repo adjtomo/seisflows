@@ -97,7 +97,7 @@ def test_run_chunk_runs_every_task_and_marks_each(tmpdir, monkeypatch):
     found = sorted(os.listdir(os.path.join(markers, "77")))
     assert(found == ["3.ok", "4.fail", "5.fail", "6.ok"])
 
-    log = lambda task: open(os.path.join(logdir, f"77_{task}.log")).read()
+    log = lambda task: open(os.path.join(logdir, f"77_task{task}.log")).read()
     assert("task 3 of 0" in log(3))  # not the array index, the task id
     assert("exited with code 3" in log(4))
     assert("exceeded its time limit" in log(5))
