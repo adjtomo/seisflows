@@ -128,6 +128,13 @@ once; ``1`` is the extreme, one job runs every task.
     seisflows par pack True
     seisflows par njob 3
 
+.. figure:: images/packed_jobs.svg
+   :width: 100%
+   :alt: An array of 54 tasks without pack mode, in 18 waves that each wait in the queue, and with pack mode, in three jobs that each run 18 tasks one after another
+
+   The same 54 tasks without and with ``pack``. Dashed boxes are waits in the
+   queue.
+
 How it works:
 
 - The tasks are split into blocks of neighbouring ids that are as even as they
